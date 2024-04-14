@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "Minimal Manifest",
+  "version": "1.0.0",
+  "icons": {
+    "32": "qort.png"
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+  },
+  "permissions": ["scripting", "storage", "system.display", "activeTab", "tabs", "notifications"
+],
+  "externally_connectable": {
+    "matches": ["<all_urls>", "*://localhost/*", "*://127.0.0.1/*"]
+  },  
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content-script.js"]
+    }
+  ]
+}
