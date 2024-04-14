@@ -120,8 +120,8 @@ async function getBalanceInfo() {
   return data;
 }
 
-const processTransactionVersion2 = async (body: any) => {
-  const validApi = await findUsableApi();
+const processTransactionVersion2 = async (body: any, validApi: string) => {
+  // const validApi = await findUsableApi();
   const url = validApi + "/transactions/process?apiVersion=2";
   return fetch(url, {
     method: "POST",
@@ -137,7 +137,7 @@ const processTransactionVersion2 = async (body: any) => {
   });
 };
 
-const transaction = async ({ type, params, apiVersion, keyPair }: any) => {
+const transaction = async ({ type, params, apiVersion, keyPair }: any, validApi) => {
 
   const tx = createTransaction(type, keyPair, params);
   console.log({ tx });
@@ -145,7 +145,7 @@ const transaction = async ({ type, params, apiVersion, keyPair }: any) => {
 
   if (apiVersion && apiVersion === 2) {
     const signedBytes = Base58.encode(tx.signedBytes);
-    res = await processTransactionVersion2(signedBytes);
+    res = await processTransactionVersion2(signedBytes, validApi);
   }
 
   return {
@@ -158,7 +158,8 @@ const makeTransactionRequest = async (
   lastRef,
   amount,
   fee,
-  keyPair
+  keyPair,
+  validApi
 ) => {
   // let recipientName = await getName(receiver)
   // let myTxnrequest = await parentEpml.request('transaction', {
@@ -186,7 +187,7 @@ const makeTransactionRequest = async (
     },
     apiVersion: 2,
     keyPair,
-  });
+  }, validApi);
   return myTxnrequest;
 };
 
@@ -246,15 +247,18 @@ async function sendCoin({ password, amount, receiver }) {
     console.log({ lastRef });
     const fee = await sendQortFee();
     console.log({ fee });
+    const validApi = await findUsableApi();
+
     const res = await makeTransactionRequest(
       confirmReceiver,
       lastRef,
       amount,
       fee,
-      wallet2._addresses[0].keyPair
+      wallet2._addresses[0].keyPair,
+      validApi
     );
     console.log({ res });
-    return res;
+    return {res, validApi};
   } catch (error) {
     console.log({ error });
     throw new Error(error.message);
@@ -598,7 +602,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
               setTimeout(() => {
                 chrome.runtime.sendMessage({
                   action: "SET_COUNTDOWN",
-                  payload: request.timeout ? 0.9 * request.timeout : 20,
+                  payload: request.timeout ? 0.85 * request.timeout : 15,
                 });
                 chrome.runtime.sendMessage({
                   action: "UPDATE_STATE_CONFIRM_SEND_QORT",
@@ -661,6 +665,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
               sendResponse(true);
               // Use the sendResponse callback to respond to the original message
               originalSendResponse(res);
+              chrome.runtime.sendMessage({
+                action: "closePopup",
+              });
             })
             .catch((error) => {
               console.error(error.message);
