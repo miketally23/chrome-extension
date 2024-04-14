@@ -717,24 +717,76 @@ function App() {
       )}
       {extState === "web-app-request-payment" && (
         <>
-          <p>{sendqortState?.hostname}</p>
-          <p>{sendqortState?.description}</p>
-          <p>{sendqortState?.address}</p>
-          <InputLabel htmlFor="standard-adornment-password">
+                  <Spacer height="100px" />
+
+         <TextP
+            sx={{
+              textAlign: "center",
+              lineHeight: "15px",
+            }}
+          >
+            The Application <br></br>{" "}
+            <TextItalic>{sendqortState?.hostname}</TextItalic> <br></br>
+            <TextSpan>is requesting a payment</TextSpan>
+          </TextP>
+          <Spacer height="10px" />
+          <TextP
+            sx={{
+              textAlign: "center",
+              lineHeight: "15px",
+              fontSize: '10px'
+            }}
+          >{sendqortState?.description}</TextP>
+          <Spacer height="15px" />
+          <TextP
+              sx={{
+                textAlign: "center",
+                lineHeight: "24px",
+                fontSize: "20px",
+                fontWeight: 700,
+              }}
+            >
+              {sendqortState?.amount} QORT
+            </TextP>
+          <Spacer height="29px" />
+
+          <CustomLabel htmlFor="standard-adornment-password">
             Confirm wallet password
-          </InputLabel>
-          <Input
+          </CustomLabel>
+          <Spacer height="5px" />
+          <CustomInput
             type="password"
             id="standard-adornment-password"
             value={paymentPassword}
             onChange={(e) => setPaymentPassword(e.target.value)}
           />
-          <button onClick={() => confirmPayment(false)}>
-            confirm payment of qort {sendqortState?.amount}
-          </button>
-          <button onClick={() => confirmPayment(true)}>decline</button>
+           <Spacer height="29px" />
+           <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: "14px",
+            }}
+          >
+            <CustomButton
+              sx={{
+                minWidth: "102px",
+              }}
+              onClick={() => confirmPayment(false)}
+            >
+              accept
+            </CustomButton>
+            <CustomButton
+              sx={{
+                minWidth: "102px",
+              }}
+              onClick={() => confirmPayment(true)}
+            >
+              decline
+            </CustomButton>
+          </Box>
           <Typography color="errror">{sendPaymentError}</Typography>
-          <Typography>{sendPaymentSuccess}</Typography>
+    
         </>
       )}
       {extState === "web-app-request-connection" && (
