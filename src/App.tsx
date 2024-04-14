@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import reactLogo from "./assets/react.svg";
 import viteLogo from "/vite.svg";
 import "./App.css";
@@ -13,6 +13,7 @@ import { CopyToClipboard } from "react-copy-to-clipboard";
 import Download from "./assets/svgs/Download.svg";
 import Logout from "./assets/svgs/Logout.svg";
 import Return from "./assets/svgs/Return.svg";
+import Success from "./assets/svgs/Success.svg";
 import {
   createAccount,
   generateRandomSentence,
@@ -380,6 +381,12 @@ function App() {
     );
   };
 
+  // const rawWalletRef = useRef(null)
+
+  // useEffect(()=> {
+  //   rawWalletRef.current = rawWallet
+  // }, [rawWallet])
+
   useEffect(() => {
     try {
       chrome.runtime.sendMessage({ action: "getWalletInfo" }, (response) => {
@@ -389,8 +396,9 @@ function App() {
           setExtstate("authenticated");
         }
       });
+
     } catch (error) {}
-  }, [address]);
+  }, []);
 
   useEffect(() => {
     if (!address) return;
@@ -480,7 +488,7 @@ function App() {
     } catch (error) {}
   };
 
-  const returnToMain = ()=> {
+  const returnToMain = () => {
     setPaymentTo("");
     setPaymentAmount(0);
     setPaymentPassword("");
@@ -489,8 +497,8 @@ function App() {
     setCountdown(null);
     setWalletToBeDownloaded(null);
     setWalletToBeDownloadedPassword("");
-    setExtstate("authenticated")
-  }
+    setExtstate("authenticated");
+  };
   return (
     <AppContainer>
       {extState === "not-authenticated" && (
@@ -606,8 +614,8 @@ function App() {
               display: "flex",
               width: "100%",
               justifyContent: "flex-start",
-              paddingLeft: '22px',
-              boxSizing: 'border-box'
+              paddingLeft: "22px",
+              boxSizing: "border-box",
             }}
           >
             <img
@@ -619,43 +627,45 @@ function App() {
             />
           </Box>
           <Spacer height="35px" />
-          <Box sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'flex-start',
-          }}>
-          <TextP
+          <Box
             sx={{
-              textAlign: "start",
-              lineHeight: "24px",
-              fontSize: "20px",
-              fontWeight: 600,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "flex-start",
             }}
           >
-            Transfer QORT
-          </TextP>
-          <Spacer height="35px" />
-          <TextP
-            sx={{
-              textAlign: "start",
-              lineHeight: "16px",
-              fontSize: "20px",
-              fontWeight: 600,
-              color: "rgba(255, 255, 255, 0.5)",
-            }}
-          >
-            Balance:
-          </TextP>
-          <TextP
-            sx={{
-              textAlign: "start",
-              lineHeight: "24px",
-              fontSize: "20px",
-              fontWeight: 700,
-            }}
-          >
-            {balance?.toFixed(2)} QORT
-          </TextP>
+            <TextP
+              sx={{
+                textAlign: "start",
+                lineHeight: "24px",
+                fontSize: "20px",
+                fontWeight: 600,
+              }}
+            >
+              Transfer QORT
+            </TextP>
+            <Spacer height="35px" />
+            <TextP
+              sx={{
+                textAlign: "start",
+                lineHeight: "16px",
+                fontSize: "20px",
+                fontWeight: 600,
+                color: "rgba(255, 255, 255, 0.5)",
+              }}
+            >
+              Balance:
+            </TextP>
+            <TextP
+              sx={{
+                textAlign: "start",
+                lineHeight: "24px",
+                fontSize: "20px",
+                fontWeight: 700,
+              }}
+            >
+              {balance?.toFixed(2)} QORT
+            </TextP>
           </Box>
           <Spacer height="35px" />
 
@@ -669,7 +679,9 @@ function App() {
               autoComplete="off"
             />
             <Spacer height="6px" />
-            <CustomLabel htmlFor="standard-adornment-amount">Amount</CustomLabel>
+            <CustomLabel htmlFor="standard-adornment-amount">
+              Amount
+            </CustomLabel>
             <Spacer height="5px" />
             <CustomInput
               id="standard-adornment-amount"
@@ -727,49 +739,94 @@ function App() {
       )}
       {extState === "web-app-request-connection" && (
         <>
-          <p>
-            the application {requestConnection?.hostname} is requesting a
-            connection
-          </p>
-          <button
-            onClick={() =>
-              responseToConnectionRequest(
-                true,
-                requestConnection?.hostname,
-                requestConnection.interactionId
-              )
-            }
+          <Spacer height="48px" />
+          <img src={Logo1} />
+          <Spacer height="38px" />
+          <TextP
+            sx={{
+              textAlign: "center",
+              lineHeight: "15px",
+            }}
           >
-            accept
-          </button>
-          <button
-            onClick={() =>
-              responseToConnectionRequest(
-                false,
-                requestConnection?.hostname,
-                requestConnection.interactionId
-              )
-            }
+            The Application <br></br>{" "}
+            <TextItalic>{requestConnection?.hostname}</TextItalic> <br></br>
+            <TextSpan>is requestion a connection</TextSpan>
+          </TextP>
+          <Spacer height="38px" />
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: "14px",
+            }}
           >
-            decline
-          </button>
+            <CustomButton
+              sx={{
+                minWidth: "102px",
+              }}
+              onClick={() =>
+                responseToConnectionRequest(
+                  true,
+                  requestConnection?.hostname,
+                  requestConnection.interactionId
+                )
+              }
+            >
+              accept
+            </CustomButton>
+            <CustomButton
+              sx={{
+                minWidth: "102px",
+              }}
+              onClick={() =>
+                responseToConnectionRequest(
+                  false,
+                  requestConnection?.hostname,
+                  requestConnection.interactionId
+                )
+              }
+            >
+              decline
+            </CustomButton>
+          </Box>
         </>
       )}
       {extState === "web-app-request-authentication" && (
         <>
-          <p>the application {requestConnection?.hostname} you Authenticate</p>
-          <p>Either create a new account or import an existing one</p>
-          <button
+          <Spacer height="48px" />
+          <img src={Logo1} />
+          <Spacer height="38px" />
+          <TextP
+            sx={{
+              textAlign: "center",
+              lineHeight: "15px",
+            }}
+          >
+            The Application <br></br>{" "}
+            <TextItalic>{requestConnection?.hostname}</TextItalic> <br></br>
+            <TextSpan>requests authentication</TextSpan>
+          </TextP>
+          <Spacer height="38px" />
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: "14px",
+            }}
+          ></Box>
+          <Spacer height="38px" />
+          <CustomButton {...getRootProps()}>
+            <input {...getInputProps()} />
+            Authenticate
+          </CustomButton>
+          <Spacer height="6px" />
+          <CustomButton
             onClick={() => {
               setExtstate("create-wallet");
             }}
           >
             Create account
-          </button>
-          <button {...getRootProps()}>
-            <input {...getInputProps()} />
-            Existing account
-          </button>
+          </CustomButton>
         </>
       )}
       {extState === "download-wallet" && (
@@ -810,10 +867,23 @@ function App() {
         <>
           {!walletToBeDownloaded && (
             <>
-              <InputLabel htmlFor="standard-adornment-password">
+              <Spacer height="48px" />
+              <img src={Logo1} />
+              <Spacer height="38px" />
+              <TextP
+                sx={{
+                  textAlign: "center",
+                  lineHeight: "15px",
+                }}
+              >
+                Set up your Qortal account
+              </TextP>
+              <Spacer height="14px" />
+              <CustomLabel htmlFor="standard-adornment-password">
                 Wallet password
-              </InputLabel>
-              <Input
+              </CustomLabel>
+              <Spacer height="5px" />
+              <CustomInput
                 type="password"
                 id="standard-adornment-password"
                 value={walletToBeDownloadedPassword}
@@ -821,10 +891,12 @@ function App() {
                   setWalletToBeDownloadedPassword(e.target.value)
                 }
               />
-              <InputLabel htmlFor="standard-adornment-password">
+              <Spacer height="6px" />
+              <CustomLabel htmlFor="standard-adornment-password">
                 Confirm wallet password
-              </InputLabel>
-              <Input
+              </CustomLabel>
+              <Spacer height="5px" />
+              <CustomInput
                 type="password"
                 id="standard-adornment-password"
                 value={walletToBeDownloadedPasswordConfirm}
@@ -832,7 +904,11 @@ function App() {
                   setWalletToBeDownloadedPasswordConfirm(e.target.value)
                 }
               />
-              <button onClick={createAccountFunc}>Create Account</button>
+              <Spacer height="17px" />
+
+              <CustomButton onClick={createAccountFunc}>
+                Create Account
+              </CustomButton>
               <Typography color="errror">
                 {walletToBeDownloadedError}
               </Typography>
@@ -841,24 +917,51 @@ function App() {
 
           {walletToBeDownloaded && (
             <>
-              <button onClick={saveFileToDiskFunc}>Download wallet</button>
+              <Spacer height="48px" />
+              <img src={Success} />
+              <Spacer height="45px" />
+              <TextP
+                sx={{
+                  textAlign: "center",
+                  lineHeight: "15px",
+                }}
+              >
+                Congrats, you’re all set up!
+              </TextP>
+              <Spacer height="100px" />
+              <CustomButton onClick={()=> {
+                saveFileToDiskFunc()
+                returnToMain()
+              }}>
+                Backup Account
+              </CustomButton>
             </>
           )}
         </>
       )}
-
       {countdown && (
-        <CountdownCircleTimer
-          isPlaying
-          duration={countdown}
-          colors={["#004777", "#F7B801", "#A30000", "#A30000"]}
-          colorsTime={[7, 5, 2, 0]}
-          onComplete={() => {
-            window.close();
+        <Box
+          style={{
+            position: "absolute",
+            top: "20px",
+            left: "20px",
           }}
         >
-          {({ remainingTime }) => remainingTime}
-        </CountdownCircleTimer>
+          {/* <Spacer  height="25px"/> */}
+          <CountdownCircleTimer
+            isPlaying
+            duration={countdown}
+            colors={["#004777", "#F7B801", "#A30000", "#A30000"]}
+            colorsTime={[7, 5, 2, 0]}
+            onComplete={() => {
+              window.close();
+            }}
+            size={75}
+            strokeWidth={8}
+          >
+            {({ remainingTime }) => <TextP>{remainingTime}</TextP>}
+          </CountdownCircleTimer>
+        </Box>
       )}
     </AppContainer>
   );
