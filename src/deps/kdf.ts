@@ -16,7 +16,6 @@ const stringtoUTF8Array = (message)=> {
 }
 
 const stringToUTF8Array=(message)=> {
-    console.log({message})
     if (typeof message !== 'string') return message; // Assuming you still want to pass through non-string inputs unchanged
     const encoder = new TextEncoder(); // TextEncoder defaults to UTF-8
     return encoder.encode(message);
@@ -27,14 +26,7 @@ const computekdf = async (req)=> {
     const sha512Hash = new Sha512().process(combinedBytes).finish().result
     const sha512HashBase64 = bytesToBase64(sha512Hash)
     const result = bcrypt.hashSync(sha512HashBase64.substring(0, 72), staticBcryptSalt)
-    if(nonce === 0){
-        console.log({salt, key, nonce, staticSalt, staticBcryptSalt})
-        console.log({combinedBytes})
-        console.log({sha512Hash})
-        console.log({sha512HashBase64})
-        console.log({result})
-
-    }
+    
     return { key, nonce, result }
 }
 
@@ -53,12 +45,10 @@ export const doInitWorkers = (numberOfWorkers) => {
 }
 
 export const kdf = async (seed, salt, threads) => {
-    console.log({seed, salt, threads})
 	const workers = threads
     const salt2 = 	new Uint8Array(salt)
 
 	salt = new Uint8Array(salt)
-    console.log({salt, salt2})
 	const seedParts = await Promise.all(workers.map((worker, index) => {
 		const nonce = index
 		return computekdf({
@@ -68,7 +58,6 @@ export const kdf = async (seed, salt, threads) => {
 			staticSalt: crypto.staticSalt,
 			staticBcryptSalt: crypto.staticBcryptSalt
 		}).then(data => {
-            console.log({data})
 			let jsonData
 			try {
 				jsonData = JSON.parse(data)
@@ -81,7 +70,6 @@ export const kdf = async (seed, salt, threads) => {
 			return data.result
 		})
 	}))
-    console.log({seedParts})
 	const result = new Sha512().process(stringtoUTF8Array(crypto.staticSalt + seedParts.reduce((a, c) => a + c))).finish().result
 	return result
 }

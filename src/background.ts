@@ -55,12 +55,9 @@ async function findUsableApi() {
 async function getNameInfo() {
   const wallet = await getSaveWallet();
   const address = wallet.address0;
-  console.log({ address });
   const validApi = await findUsableApi();
   const response = await fetch(validApi + "/names/address/" + address);
-  console.log({ response });
   const nameData = await response.json();
-  console.log({ nameData });
   if (nameData?.length > 0) {
     return nameData[0].name;
   } else {
@@ -92,7 +89,6 @@ async function getSaveWallet() {
 }
 
 async function getUserInfo() {
-  console.log("entered");
   const wallet = await getSaveWallet();
   const address = wallet.address0;
   const addressInfo = await getAddressInfo(address);
@@ -111,7 +107,6 @@ async function connection(hostname) {
 async function getBalanceInfo() {
   const wallet = await getSaveWallet();
   const address = wallet.address0;
-  console.log({ address });
   const validApi = await findUsableApi();
   const response = await fetch(validApi + "/addresses/balance/" + address);
 
@@ -140,7 +135,6 @@ const processTransactionVersion2 = async (body: any, validApi: string) => {
 const transaction = async ({ type, params, apiVersion, keyPair }: any, validApi) => {
 
   const tx = createTransaction(type, keyPair, params);
-  console.log({ tx });
   let res;
 
   if (apiVersion && apiVersion === 2) {
@@ -161,20 +155,7 @@ const makeTransactionRequest = async (
   keyPair,
   validApi
 ) => {
-  // let recipientName = await getName(receiver)
-  // let myTxnrequest = await parentEpml.request('transaction', {
-  //   type: 2,
-  //   nonce: 0,
-  //   params: {
-  //     recipient: receiver,
-  //     recipientName: recipientName,
-  //     amount: amount,
-  //     lastReference: lastRef,
-  //     fee: fee
-  //   },
-  //   apiVersion: 2
-  // })
-  console.log({ receiver, lastRef, amount, fee });
+
   const myTxnrequest = await transaction({
     nonce: 0,
     type: 2,
@@ -244,9 +225,7 @@ async function sendCoin({ password, amount, receiver }) {
     const wallet2 = new PhraseWallet(response, walletVersion);
 
     const lastRef = await getLastRef();
-    console.log({ lastRef });
     const fee = await sendQortFee();
-    console.log({ fee });
     const validApi = await findUsableApi();
 
     const res = await makeTransactionRequest(
@@ -257,7 +236,6 @@ async function sendCoin({ password, amount, receiver }) {
       wallet2._addresses[0].keyPair,
       validApi
     );
-    console.log({ res });
     return {res, validApi};
   } catch (error) {
     console.log({ error });
@@ -266,7 +244,6 @@ async function sendCoin({ password, amount, receiver }) {
 }
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  console.log({ request });
   if (request) {
     switch (request.action) {
       case "version":
@@ -305,7 +282,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         getNameInfo()
           .then((name) => {
             sendResponse(name);
-            console.log("name:", name);
           })
           .catch((error) => {
             console.error(error.message);
@@ -315,7 +291,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         getUserInfo()
           .then((name) => {
             sendResponse(name);
-            console.log("name:", name);
           })
           .catch((error) => {
             sendResponse({ error: "User not authenticated" });
@@ -354,15 +329,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             })
             .catch((error) => {
               const popupUrl = chrome.runtime.getURL("index.html");
-              console.log({ popupUrl });
 
               chrome.windows.getAll(
                 { populate: true, windowTypes: ["popup"] },
                 (windows) => {
-                  console.log({ windows });
-                  windows.forEach((win) => {
-                    win.tabs.forEach((tab) => console.log("url", tab.url)); // Attempt to log URLs directly
-                  });
+                  
                   // Attempt to find an existing popup window that has a tab with the correct URL
                   const existingPopup = windows.find(
                     (w) =>
@@ -371,7 +342,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                         (tab) => tab.url && tab.url.startsWith(popupUrl)
                       )
                   );
-                  console.log({ existingPopup });
                   if (existingPopup) {
                     // If the popup exists but is minimized or not focused, focus it
                     chrome.windows.update(existingPopup.id, {
@@ -461,20 +431,15 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         const { hostname } = request.payload;
         connection(hostname)
           .then((isConnected) => {
-            console.log({ isConnected });
             if (Object.keys(isConnected)?.length > 0 && isConnected[hostname]) {
               sendResponse(true);
             } else {
               const popupUrl = chrome.runtime.getURL("index.html");
-              console.log({ popupUrl });
 
               chrome.windows.getAll(
                 { populate: true, windowTypes: ["popup"] },
                 (windows) => {
-                  console.log({ windows });
-                  windows.forEach((win) => {
-                    win.tabs.forEach((tab) => console.log("url", tab.url)); // Attempt to log URLs directly
-                  });
+              
                   // Attempt to find an existing popup window that has a tab with the correct URL
                   const existingPopup = windows.find(
                     (w) =>
@@ -483,7 +448,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                         (tab) => tab.url && tab.url.startsWith(popupUrl)
                       )
                   );
-                  console.log({ existingPopup });
                   if (existingPopup) {
                     // If the popup exists but is minimized or not focused, focus it
                     chrome.windows.update(existingPopup.id, {
@@ -547,22 +511,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         {
           const { amount, hostname, address, description } = request.payload;
           const popupUrl = chrome.runtime.getURL("index.html");
-          console.log({ popupUrl });
 
           chrome.windows.getAll(
             { populate: true, windowTypes: ["popup"] },
             (windows) => {
-              console.log({ windows });
-              windows.forEach((win) => {
-                win.tabs.forEach((tab) => console.log("url", tab.url)); // Attempt to log URLs directly
-              });
+           
               // Attempt to find an existing popup window that has a tab with the correct URL
               const existingPopup = windows.find(
                 (w) =>
                   w.tabs &&
                   w.tabs.some((tab) => tab.url && tab.url.startsWith(popupUrl))
               );
-              console.log({ existingPopup });
               if (existingPopup) {
                 // If the popup exists but is minimized or not focused, focus it
                 chrome.windows.update(existingPopup.id, {
@@ -626,7 +585,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       case "responseToConnectionRequest":
         {
           const { hostname, isOkay } = request.payload;
-          console.log({ hostname, isOkay });
           const interactionId3 = request.payload.interactionId;
           if (!isOkay) {
             const originalSendResponse = pendingResponses.get(interactionId3);
@@ -665,20 +623,19 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
               sendResponse(true);
               // Use the sendResponse callback to respond to the original message
               originalSendResponse(res);
-              chrome.runtime.sendMessage({
-                action: "closePopup",
-              });
+              // chrome.runtime.sendMessage({
+              //   action: "closePopup",
+              // });
             })
             .catch((error) => {
               console.error(error.message);
-              sendResponse(false);
+              sendResponse({ error: error.message });
               originalSendResponse({ error: error.message });
             });
 
           // Remove the callback from the Map as it's no longer needed
           pendingResponses.delete(interactionId2);
         }
-        console.log({ password, amount, receiver });
 
         break;
       case "logout" : {
@@ -700,59 +657,20 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
   return true;
 });
-// chrome.runtime.onMessageExternal.addListener(function (
-//   request,
-//   sender,
-//   sendResponse
-// ) {
-//   console.log({ request });
-//   if (request) {
-//     switch (request.action) {
-//       case "version":
-//         // Example: respond with the version
-//         sendResponse({ version: "1.0" });
-//         break;
-//       case "storeWalletInfo":
-//         chrome.storage.local.set({ walletInfo: request.wallet }, () => {
-//           if (chrome.runtime.lastError) {
-//             sendResponse({ error: chrome.runtime.lastError.message });
-//           } else {
-//             sendResponse({ result: "Data saved successfully" });
-//           }
-//         });
-//         break;
-//       case "getWalletInfo":
-//         chrome.storage.local.get(["walletInfo"], (result) => {
-//           if (chrome.runtime.lastError) {
-//             sendResponse({ error: chrome.runtime.lastError.message });
-//           } else if (result.walletInfo) {
-//             sendResponse({ walletInfo: result.walletInfo });
-//           } else {
-//             sendResponse({ error: "No wallet info found" });
-//           }
-//         });
-//         break;
-//     }
-//   }
-//   return true; // This is crucial for asynchronous sendResponse
-// });
+
 
 chrome.action.onClicked.addListener((tab) => {
   const popupUrl = chrome.runtime.getURL("index.html");
   chrome.windows.getAll(
     { populate: true, windowTypes: ["popup"] },
     (windows) => {
-      console.log({ windows });
-      windows.forEach((win) => {
-        win.tabs.forEach((tab) => console.log("url", tab.url)); // Attempt to log URLs directly
-      });
+     
       // Attempt to find an existing popup window that has a tab with the correct URL
       const existingPopup = windows.find(
         (w) =>
           w.tabs &&
           w.tabs.some((tab) => tab.url && tab.url.startsWith(popupUrl))
       );
-      console.log({ existingPopup });
       if (existingPopup) {
         // If the popup exists but is minimized or not focused, focus it
         chrome.windows.update(existingPopup.id, {

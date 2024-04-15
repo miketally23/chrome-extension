@@ -3,10 +3,12 @@ import reactLogo from "./assets/react.svg";
 import viteLogo from "/vite.svg";
 import "./App.css";
 import { useDropzone } from "react-dropzone";
-import { Box, Input, InputLabel, Typography } from "@mui/material";
+import { Box, Input, InputLabel, Tooltip, Typography } from "@mui/material";
 import { decryptStoredWallet } from "./utils/decryptWallet";
 import { CountdownCircleTimer } from "react-countdown-circle-timer";
 import Logo1 from "./assets/svgs/Logo1.svg";
+import Logo1Dark from "./assets/svgs/Logo1Dark.svg";
+
 import Logo2 from "./assets/svgs/Logo2.svg";
 import Copy from "./assets/svgs/Copy.svg";
 import { CopyToClipboard } from "react-copy-to-clipboard";
@@ -14,6 +16,7 @@ import Download from "./assets/svgs/Download.svg";
 import Logout from "./assets/svgs/Logout.svg";
 import Return from "./assets/svgs/Return.svg";
 import Success from "./assets/svgs/Success.svg";
+import Info from "./assets/svgs/Info.svg";
 import {
   createAccount,
   generateRandomSentence,
@@ -37,6 +40,7 @@ import {
   TextSpan,
 } from "./App-styles";
 import { Spacer } from "./common/Spacer";
+import { Loader } from "./components/Loader";
 
 type extStates =
   | "not-authenticated"
@@ -46,7 +50,9 @@ type extStates =
   | "web-app-request-payment"
   | "web-app-request-authentication"
   | "download-wallet"
-  | "create-wallet";
+  | "create-wallet"
+  | "transfer-success-regular"
+  | "transfer-success-request";
 
 function App() {
   const [extState, setExtstate] = useState<extStates>("not-authenticated");
@@ -66,6 +72,8 @@ function App() {
   const [walletToBeDownloaded, setWalletToBeDownloaded] = useState<any>(null);
   const [walletToBeDownloadedPassword, setWalletToBeDownloadedPassword] =
     useState<string>("");
+  const [sendqortState, setSendqortState] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false)
   const [
     walletToBeDownloadedPasswordConfirm,
     setWalletToBeDownloadedPasswordConfirm,
@@ -97,7 +105,7 @@ function App() {
         // Read the file as text
         reader.readAsText(file);
       });
-      console.log({ fileContents });
+    
       let error: any = null;
       let pf: any;
 
@@ -132,52 +140,13 @@ function App() {
     },
   });
 
-  // const storeDecryptedWallet = async () => {
-  //   const res = await decryptStoredWallet("password", rawWallet);
-  //   const wallet2 = new PhraseWallet(res, walletVersion);
-  //   setdecryptedWallet(wallet2);
-  // };
-  // const saveWalletFunc = async (password: string) => {
-  //   console.log({ decryptedWallet });
-  //   let wallet = structuredClone(decryptedWallet);
-  //   console.log({ decryptedWallet: decryptedWallet?.generateSaveWalletData });
-  //   const qortAddress = decryptedWallet.addresses[0].address;
-  //   if (decryptedWallet?.generateSaveWalletData) {
-  //     console.log("yes", wallet);
-  //     wallet = await decryptedWallet.generateSaveWalletData(
-  //       password,
-  //       crypto.kdfThreads,
-  //       () => {}
-  //     );
-  //   } else {
-  //     console.log("no", wallet);
-  //     const res = await decryptStoredWallet(password, wallet);
-  //     const wallet2 = new PhraseWallet(res, walletVersion);
-  //     console.log({ wallet2 });
-  //     wallet = await wallet2.generateSaveWalletData(
-  //       password,
-  //       crypto.kdfThreads,
-  //       () => {}
-  //     );
-  //   }
-  //   setWalletToBeDownloaded({
-  //     wallet,
-  //     qortAddress,
-  //   });
-  //   return {
-  //     wallet,
-  //     qortAddress,
-  //   };
-  // };
+  
 
   const saveWalletFunc = async (password: string) => {
-    console.log({ decryptedWallet });
     let wallet = structuredClone(rawWallet);
 
-    console.log("no", wallet);
     const res = await decryptStoredWallet(password, wallet);
     const wallet2 = new PhraseWallet(res, walletVersion);
-    console.log({ wallet2 });
     wallet = await wallet2.generateSaveWalletData(
       password,
       crypto.kdfThreads,
@@ -210,35 +179,14 @@ function App() {
           tabs[0].id,
           { from: "popup", subject: "anySubject" },
           function (response) {
-            console.log(response);
+           
           }
         );
       }
     );
   };
-  const getWalletInfoFunc = async () => {
-    // const res = await getWalletInfo()
-    // console.log({res})
-    chrome.runtime.sendMessage({ action: "getWalletInfo" }, (response) => {
-      if (response) {
-        console.log("Extension installed: ", response);
-        // setIsExtensionInstalled(true);
-      }
-    });
-  };
-  const getValidApiFunc = () => {
-    chrome.runtime.sendMessage({ action: "validApi" }, (response) => {
-      if (response) {
-      }
-    });
-  };
-  const getNameFunc = () => {
-    chrome.runtime.sendMessage({ action: "name" }, (response) => {
-      if (response) {
-        console.log("name", response);
-      }
-    });
-  };
+ 
+ 
   const getBalanceFunc = () => {
     chrome.runtime.sendMessage({ action: "balance" }, (response) => {
       if (response && !response?.error) {
@@ -261,6 +209,7 @@ function App() {
       setSendPaymentError("Please enter your wallet password");
       return;
     }
+    setIsLoading(true)
     chrome.runtime.sendMessage(
       {
         action: "sendCoin",
@@ -272,28 +221,26 @@ function App() {
       },
       (response) => {
         if (response?.error) {
-          console.log("coin", response);
           setSendPaymentError(response.error);
         } else {
-          setSendPaymentSuccess("Payment successfully sent");
+          setExtstate("transfer-success-regular");
+          // setSendPaymentSuccess("Payment successfully sent");
         }
+        setIsLoading(false)
       }
     );
   };
 
-  console.log({ rawWallet, decryptedWallet });
 
   const clearAllStates = () => {
     setRequestConnection(null);
     setRequestAuthentication(null);
   };
 
-  const [sendqortState, setSendqortState] = useState<any>(null);
-
   useEffect(() => {
     // Listen for messages from the background script
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-      console.log({ message });
+     
       // Check if the message is to update the state
       if (message.action === "UPDATE_STATE_CONFIRM_SEND_QORT") {
         // Update the component state with the received 'sendqort' state
@@ -316,7 +263,7 @@ function App() {
     });
   }, []);
 
-  console.log({ sendqortState });
+ 
   //param = isDecline
   const confirmPayment = (isDecline: boolean) => {
     if (isDecline) {
@@ -345,6 +292,7 @@ function App() {
       setSendPaymentError("Please enter your wallet password");
       return;
     }
+    setIsLoading(true)
     chrome.runtime.sendMessage(
       {
         action: "sendQortConfirmation",
@@ -357,9 +305,17 @@ function App() {
         },
       },
       (response) => {
-        if (response) {
-          setSendPaymentSuccess("Payment successfully sent");
+        if (response === true) {
+          setExtstate("transfer-success-request");
+          setCountdown(null);
+          // setSendPaymentSuccess("Payment successfully sent");
+        } else {
+         
+          setSendPaymentError(
+            response?.error || "Unable to perform payment. Please try again."
+          );
         }
+        setIsLoading(false)
       }
     );
   };
@@ -391,12 +347,10 @@ function App() {
     try {
       chrome.runtime.sendMessage({ action: "getWalletInfo" }, (response) => {
         if (response && response?.walletInfo) {
-          console.log("Extension installed: ", response);
           setRawWallet(response?.walletInfo);
           setExtstate("authenticated");
         }
       });
-
     } catch (error) {}
   }, []);
 
@@ -405,7 +359,6 @@ function App() {
     try {
       chrome.runtime.sendMessage({ action: "userInfo" }, (response) => {
         if (response && !response.error) {
-          console.log("Extension installed: ", response);
           setUserInfo(response);
         }
       });
@@ -418,7 +371,6 @@ function App() {
       console.log("exit");
     };
   }, []);
-  console.log({ userInfo });
 
   const confirmPasswordToDownload = async () => {
     try {
@@ -427,9 +379,18 @@ function App() {
         setSendPaymentError("Please enter your password");
         return;
       }
+      setIsLoading(true)
+      await new Promise<void>((res)=> {
+        setTimeout(()=> {
+          res()
+        }, 250)
+      })
       const res = await saveWalletFunc(walletToBeDownloadedPassword);
     } catch (error: any) {
       setWalletToBeDownloadedError(error?.message);
+    } finally {
+      setIsLoading(false)
+
     }
   };
 
@@ -441,6 +402,7 @@ function App() {
       );
     } catch (error: any) {
       setWalletToBeDownloadedError(error?.message);
+    } finally {
     }
   };
 
@@ -460,8 +422,13 @@ function App() {
         setWalletToBeDownloadedError("Password fields do not match!");
         return;
       }
+      setIsLoading(true)
+      await new Promise<void>((res)=> {
+        setTimeout(()=> {
+          res()
+        }, 250)
+      })
       const res = await createAccount();
-      console.log("new account", res);
       const wallet = await res.generateSaveWalletData(
         walletToBeDownloadedPassword,
         crypto.kdfThreads,
@@ -475,6 +442,9 @@ function App() {
       });
     } catch (error: any) {
       setWalletToBeDownloadedError(error?.message);
+    } finally {
+      setIsLoading(false)
+
     }
   };
 
@@ -482,7 +452,7 @@ function App() {
     try {
       chrome.runtime.sendMessage({ action: "logout" }, (response) => {
         if (response) {
-          window.close();
+          resetAllStates();
         }
       });
     } catch (error) {}
@@ -499,12 +469,41 @@ function App() {
     setWalletToBeDownloadedPassword("");
     setExtstate("authenticated");
   };
+
+  const resetAllStates = () => {
+    setExtstate("not-authenticated");
+    setBackupjson(null);
+    setRawWallet(null);
+    setdecryptedWallet(null);
+    setRequestConnection(null);
+    setRequestAuthentication(null);
+    setUserInfo(null);
+    setBalance(null);
+    setPaymentTo("");
+    setPaymentAmount(0);
+    setPaymentPassword("");
+    setSendPaymentError("");
+    setSendPaymentSuccess("");
+    setCountdown(null);
+    setWalletToBeDownloaded(null);
+    setWalletToBeDownloadedPassword("");
+    setWalletToBeDownloadedPasswordConfirm("");
+    setWalletToBeDownloadedError("");
+    setSendqortState(null);
+  };
+
   return (
     <AppContainer>
       {extState === "not-authenticated" && (
         <>
           <Spacer height="48px" />
-          <img src={Logo1} />
+          <div className="image-container" style={{
+            width: '136px',
+            height: '154px'
+          }}>
+            <img src={Logo1} className="base-image" />
+            <img src={Logo1Dark} className="hover-image" />
+          </div>
           <Spacer height="38px" />
           <TextP
             sx={{
@@ -516,18 +515,50 @@ function App() {
             <TextSpan> QORTAL WALLET</TextSpan>
           </TextP>
           <Spacer height="38px" />
-          <CustomButton {...getRootProps()}>
-            <input {...getInputProps()} />
-            Authenticate
-          </CustomButton>
-          <Spacer height="6px" />
-          <CustomButton
-            onClick={() => {
-              setExtstate("create-wallet");
+          <Box
+            sx={{
+              display: "flex",
+              gap: "10px",
+              alignItems: "center",
+              marginLeft: "28px",
             }}
           >
-            Create account
-          </CustomButton>
+            <CustomButton {...getRootProps()}>
+              <input {...getInputProps()} />
+              Authenticate
+            </CustomButton>
+            <Tooltip
+              title="Authenticate by importing your Qortal JSON file"
+              arrow
+            >
+              <img src={Info} />
+            </Tooltip>
+          </Box>
+
+          <Spacer height="6px" />
+          <Box
+            sx={{
+              display: "flex",
+              gap: "10px",
+              alignItems: "center",
+              marginLeft: "28px",
+            }}
+          >
+            <CustomButton
+              onClick={() => {
+                setExtstate("create-wallet");
+              }}
+            >
+              Create account
+            </CustomButton>
+
+            <img
+              src={Info}
+              style={{
+                visibility: "hidden",
+              }}
+            />
+          </Box>
         </>
       )}
       {/* {extState !== "not-authenticated" && (
@@ -556,16 +587,19 @@ function App() {
               </AddressBox>
             </CopyToClipboard>
             <Spacer height="10px" />
-            <TextP
-              sx={{
-                textAlign: "center",
-                lineHeight: "24px",
-                fontSize: "20px",
-                fontWeight: 700,
-              }}
-            >
-              {balance?.toFixed(2)} QORT
-            </TextP>
+            {balance && (
+               <TextP
+               sx={{
+                 textAlign: "center",
+                 lineHeight: "24px",
+                 fontSize: "20px",
+                 fontWeight: 700,
+               }}
+             >
+               {balance?.toFixed(2)} QORT
+             </TextP>
+            )}
+           
             {/* <p>balance: {balance}</p> */}
             <Spacer height="55px" />
 
@@ -692,7 +726,7 @@ function App() {
             />
             <Spacer height="6px" />
             <CustomLabel htmlFor="standard-adornment-password">
-              Confirm wallet password
+              Confirm Wallet Password
             </CustomLabel>
             <Spacer height="5px" />
             <CustomInput
@@ -717,9 +751,9 @@ function App() {
       )}
       {extState === "web-app-request-payment" && (
         <>
-                  <Spacer height="100px" />
+          <Spacer height="100px" />
 
-         <TextP
+          <TextP
             sx={{
               textAlign: "center",
               lineHeight: "15px",
@@ -734,24 +768,26 @@ function App() {
             sx={{
               textAlign: "center",
               lineHeight: "15px",
-              fontSize: '10px'
+              fontSize: "10px",
             }}
-          >{sendqortState?.description}</TextP>
+          >
+            {sendqortState?.description}
+          </TextP>
           <Spacer height="15px" />
           <TextP
-              sx={{
-                textAlign: "center",
-                lineHeight: "24px",
-                fontSize: "20px",
-                fontWeight: 700,
-              }}
-            >
-              {sendqortState?.amount} QORT
-            </TextP>
+            sx={{
+              textAlign: "center",
+              lineHeight: "24px",
+              fontSize: "20px",
+              fontWeight: 700,
+            }}
+          >
+            {sendqortState?.amount} QORT
+          </TextP>
           <Spacer height="29px" />
 
           <CustomLabel htmlFor="standard-adornment-password">
-            Confirm wallet password
+            Confirm Wallet Password
           </CustomLabel>
           <Spacer height="5px" />
           <CustomInput
@@ -760,8 +796,8 @@ function App() {
             value={paymentPassword}
             onChange={(e) => setPaymentPassword(e.target.value)}
           />
-           <Spacer height="29px" />
-           <Box
+          <Spacer height="29px" />
+          <Box
             sx={{
               display: "flex",
               alignItems: "center",
@@ -786,13 +822,18 @@ function App() {
             </CustomButton>
           </Box>
           <Typography color="errror">{sendPaymentError}</Typography>
-    
         </>
       )}
       {extState === "web-app-request-connection" && (
         <>
           <Spacer height="48px" />
-          <img src={Logo1} />
+          <div className="image-container" style={{
+            width: '136px',
+            height: '154px'
+          }}>
+            <img src={Logo1} className="base-image" />
+            <img src={Logo1Dark} className="hover-image" />
+          </div>
           <Spacer height="38px" />
           <TextP
             sx={{
@@ -846,7 +887,13 @@ function App() {
       {extState === "web-app-request-authentication" && (
         <>
           <Spacer height="48px" />
-          <img src={Logo1} />
+          <div className="image-container" style={{
+            width: '136px',
+            height: '154px'
+          }}>
+            <img src={Logo1} className="base-image" />
+            <img src={Logo1Dark} className="hover-image" />
+          </div>
           <Spacer height="38px" />
           <TextP
             sx={{
@@ -883,15 +930,59 @@ function App() {
       )}
       {extState === "download-wallet" && (
         <>
-          <div>
-            {rawWallet?.address0 && <p>Welcome {rawWallet?.address0}</p>}
+          <Spacer height="22px" />
+          <Box
+            sx={{
+              display: "flex",
+              width: "100%",
+              justifyContent: "flex-start",
+              paddingLeft: "22px",
+              boxSizing: "border-box",
+            }}
+          >
+            <img
+              style={{
+                cursor: "pointer",
+              }}
+              onClick={returnToMain}
+              src={Return}
+            />
+          </Box>
+          <Spacer height="10px" />
+          <div className="image-container" style={{
+            width: '136px',
+            height: '154px'
+          }}>
+            <img src={Logo1} className="base-image" />
+            <img src={Logo1Dark} className="hover-image" />
           </div>
+          <Spacer height="35px" />
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "flex-start",
+            }}
+          >
+            <TextP
+              sx={{
+                textAlign: "start",
+                lineHeight: "24px",
+                fontSize: "20px",
+                fontWeight: 600,
+              }}
+            >
+              Download Wallet
+            </TextP>
+          </Box>
+          <Spacer height="35px" />
           {!walletToBeDownloaded && (
             <>
-              <InputLabel htmlFor="standard-adornment-password">
-                Confirm wallet password
-              </InputLabel>
-              <Input
+              <CustomLabel htmlFor="standard-adornment-password">
+                Confirm Wallet Password
+              </CustomLabel>
+              <Spacer height="5px" />
+              <CustomInput
                 type="password"
                 id="standard-adornment-password"
                 value={walletToBeDownloadedPassword}
@@ -899,9 +990,10 @@ function App() {
                   setWalletToBeDownloadedPassword(e.target.value)
                 }
               />
-              <button onClick={confirmPasswordToDownload}>
+              <Spacer height="20px" />
+              <CustomButton onClick={confirmPasswordToDownload}>
                 Confirm password
-              </button>
+              </CustomButton>
               <Typography color="errror">
                 {walletToBeDownloadedError}
               </Typography>
@@ -910,7 +1002,9 @@ function App() {
 
           {walletToBeDownloaded && (
             <>
-              <button onClick={saveFileToDiskFunc}>Download wallet</button>
+              <CustomButton onClick={saveFileToDiskFunc}>
+                Download wallet
+              </CustomButton>
             </>
           )}
         </>
@@ -919,8 +1013,34 @@ function App() {
         <>
           {!walletToBeDownloaded && (
             <>
-              <Spacer height="48px" />
-              <img src={Logo1} />
+            <Spacer height="22px" />
+          <Box
+            sx={{
+              display: "flex",
+              width: "100%",
+              justifyContent: "flex-start",
+              paddingLeft: "22px",
+              boxSizing: "border-box",
+            }}
+          >
+            <img
+              style={{
+                cursor: "pointer",
+              }}
+              onClick={()=> {
+                setExtstate("not-authenticated")
+              }}
+              src={Return}
+            />
+          </Box>
+              <Spacer height="15px" />
+              <div className="image-container" style={{
+            width: '136px',
+            height: '154px'
+          }}>
+            <img src={Logo1} className="base-image" />
+            <img src={Logo1Dark} className="hover-image" />
+          </div>
               <Spacer height="38px" />
               <TextP
                 sx={{
@@ -932,7 +1052,7 @@ function App() {
               </TextP>
               <Spacer height="14px" />
               <CustomLabel htmlFor="standard-adornment-password">
-                Wallet password
+                Wallet Password
               </CustomLabel>
               <Spacer height="5px" />
               <CustomInput
@@ -945,7 +1065,7 @@ function App() {
               />
               <Spacer height="6px" />
               <CustomLabel htmlFor="standard-adornment-password">
-                Confirm wallet password
+                Confirm Wallet Password
               </CustomLabel>
               <Spacer height="5px" />
               <CustomInput
@@ -981,14 +1101,62 @@ function App() {
                 Congrats, you’re all set up!
               </TextP>
               <Spacer height="100px" />
-              <CustomButton onClick={()=> {
-                saveFileToDiskFunc()
-                returnToMain()
-              }}>
+              <CustomButton
+                onClick={() => {
+                  saveFileToDiskFunc();
+                  returnToMain();
+                }}
+              >
                 Backup Account
               </CustomButton>
             </>
           )}
+        </>
+      )}
+      {extState === "transfer-success-regular" && (
+        <>
+          <Spacer height="48px" />
+          <img src={Success} />
+          <Spacer height="45px" />
+          <TextP
+            sx={{
+              textAlign: "center",
+              lineHeight: "15px",
+            }}
+          >
+            The transfer was succesful!
+          </TextP>
+          <Spacer height="100px" />
+          <CustomButton
+            onClick={() => {
+              returnToMain();
+            }}
+          >
+            Continue
+          </CustomButton>
+        </>
+      )}
+      {extState === "transfer-success-request" && (
+        <>
+          <Spacer height="48px" />
+          <img src={Success} />
+          <Spacer height="45px" />
+          <TextP
+            sx={{
+              textAlign: "center",
+              lineHeight: "15px",
+            }}
+          >
+            The transfer was succesful!
+          </TextP>
+          <Spacer height="100px" />
+          <CustomButton
+            onClick={() => {
+              window.close();
+            }}
+          >
+            Continue
+          </CustomButton>
         </>
       )}
       {countdown && (
@@ -1015,6 +1183,7 @@ function App() {
           </CountdownCircleTimer>
         </Box>
       )}
+      {isLoading && <Loader />}
     </AppContainer>
   );
 }

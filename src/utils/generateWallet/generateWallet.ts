@@ -85,7 +85,6 @@ export const createAccount = async()=> {
 
   export const  saveFileToDisk= async(data, qortAddress) => {
     try {
-        console.log({data, qortAddress})
     const dataString = JSON.stringify(data)
         const blob = new Blob([dataString], { type: 'text/plain;charset=utf-8' })
         const fileName = "qortal_backup_" + qortAddress + ".json"

@@ -7,7 +7,6 @@ import { doInitWorkers, kdf } from '../../deps/kdf.js'
 import { crypto as cryptoVals } from '../../constants/decryptWallet.js'
 
 const getRandomValues = crypto ? crypto.getRandomValues.bind(crypto) : msCrypto.getRandomValues.bind(msCrypto)
-console.log({getRandomValues})
 export const generateSaveWalletData = async (wallet, password, kdfThreads) => {
 	const threads = doInitWorkers(cryptoVals.kdfThreads)
 

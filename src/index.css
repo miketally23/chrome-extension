@@ -30,3 +30,26 @@
 body {
   margin: 0px;
 }
+
+.image-container {
+  position: relative;
+}
+
+.image-container img {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transition: opacity 0.5s ease; /* Optional: adds a fade effect */
+}
+
+.image-container .hover-image {
+  opacity: 0;
+}
+
+.image-container:hover .hover-image {
+  opacity: 1;
+}
+
+.image-container:hover .base-image {
+  opacity: 0;
+}

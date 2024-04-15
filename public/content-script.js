@@ -10,13 +10,12 @@
 // In your content script
 document.addEventListener('qortalExtensionRequests', async (event) => {
   const { type, payload, requestId, timeout } = event.detail; // Capture the requestId
-console.log({type})
+
   if (type === 'REQUEST_USER_INFO') {
     const hostname = window.location.hostname
     const res = await connection(hostname)
-    console.log('is connected', res)
+
     if(!res){
-      console.log('thou')
       document.dispatchEvent(new CustomEvent('qortalExtensionResponses', {
         detail: { type: "USER_INFO", data: {
           error: "Not authorized"
@@ -93,7 +92,6 @@ console.log({type})
   } else if (type === 'REQUEST_SEND_QORT') {
     const hostname = window.location.hostname
     const res = await connection(hostname)
-    console.log('isconnected', res)
     if(!res){
       document.dispatchEvent(new CustomEvent('qortalExtensionResponses', {
         detail: { type: "USER_INFO", data: {

@@ -22,7 +22,6 @@ const utils = {
     appendBuffer (buffer1, buffer2) {
         buffer1 = new Uint8Array(buffer1)
         buffer2 = new Uint8Array(buffer2)
-        console.log('buffer1.byteLength ', buffer1.byteLength , buffer2.byteLength)
         const tmp = new Uint8Array(buffer1.byteLength + buffer2.byteLength)
         tmp.set(buffer1, 0)
         tmp.set(buffer2, buffer1.byteLength)
