@@ -561,7 +561,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
               setTimeout(() => {
                 chrome.runtime.sendMessage({
                   action: "SET_COUNTDOWN",
-                  payload: request.timeout ? 0.85 * request.timeout : 15,
+                  payload: (request.timeout ? request.timeout : 60) - 6,
                 });
                 chrome.runtime.sendMessage({
                   action: "UPDATE_STATE_CONFIRM_SEND_QORT",
