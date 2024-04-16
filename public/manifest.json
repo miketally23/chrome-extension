@@ -14,11 +14,8 @@
   },
   "action": {
   },
-  "permissions": ["scripting", "storage", "system.display", "activeTab", "tabs", "notifications"
+  "permissions": ["scripting", "storage", "system.display", "activeTab", "tabs"
 ],
-  "externally_connectable": {
-    "matches": ["<all_urls>", "*://localhost/*", "*://127.0.0.1/*"]
-  },  
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
