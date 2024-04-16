@@ -1,9 +1,12 @@
 {
   "manifest_version": 3,
-  "name": "Minimal Manifest",
+  "name": "Qortal",
   "version": "1.0.0",
   "icons": {
-    "32": "qort.png"
+    "16": "qort.png",
+  "32": "qort.png",
+  "48": "qort.png",
+  "128": "qort.png"
   },
   "background": {
     "service_worker": "background.js",
