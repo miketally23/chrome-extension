@@ -345,13 +345,16 @@ function App() {
 
   useEffect(() => {
     try {
+      setIsLoading(true)
       chrome.runtime.sendMessage({ action: "getWalletInfo" }, (response) => {
         if (response && response?.walletInfo) {
           setRawWallet(response?.walletInfo);
           setExtstate("authenticated");
         }
       });
-    } catch (error) {}
+    } catch (error) {} finally {
+      setIsLoading(false)
+    }
   }, []);
 
   useEffect(() => {
@@ -737,8 +740,14 @@ function App() {
               autoComplete="off"
             />
           </Box>
-          <Typography color="errror">{sendPaymentError}</Typography>
-          <Typography>{sendPaymentSuccess}</Typography>
+          <Spacer height="10px" />
+          <Typography sx={{
+            color: "red",
+            fontSize: "12px",
+            fontFamily: "Inter",
+            fontWeight: '600'
+          }}>{sendPaymentError}</Typography>
+          {/* <Typography>{sendPaymentSuccess}</Typography> */}
           <Spacer height="25px" />
           <CustomButton
             onClick={() => {

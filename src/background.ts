@@ -213,7 +213,9 @@ async function getNameOrAddress(receiver) {
     }
     if (!response?.ok) throw new Error("Cannot fetch name");
     return { error: "cannot validate address or name" };
-  } catch (error) {}
+  } catch (error) {
+    throw new Error(error?.message || "cannot validate address or name")
+  }
 }
 async function sendCoin({ password, amount, receiver }) {
   try {
@@ -238,7 +240,6 @@ async function sendCoin({ password, amount, receiver }) {
     );
     return {res, validApi};
   } catch (error) {
-    console.log({ error });
     throw new Error(error.message);
   }
 }
@@ -301,7 +302,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         getBalanceInfo()
           .then((balance) => {
             sendResponse(balance);
-            console.log("balance:", balance);
           })
           .catch((error) => {
             console.error(error.message);

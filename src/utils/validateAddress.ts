@@ -3,10 +3,19 @@
 import Base58 from "../deps/Base58"
 
 export const validateAddress = (address) => {
-	const decodePubKey = Base58.decode(address)
+	let isAddress = false
+	try {
+		const decodePubKey = Base58.decode(address)
 
 	if (!(decodePubKey instanceof Uint8Array && decodePubKey.length == 25)) {
-		return false
+		isAddress = false
+	} else  {
+		isAddress = true
 	}
-	return true
+	
+	} catch (error) {
+		
+	}
+
+	return isAddress
 }
