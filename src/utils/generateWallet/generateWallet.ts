@@ -88,24 +88,58 @@ export const createAccount = async()=> {
     const dataString = JSON.stringify(data)
         const blob = new Blob([dataString], { type: 'text/plain;charset=utf-8' })
         const fileName = "qortal_backup_" + qortAddress + ".json"
-        const fileHandle = await self.showSaveFilePicker({
+        // Feature detection. The API needs to be supported
+        // and the app not run in an iframe.
+        const supportsFileSystemAccess =
+        'showSaveFilePicker' in window &&
+        (() => {
+            try {
+                return window.self === window.top
+            } catch {
+                return false
+            }
+        })()
+        // If the File System Access API is supported...
+        if (supportsFileSystemAccess) {
+            try {
+            // Show the file save dialog.
+            const fileHandle = await window.showSaveFilePicker({
             suggestedName: fileName,
             types: [{
                     description: "File",
             }]
         })
-        const writeFile = async (fileHandle, contents) => {
+            // Write the blob to the file.
             const writable = await fileHandle.createWritable()
-            await writable.write(contents)
+            await writable.write(blob)
             await writable.close()
+            console.log("FILE SAVED")
+            return
+        } catch (err) {
+            // Fail silently if the user has simply canceled the dialog.
+            if (err.name !== 'AbortError') {
+            console.error(err.name, err.message)
+            return
+            }
         }
-        writeFile(fileHandle, blob).then(() => console.log("FILE SAVED"))
-
+        }
+      // Fallback if the File System Access API is not supported...
+      // Create the blob URL.
+      const blobURL = URL.createObjectURL(blob)
+      // Create the `<a download>` element and append it invisibly.
+      const a = document.createElement('a')
+      a.href = blobURL
+      a.download = fileName
+      a.style.display = 'none'
+      document.body.append(a)
+      // Programmatically click the element.
+      a.click()
+      // Revoke the blob URL and remove the element.
+      setTimeout(() => {
+        URL.revokeObjectURL(blobURL);
+        a.remove();
+      }, 1000);
     } catch (error) {
         console.log({error})
-        if (error.name === 'AbortError') {
-            return
-        }
-        FileSaver.saveAs(blob, fileName)
     }
 }
