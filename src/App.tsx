@@ -81,6 +81,13 @@ function App() {
   const [walletToBeDownloadedError, setWalletToBeDownloadedError] =
     useState<string>("");
 
+    const holdRefExtState = useRef<extStates>("not-authenticated")
+  useEffect(()=> {
+    if(extState){
+      holdRefExtState.current = extState
+    }
+  }, [extState])
+
   const address = useMemo(() => {
     if (!rawWallet?.address0) return "";
     return rawWallet.address0;
@@ -342,6 +349,7 @@ function App() {
   // useEffect(()=> {
   //   rawWalletRef.current = rawWallet
   // }, [rawWallet])
+  
 
   useEffect(() => {
     try {
@@ -349,6 +357,7 @@ function App() {
       chrome.runtime.sendMessage({ action: "getWalletInfo" }, (response) => {
         if (response && response?.walletInfo) {
           setRawWallet(response?.walletInfo);
+          if(holdRefExtState.current === 'web-app-request-payment' || holdRefExtState.current === 'web-app-request-connection') return
           setExtstate("authenticated");
         }
       });
