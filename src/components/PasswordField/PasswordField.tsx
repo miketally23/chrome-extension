@@ -2,8 +2,7 @@ import { InputAdornment, TextField, TextFieldProps, styled } from "@mui/material
 import { useState } from 'react'
 
 export const CustomInput = styled(TextField)({
-    width: "100%", // Adjust the width as needed
-    maxWidth: "183px",
+    width: "183px", // Adjust the width as needed
     borderRadius: "5px",
     // backgroundColor: "rgba(30, 30, 32, 1)",
     outline: "none",
