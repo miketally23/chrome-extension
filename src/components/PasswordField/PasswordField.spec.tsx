@@ -22,5 +22,7 @@ describe('PasswordField', () => {
         expect(getByTestId("password-text-indicator").textContent).toBe('😸');
         await user.click(getByTestId('toggle-view-password-btn'));
         expect(getByTestId("plain-text-indicator").textContent).toBe('🙀');
+        await user.click(getByTestId('toggle-view-password-btn'));
+        expect(getByTestId("password-text-indicator").textContent).toBe('😸');
     })
 })
