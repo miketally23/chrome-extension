@@ -1,4 +1,4 @@
-import { TextField, styled } from "@mui/material";
+import { InputAdornment, TextField, TextFieldProps, styled } from "@mui/material";
 import { useState } from 'react'
 
 export const CustomInput = styled(TextField)({
@@ -41,7 +41,7 @@ export const CustomInput = styled(TextField)({
 });
 
 
-export const PasswordField = ({ ...props }) => {
+export const PasswordField: React.FunctionComponent<TextFieldProps> = ({ ...props }) => {
     const [canViewPassword, setCanViewPassword] = useState(false);
     return (
         <div style={{
@@ -50,15 +50,20 @@ export const PasswordField = ({ ...props }) => {
             <CustomInput
                 type={canViewPassword ? 'text' : 'password'}
                 id="standard-adornment-password"
+                InputProps={{
+                    endAdornment: (
+                        <InputAdornment position="end" style={{
+                            cursor: 'pointer'
+                        }} onClick={() => {
+                            setCanViewPassword((prevState) => !prevState)
+                        }}>
+                            {canViewPassword ? '🙀' : '😸'}
+                        </InputAdornment>
+                    )
+                }}
                 {...props}
             />
-            <button type='button' style={{
-                position: 'absolute',
-                right: 0,
-                top: '50%'
-            }} onClick={() => {
-                setCanViewPassword((prevState) => !prevState)
-            }}>{canViewPassword ? '🙀' : '😸'}</button>
+
         </div>
     )
 }
