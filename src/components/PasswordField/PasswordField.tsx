@@ -49,12 +49,12 @@ export const PasswordField: React.FunctionComponent<TextFieldProps> = ({ ...prop
                 type={canViewPassword ? 'text' : 'password'}
                 InputProps={{
                     endAdornment: (
-                        <InputAdornment position="end" style={{
+                        <InputAdornment position="end" data-testid="toggle-view-password-btn" style={{
                             cursor: 'pointer'
                         }} onClick={() => {
                             setCanViewPassword((prevState) => !prevState)
                         }}>
-                            {canViewPassword ? <span data-testid="eyes-opened">🙀</span> : <span data-testid="eyes-closed">😸</span>}
+                            {canViewPassword ? <span data-testid="plain-text-indicator">🙀</span> : <span data-testid="password-text-indicator">😸</span>}
                         </InputAdornment>
                     )
                 }}
