@@ -41,6 +41,7 @@ import {
 } from "./App-styles";
 import { Spacer } from "./common/Spacer";
 import { Loader } from "./components/Loader";
+import { PasswordField } from "./components";
 
 type extStates =
   | "not-authenticated"
@@ -741,8 +742,7 @@ function App() {
               Confirm Wallet Password
             </CustomLabel>
             <Spacer height="5px" />
-            <CustomInput
-              type="password"
+            <PasswordField
               id="standard-adornment-password"
               value={paymentPassword}
               onChange={(e) => setPaymentPassword(e.target.value)}
@@ -808,8 +808,7 @@ function App() {
             Confirm Wallet Password
           </CustomLabel>
           <Spacer height="5px" />
-          <CustomInput
-            type="password"
+          <PasswordField
             id="standard-adornment-password"
             value={paymentPassword}
             onChange={(e) => setPaymentPassword(e.target.value)}
@@ -1000,8 +999,7 @@ function App() {
                 Confirm Wallet Password
               </CustomLabel>
               <Spacer height="5px" />
-              <CustomInput
-                type="password"
+              <PasswordField
                 id="standard-adornment-password"
                 value={walletToBeDownloadedPassword}
                 onChange={(e) =>
@@ -1073,8 +1071,7 @@ function App() {
                 Wallet Password
               </CustomLabel>
               <Spacer height="5px" />
-              <CustomInput
-                type="password"
+              <PasswordField
                 id="standard-adornment-password"
                 value={walletToBeDownloadedPassword}
                 onChange={(e) =>
@@ -1086,8 +1083,7 @@ function App() {
                 Confirm Wallet Password
               </CustomLabel>
               <Spacer height="5px" />
-              <CustomInput
-                type="password"
+              <PasswordField
                 id="standard-adornment-password"
                 value={walletToBeDownloadedPasswordConfirm}
                 onChange={(e) =>
