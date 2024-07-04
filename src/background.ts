@@ -1,6 +1,7 @@
 // @ts-nocheck
 import Base58 from "./deps/Base58";
 import { createTransaction } from "./transactions/transactions";
+import { decryptChatMessage } from "./utils/decryptChatMessage";
 import { decryptStoredWallet } from "./utils/decryptWallet";
 import PhraseWallet from "./utils/generateWallet/phrase-wallet";
 import { validateAddress } from "./utils/validateAddress";
@@ -132,8 +133,10 @@ const processTransactionVersion2 = async (body: any, validApi: string) => {
   });
 };
 
-const transaction = async ({ type, params, apiVersion, keyPair }: any, validApi) => {
-
+const transaction = async (
+  { type, params, apiVersion, keyPair }: any,
+  validApi
+) => {
   const tx = createTransaction(type, keyPair, params);
   let res;
 
@@ -155,20 +158,22 @@ const makeTransactionRequest = async (
   keyPair,
   validApi
 ) => {
-
-  const myTxnrequest = await transaction({
-    nonce: 0,
-    type: 2,
-    params: {
-      recipient: receiver,
-      // recipientName: recipientName,
-      amount: amount,
-      lastReference: lastRef,
-      fee: fee,
+  const myTxnrequest = await transaction(
+    {
+      nonce: 0,
+      type: 2,
+      params: {
+        recipient: receiver,
+        // recipientName: recipientName,
+        amount: amount,
+        lastReference: lastRef,
+        fee: fee,
+      },
+      apiVersion: 2,
+      keyPair,
     },
-    apiVersion: 2,
-    keyPair,
-  }, validApi);
+    validApi
+  );
   return myTxnrequest;
 };
 
@@ -214,7 +219,7 @@ async function getNameOrAddress(receiver) {
     if (!response?.ok) throw new Error("Cannot fetch name");
     return { error: "cannot validate address or name" };
   } catch (error) {
-    throw new Error(error?.message || "cannot validate address or name")
+    throw new Error(error?.message || "cannot validate address or name");
   }
 }
 async function sendCoin({ password, amount, receiver }) {
@@ -238,7 +243,67 @@ async function sendCoin({ password, amount, receiver }) {
       wallet2._addresses[0].keyPair,
       validApi
     );
-    return {res, validApi};
+    return { res, validApi };
+  } catch (error) {
+    throw new Error(error.message);
+  }
+}
+
+function fetchMessages(apiCall) {
+  let retryDelay = 2000; // Start with a 2-second delay
+  const maxDuration = 360000; // Maximum duration set to 6 minutes
+  const startTime = Date.now(); // Record the start time
+
+  // Promise to handle polling logic
+  return new Promise((resolve, reject) => {
+      const attemptFetch = async () => {
+          if (Date.now() - startTime > maxDuration) {
+              return reject(new Error("Maximum polling time exceeded"));
+          }
+
+          try {
+              const response = await fetch(apiCall);
+              const data = await response.json();
+
+              if (data && data.length > 0) {
+                  resolve(data); // Resolve the promise when data is found
+              } else {
+                  console.log("No items found, retrying in", retryDelay / 1000, "seconds...");
+                  setTimeout(attemptFetch, retryDelay);
+                  retryDelay = Math.min(retryDelay * 2, 360000); // Ensure delay does not exceed 6 minutes
+              }
+          } catch (error) {
+              reject(error); // Reject the promise on error
+          }
+      };
+
+      attemptFetch(); // Initial call to start the polling
+  });
+}
+
+async function listenForChatMessage({ nodeBaseUrl, senderAddress, senderPublicKey, timestamp }) {
+  try {
+    let validApi = "";
+    const checkIfNodeBaseUrlIsAcceptable = apiEndpoints.find(
+      (item) => item === nodeBaseUrl
+    );
+    if (checkIfNodeBaseUrlIsAcceptable) {
+      validApi = checkIfNodeBaseUrlIsAcceptable;
+    } else {
+      validApi = await findUsableApi();
+    }
+    const wallet = await getSaveWallet();
+    const address = wallet.address0;
+    const before = timestamp + 5000
+    const after = timestamp - 5000
+    const apiCall = `${validApi}/chat/messages?involving=${senderAddress}&involving=${address}&reverse=true&limit=1&before=${before}&after=${after}}`;
+    const encodedMessageObj = await fetchMessages(apiCall)
+    console.log({encodedMessageObj})
+    const response = await decryptStoredWallet(password, wallet);
+    const wallet2 = new PhraseWallet(response, walletVersion);
+    const decodedMessage =  decryptChatMessage(encodedMessageObj.data, wallet2._addresses[0].keyPair.privateKey, senderPublicKey, encodedMessageObj.reference)
+    console.log({decodedMessage})
+    return { secretCode: decodedMessage };
   } catch (error) {
     throw new Error(error.message);
   }
@@ -321,6 +386,21 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         }
 
         break;
+
+      case "oauth": {
+        const { nodeBaseUrl, senderAddress, senderPublicKey, timestamp } = request.payload;
+
+        listenForChatMessage({ nodeBaseUrl, senderAddress, senderPublicKey, timestamp })
+          .then(({ secretCode }) => {
+            sendResponse(secretCode);
+          })
+          .catch((error) => {
+            sendResponse({ error: error.message });
+            console.error(error.message);
+          });
+
+        break;
+      }
       case "authentication":
         {
           getSaveWallet()
@@ -333,7 +413,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
               chrome.windows.getAll(
                 { populate: true, windowTypes: ["popup"] },
                 (windows) => {
-                  
                   // Attempt to find an existing popup window that has a tab with the correct URL
                   const existingPopup = windows.find(
                     (w) =>
@@ -396,7 +475,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                   let intervalId = null;
                   const startTime = Date.now();
                   const checkInterval = 3000; // Check every 3 seconds
-                  const timeout = request.timeout ? 0.75 * (request.timeout * 1000) : 60000; // Stop after 15 seconds
+                  const timeout = request.timeout
+                    ? 0.75 * (request.timeout * 1000)
+                    : 60000; // Stop after 15 seconds
 
                   const checkFunction = () => {
                     getSaveWallet()
@@ -439,7 +520,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
               chrome.windows.getAll(
                 { populate: true, windowTypes: ["popup"] },
                 (windows) => {
-              
                   // Attempt to find an existing popup window that has a tab with the correct URL
                   const existingPopup = windows.find(
                     (w) =>
@@ -515,7 +595,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           chrome.windows.getAll(
             { populate: true, windowTypes: ["popup"] },
             (windows) => {
-           
               // Attempt to find an existing popup window that has a tab with the correct URL
               const existingPopup = windows.find(
                 (w) =>
@@ -556,7 +635,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
               }
 
               const interactionId = Date.now().toString(); // Simple example; consider a better unique ID
-
 
               setTimeout(() => {
                 chrome.runtime.sendMessage({
@@ -638,33 +716,30 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         }
 
         break;
-      case "logout" : {
-        chrome.storage.local.remove('walletInfo', () => {
-          if (chrome.runtime.lastError) {
-            // Handle error
-            console.error(chrome.runtime.lastError.message);
-          } else {
-            // Data removed successfully
-            sendResponse(true)
-          }
-        });
-        
+      case "logout":
+        {
+          chrome.storage.local.remove("walletInfo", () => {
+            if (chrome.runtime.lastError) {
+              // Handle error
+              console.error(chrome.runtime.lastError.message);
+            } else {
+              // Data removed successfully
+              sendResponse(true);
+            }
+          });
+        }
 
-      }
-
-      break;
+        break;
     }
   }
   return true;
 });
-
 
 chrome.action.onClicked.addListener((tab) => {
   const popupUrl = chrome.runtime.getURL("index.html");
   chrome.windows.getAll(
     { populate: true, windowTypes: ["popup"] },
     (windows) => {
-     
       // Attempt to find an existing popup window that has a tab with the correct URL
       const existingPopup = windows.find(
         (w) =>

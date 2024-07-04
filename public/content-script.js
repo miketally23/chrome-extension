@@ -62,6 +62,35 @@ document.addEventListener('qortalExtensionRequests', async (event) => {
         }));
       }
     });
+  } else if (type === 'REQUEST_OAUTH') {
+    const hostname = window.location.hostname
+    const res = await connection(hostname)
+    if(!res){
+      document.dispatchEvent(new CustomEvent('qortalExtensionResponses', {
+        detail: { type: "OAUTH", data: {
+          error: "Not authorized"
+        }, requestId }
+      }));
+      return
+    }
+    chrome.runtime.sendMessage({ action: "oauth", payload: {
+      nodeBaseUrl,
+      senderAddress,
+      senderPublicKey, timestamp
+    }}, (response) => {
+      if (response.error) {
+        document.dispatchEvent(new CustomEvent('qortalExtensionResponses', {
+          detail: { type: "OAUTH", data: {
+            error: response.error
+          }, requestId }
+        }));
+      } else {
+        // Include the requestId in the detail when dispatching the response
+        document.dispatchEvent(new CustomEvent('qortalExtensionResponses', {
+          detail: { type: "OAUTH", data: response, requestId }
+        }));
+      }
+    });
   } else if (type === 'REQUEST_AUTHENTICATION') {
     const hostname = window.location.hostname
     const res = await connection(hostname)
