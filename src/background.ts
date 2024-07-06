@@ -263,8 +263,9 @@ function fetchMessages(apiCall) {
 
           try {
               const response = await fetch(apiCall);
+              console.log({response})
               const data = await response.json();
-
+            console.log({data})
               if (data && data.length > 0) {
                   resolve(data); // Resolve the promise when data is found
               } else {
@@ -296,7 +297,7 @@ async function listenForChatMessage({ nodeBaseUrl, senderAddress, senderPublicKe
     const address = wallet.address0;
     const before = timestamp + 5000
     const after = timestamp - 5000
-    const apiCall = `${validApi}/chat/messages?involving=${senderAddress}&involving=${address}&reverse=true&limit=1&before=${before}&after=${after}}`;
+    const apiCall = `${validApi}/chat/messages?involving=${senderAddress}&involving=${address}&reverse=true&limit=1&before=${before}&after=${after}`;
     const encodedMessageObj = await fetchMessages(apiCall)
     console.log({encodedMessageObj})
     const response = await decryptStoredWallet(password, wallet);
@@ -389,7 +390,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
       case "oauth": {
         const { nodeBaseUrl, senderAddress, senderPublicKey, timestamp } = request.payload;
-
+        console.log('sup', nodeBaseUrl, senderAddress, senderPublicKey, timestamp)
         listenForChatMessage({ nodeBaseUrl, senderAddress, senderPublicKey, timestamp })
           .then(({ secretCode }) => {
             sendResponse(secretCode);

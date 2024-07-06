@@ -63,6 +63,7 @@ document.addEventListener('qortalExtensionRequests', async (event) => {
       }
     });
   } else if (type === 'REQUEST_OAUTH') {
+    console.log('oauth enter')
     const hostname = window.location.hostname
     const res = await connection(hostname)
     if(!res){
@@ -73,10 +74,12 @@ document.addEventListener('qortalExtensionRequests', async (event) => {
       }));
       return
     }
+    console.log('oauth enter2')
+
     chrome.runtime.sendMessage({ action: "oauth", payload: {
-      nodeBaseUrl,
-      senderAddress,
-      senderPublicKey, timestamp
+      nodeBaseUrl: payload.nodeBaseUrl,
+      senderAddress: payload.senderAddress,
+      senderPublicKey: payload.senderPublicKey, timestamp: payload.timestamp
     }}, (response) => {
       if (response.error) {
         document.dispatchEvent(new CustomEvent('qortalExtensionResponses', {
