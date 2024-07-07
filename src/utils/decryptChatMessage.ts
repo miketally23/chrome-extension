@@ -7,8 +7,11 @@ import {Sha256} from 'asmcrypto.js'
 
 
 export const decryptChatMessage = (encryptedMessage, privateKey, recipientPublicKey, lastReference) => {
+	const test = encryptedMessage
+	console.log({test})
+	console.log({encryptedMessage, privateKey, recipientPublicKey, lastReference})
 	let _encryptedMessage = Base58.decode(encryptedMessage)
-
+	console.log({_encryptedMessage})
 	const _base58RecipientPublicKey = recipientPublicKey instanceof Uint8Array ? Base58.encode(recipientPublicKey) : recipientPublicKey
 	const _recipientPublicKey = Base58.decode(_base58RecipientPublicKey)
 

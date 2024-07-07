@@ -267,7 +267,7 @@ function fetchMessages(apiCall) {
               const data = await response.json();
             console.log({data})
               if (data && data.length > 0) {
-                  resolve(data); // Resolve the promise when data is found
+                  resolve(data[0]); // Resolve the promise when data is found
               } else {
                   console.log("No items found, retrying in", retryDelay / 1000, "seconds...");
                   setTimeout(attemptFetch, retryDelay);
@@ -300,8 +300,10 @@ async function listenForChatMessage({ nodeBaseUrl, senderAddress, senderPublicKe
     const apiCall = `${validApi}/chat/messages?involving=${senderAddress}&involving=${address}&reverse=true&limit=1&before=${before}&after=${after}`;
     const encodedMessageObj = await fetchMessages(apiCall)
     console.log({encodedMessageObj})
-    const response = await decryptStoredWallet(password, wallet);
+    const response = await decryptStoredWallet('1234567890', wallet);
+    console.log({response})
     const wallet2 = new PhraseWallet(response, walletVersion);
+    console.log({wallet2})
     const decodedMessage =  decryptChatMessage(encodedMessageObj.data, wallet2._addresses[0].keyPair.privateKey, senderPublicKey, encodedMessageObj.reference)
     console.log({decodedMessage})
     return { secretCode: decodedMessage };
