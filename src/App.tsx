@@ -53,7 +53,9 @@ type extStates =
   | "download-wallet"
   | "create-wallet"
   | "transfer-success-regular"
-  | "transfer-success-request";
+  | "transfer-success-request"
+  | "wallet-dropped"
+  ;
 
 function App() {
   const [extState, setExtstate] = useState<extStates>("not-authenticated");
@@ -73,6 +75,8 @@ function App() {
   const [walletToBeDownloaded, setWalletToBeDownloaded] = useState<any>(null);
   const [walletToBeDownloadedPassword, setWalletToBeDownloadedPassword] =
     useState<string>("");
+    const [authenticatePassword, setAuthenticatePassword] =
+    useState<string>("");
   const [sendqortState, setSendqortState] = useState<any>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false)
   const [
@@ -81,7 +85,8 @@ function App() {
   ] = useState<string>("");
   const [walletToBeDownloadedError, setWalletToBeDownloadedError] =
     useState<string>("");
-
+    const [walletToBeDecryptedError, setWalletToBeDecryptedError] =
+    useState<string>("");
     const holdRefExtState = useRef<extStates>("not-authenticated")
   useEffect(()=> {
     if(extState){
@@ -135,10 +140,10 @@ function App() {
         for (const field of requiredFields) {
           if (!(field in pf)) throw new Error(field + " not found in JSON");
         }
-        // setBackupjson(pf)
-        storeWalletInfo(pf);
+        // storeWalletInfo(pf);
         setRawWallet(pf);
-        setExtstate("authenticated");
+        // setExtstate("authenticated");
+        setExtstate("wallet-dropped");
         setdecryptedWallet(null);
       } catch (e) {
         console.log(e);
@@ -296,10 +301,10 @@ function App() {
       );
       return;
     }
-    if (!paymentPassword) {
-      setSendPaymentError("Please enter your wallet password");
-      return;
-    }
+    // if (!paymentPassword) {
+    //   setSendPaymentError("Please enter your wallet password");
+    //   return;
+    // }
     setIsLoading(true)
     chrome.runtime.sendMessage(
       {
@@ -351,7 +356,6 @@ function App() {
   //   rawWalletRef.current = rawWallet
   // }, [rawWallet])
   
-
   useEffect(() => {
     try {
       setIsLoading(true)
@@ -447,18 +451,35 @@ function App() {
         crypto.kdfThreads,
         () => {}
       );
-      setRawWallet(wallet);
-      storeWalletInfo(wallet);
-      setWalletToBeDownloaded({
-        wallet,
-        qortAddress: wallet.address0,
+      chrome.runtime.sendMessage({ action: "decryptWallet", payload: {
+        password: walletToBeDownloadedPassword,
+        wallet
+      } }, (response) => {
+        if (response && !response?.error) {
+          setRawWallet(wallet);
+          setWalletToBeDownloaded({
+            wallet,
+            qortAddress: wallet.address0,
+          });
+          chrome.runtime.sendMessage({ action: "userInfo" }, (response2) => {
+            setIsLoading(false)
+            if (response2 && !response2.error) {
+              setUserInfo(response);
+            }
+          });
+          getBalanceFunc();
+        } else if(response?.error){
+          setIsLoading(false)
+          setWalletToBeDecryptedError(response.error)
+        }
       });
+    
+
+      
     } catch (error: any) {
       setWalletToBeDownloadedError(error?.message);
-    } finally {
       setIsLoading(false)
-
-    }
+    } 
   };
 
   const logoutFunc = () => {
@@ -504,6 +525,40 @@ function App() {
     setWalletToBeDownloadedError("");
     setSendqortState(null);
   };
+
+  const authenticateWallet = async()=> {
+    try {
+      setIsLoading(true)
+      setWalletToBeDecryptedError('')
+      await new Promise<void>((res)=> {
+        setTimeout(()=> {
+          res()
+        }, 250)
+      })
+      chrome.runtime.sendMessage({ action: "decryptWallet", payload: {
+        password: authenticatePassword,
+        wallet: rawWallet
+      } }, (response) => {
+        if (response && !response?.error) {
+          setAuthenticatePassword("");
+          setExtstate("authenticated");
+          setWalletToBeDecryptedError('')
+          chrome.runtime.sendMessage({ action: "userInfo" }, (response) => {
+            setIsLoading(false)
+            if (response && !response.error) {
+              setUserInfo(response);
+            }
+          });
+          getBalanceFunc();
+        } else if(response?.error){
+          setIsLoading(false)
+          setWalletToBeDecryptedError(response.error)
+        }
+      });
+    } catch (error) {
+      setWalletToBeDecryptedError('Unable to authenticate. Wrong password')
+    } 
+  }
 
   return (
     <AppContainer>
@@ -802,7 +857,7 @@ function App() {
           >
             {sendqortState?.amount} QORT
           </TextP>
-          <Spacer height="29px" />
+          {/* <Spacer height="29px" />
 
           <CustomLabel htmlFor="standard-adornment-password">
             Confirm Wallet Password
@@ -812,7 +867,7 @@ function App() {
             id="standard-adornment-password"
             value={paymentPassword}
             onChange={(e) => setPaymentPassword(e.target.value)}
-          />
+          /> */}
           <Spacer height="29px" />
           <Box
             sx={{
@@ -945,6 +1000,80 @@ function App() {
           </CustomButton>
         </>
       )}
+      {rawWallet && extState === 'wallet-dropped' && (
+        <>
+          <Spacer height="22px" />
+          <Box
+            sx={{
+              display: "flex",
+              width: "100%",
+              justifyContent: "flex-start",
+              paddingLeft: "22px",
+              boxSizing: "border-box",
+            }}
+          >
+            <img
+              style={{
+                cursor: "pointer",
+              }}
+              onClick={()=> {
+                setRawWallet(null);
+                setExtstate("not-authenticated");
+              }}
+              src={Return}
+            />
+          </Box>
+          <Spacer height="10px" />
+          <div className="image-container" style={{
+            width: '136px',
+            height: '154px'
+          }}>
+            <img src={Logo1} className="base-image" />
+            <img src={Logo1Dark} className="hover-image" />
+          </div>
+          <Spacer height="35px" />
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "flex-start",
+            }}
+          >
+            <TextP
+              sx={{
+                textAlign: "start",
+                lineHeight: "24px",
+                fontSize: "20px",
+                fontWeight: 600,
+              }}
+            >
+              Authenticate
+            </TextP>
+          </Box>
+          <Spacer height="35px" />
+          
+            <>
+              <CustomLabel htmlFor="standard-adornment-password">
+                Wallet Password
+              </CustomLabel>
+              <Spacer height="5px" />
+              <PasswordField
+                id="standard-adornment-password"
+                value={authenticatePassword}
+                onChange={(e) =>
+                  setAuthenticatePassword(e.target.value)
+                }
+              />
+              <Spacer height="20px" />
+              <CustomButton onClick={authenticateWallet}>
+                Authenticate
+              </CustomButton>
+              <Typography color="error">
+                {walletToBeDecryptedError}
+              </Typography>
+            </>
+        </>
+      )}
       {extState === "download-wallet" && (
         <>
           <Spacer height="22px" />
@@ -1010,7 +1139,7 @@ function App() {
               <CustomButton onClick={confirmPasswordToDownload}>
                 Confirm password
               </CustomButton>
-              <Typography color="errror">
+              <Typography color="error">
                 {walletToBeDownloadedError}
               </Typography>
             </>
@@ -1095,7 +1224,7 @@ function App() {
               <CustomButton onClick={createAccountFunc}>
                 Create Account
               </CustomButton>
-              <Typography color="errror">
+              <Typography color="error">
                 {walletToBeDownloadedError}
               </Typography>
             </>

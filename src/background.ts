@@ -80,6 +80,15 @@ async function getAddressInfo(address) {
   return data;
 }
 
+async function getKeyPair() {
+  const res = await chrome.storage.local.get(["keyPair"]);
+  if (res?.keyPair) {
+    return res.keyPair;
+  } else {
+    throw new Error("Wallet not authenticated");
+  }
+}
+
 async function getSaveWallet() {
   const res = await chrome.storage.local.get(["walletInfo"]);
   if (res?.walletInfo) {
@@ -222,14 +231,67 @@ async function getNameOrAddress(receiver) {
     throw new Error(error?.message || "cannot validate address or name");
   }
 }
-async function sendCoin({ password, amount, receiver }) {
+
+async function decryptWallet({password, wallet, walletVersion}) {
+  try {
+    const response = await decryptStoredWallet(password, wallet);
+    const wallet2 = new PhraseWallet(response, walletVersion);
+    const keyPair = wallet2._addresses[0].keyPair;
+    const toSave = {
+      privateKey: Base58.encode(keyPair.privateKey),
+  publicKey: Base58.encode(keyPair.publicKey)
+    }
+    const dataString = JSON.stringify(toSave)
+    await new Promise((resolve, reject) => {
+      chrome.storage.local.set({ keyPair: dataString }, () => {
+        if (chrome.runtime.lastError) {
+          reject(new Error(chrome.runtime.lastError.message));
+        } else {
+          resolve(true);
+        }
+      });
+    });
+
+    await new Promise((resolve, reject) => {
+      chrome.storage.local.set({ walletInfo: wallet }, () => {
+        if (chrome.runtime.lastError) {
+          reject(new Error(chrome.runtime.lastError.message));
+        } else {
+          resolve(true);
+        }
+      });
+    });
+
+    return true; 
+  } catch (error) {
+    console.log({error})
+    throw new Error(error.message);
+  }
+}
+
+async function sendCoin({ password, amount, receiver }, skipConfirmPassword) {
   try {
     const confirmReceiver = await getNameOrAddress(receiver);
     if (confirmReceiver.error)
       throw new Error("Invalid receiver address or name");
     const wallet = await getSaveWallet();
-    const response = await decryptStoredWallet(password, wallet);
+    let keyPair = ''
+    if(skipConfirmPassword){
+      const resKeyPair = await getKeyPair()
+      const parsedData = JSON.parse(resKeyPair)
+      const uint8PrivateKey = Base58.decode(parsedData.privateKey);
+      const uint8PublicKey = Base58.decode(parsedData.publicKey);
+      keyPair = {
+        privateKey: uint8PrivateKey,
+        publicKey: uint8PublicKey
+      };
+    } else {
+      const response = await decryptStoredWallet(password, wallet);
     const wallet2 = new PhraseWallet(response, walletVersion);
+
+    keyPair = wallet2._addresses[0].keyPair
+    }
+    
 
     const lastRef = await getLastRef();
     const fee = await sendQortFee();
@@ -240,7 +302,7 @@ async function sendCoin({ password, amount, receiver }) {
       lastRef,
       amount,
       fee,
-      wallet2._addresses[0].keyPair,
+      keyPair,
       validApi
     );
     return { res, validApi };
@@ -263,13 +325,10 @@ function fetchMessages(apiCall) {
 
           try {
               const response = await fetch(apiCall);
-              console.log({response})
               const data = await response.json();
-            console.log({data})
               if (data && data.length > 0) {
                   resolve(data[0]); // Resolve the promise when data is found
               } else {
-                  console.log("No items found, retrying in", retryDelay / 1000, "seconds...");
                   setTimeout(attemptFetch, retryDelay);
                   retryDelay = Math.min(retryDelay * 2, 360000); // Ensure delay does not exceed 6 minutes
               }
@@ -299,15 +358,19 @@ async function listenForChatMessage({ nodeBaseUrl, senderAddress, senderPublicKe
     const after = timestamp - 5000
     const apiCall = `${validApi}/chat/messages?involving=${senderAddress}&involving=${address}&reverse=true&limit=1&before=${before}&after=${after}`;
     const encodedMessageObj = await fetchMessages(apiCall)
-    console.log({encodedMessageObj})
-    const response = await decryptStoredWallet('1234567890', wallet);
-    console.log({response})
-    const wallet2 = new PhraseWallet(response, walletVersion);
-    console.log({wallet2})
-    const decodedMessage =  decryptChatMessage(encodedMessageObj.data, wallet2._addresses[0].keyPair.privateKey, senderPublicKey, encodedMessageObj.reference)
-    console.log({decodedMessage})
+   
+    const resKeyPair = await getKeyPair()
+      const parsedData = JSON.parse(resKeyPair)
+      const uint8PrivateKey = Base58.decode(parsedData.privateKey);
+      const uint8PublicKey = Base58.decode(parsedData.publicKey);
+      const keyPair = {
+        privateKey: uint8PrivateKey,
+        publicKey: uint8PublicKey
+      };
+    const decodedMessage =  decryptChatMessage(encodedMessageObj.data, keyPair.privateKey, senderPublicKey, encodedMessageObj.reference)
     return { secretCode: decodedMessage };
   } catch (error) {
+    console.error(error)
     throw new Error(error.message);
   }
 }
@@ -329,15 +392,21 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         });
         break;
       case "getWalletInfo":
-        chrome.storage.local.get(["walletInfo"], (result) => {
-          if (chrome.runtime.lastError) {
-            sendResponse({ error: chrome.runtime.lastError.message });
-          } else if (result.walletInfo) {
-            sendResponse({ walletInfo: result.walletInfo });
-          } else {
-            sendResponse({ error: "No wallet info found" });
-          }
-        });
+       
+          getKeyPair().then(()=> {
+            chrome.storage.local.get(["walletInfo"], (result) => {
+              if (chrome.runtime.lastError) {
+                sendResponse({ error: chrome.runtime.lastError.message });
+              } else if (result.walletInfo) {
+                sendResponse({ walletInfo: result.walletInfo });
+              } else {
+                sendResponse({ error: "No wallet info found" });
+              }
+            });
+          }).catch((error)=> {
+            sendResponse({ error: error.message });
+          })
+        
         break;
       case "validApi":
         findUsableApi()
@@ -366,6 +435,22 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             console.error(error.message);
           });
         break;
+        case "decryptWallet": {
+          const { password, wallet } = request.payload;
+
+          decryptWallet({
+            password, wallet, walletVersion
+          })
+            .then((hasDecrypted) => {
+              sendResponse(hasDecrypted);
+            })
+            .catch((error) => {
+              sendResponse({ error: error?.message });
+              console.error(error.message);
+            });
+        }
+       
+        break;
       case "balance":
         getBalanceInfo()
           .then((balance) => {
@@ -392,7 +477,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
       case "oauth": {
         const { nodeBaseUrl, senderAddress, senderPublicKey, timestamp } = request.payload;
-        console.log('sup', nodeBaseUrl, senderAddress, senderPublicKey, timestamp)
+
         listenForChatMessage({ nodeBaseUrl, senderAddress, senderPublicKey, timestamp })
           .then(({ secretCode }) => {
             sendResponse(secretCode);
@@ -699,7 +784,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             sendResponse(false);
             return;
           }
-          sendCoin({ password, amount, receiver })
+          sendCoin({ password, amount, receiver }, true)
             .then((res) => {
               sendResponse(true);
               // Use the sendResponse callback to respond to the original message
@@ -721,7 +806,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         break;
       case "logout":
         {
-          chrome.storage.local.remove("walletInfo", () => {
+          chrome.storage.local.remove(["keyPair", "walletInfo"], () => {
             if (chrome.runtime.lastError) {
               // Handle error
               console.error(chrome.runtime.lastError.message);
