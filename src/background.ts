@@ -811,6 +811,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
               // Handle error
               console.error(chrome.runtime.lastError.message);
             } else {
+              chrome.tabs.query({}, function(tabs) {
+                tabs.forEach(tab => {
+                  console.log({tab})
+                    chrome.tabs.sendMessage(tab.id, { type: "LOGOUT" });
+                });
+            });
               // Data removed successfully
               sendResponse(true);
             }

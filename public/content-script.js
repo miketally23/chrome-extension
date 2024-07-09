@@ -180,3 +180,15 @@ document.addEventListener('qortalExtensionRequests', async (event) => {
   }
   // Handle other request types as needed...
 });
+
+
+chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
+  console.log({message})
+  if (message.type === "LOGOUT") {
+      // Notify the web page
+      window.postMessage({
+          type: "LOGOUT",
+          from: 'qortal'
+      }, "*");
+  }
+});
