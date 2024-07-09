@@ -768,13 +768,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
               sendResponse(true);
             }
           }
+
+          pendingResponses.delete(interactionId3);
         }
 
         break;
       case "sendQortConfirmation":
         const { password, amount, receiver, isDecline } = request.payload;
         const interactionId2 = request.payload.interactionId;
-
         // Retrieve the stored sendResponse callback
         const originalSendResponse = pendingResponses.get(interactionId2);
 
@@ -782,6 +783,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           if (isDecline) {
             originalSendResponse({ error: "User has declined" });
             sendResponse(false);
+            pendingResponses.delete(interactionId2);
             return;
           }
           sendCoin({ password, amount, receiver }, true)
@@ -789,6 +791,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
               sendResponse(true);
               // Use the sendResponse callback to respond to the original message
               originalSendResponse(res);
+              // Remove the callback from the Map as it's no longer needed
+              pendingResponses.delete(interactionId2);
               // chrome.runtime.sendMessage({
               //   action: "closePopup",
               // });
@@ -799,8 +803,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
               originalSendResponse({ error: error.message });
             });
 
-          // Remove the callback from the Map as it's no longer needed
-          pendingResponses.delete(interactionId2);
         }
 
         break;
@@ -813,7 +815,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             } else {
               chrome.tabs.query({}, function(tabs) {
                 tabs.forEach(tab => {
-                  console.log({tab})
                     chrome.tabs.sendMessage(tab.id, { type: "LOGOUT" });
                 });
             });
