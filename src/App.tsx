@@ -1063,9 +1063,14 @@ function App() {
                 onChange={(e) =>
                   setAuthenticatePassword(e.target.value)
                 }
+                onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            authenticateWallet();
+                          }
+                        }}
               />
               <Spacer height="20px" />
-              <CustomButton onClick={authenticateWallet}>
+              <CustomButton onClick={authenticateWallet} >
                 Authenticate
               </CustomButton>
               <Typography color="error">
