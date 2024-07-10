@@ -4,6 +4,7 @@ import { crypto, walletVersion } from '../../constants/decryptWallet';
 import { doInitWorkers, kdf } from '../../deps/kdf';
 import PhraseWallet from './phrase-wallet';
 import * as WORDLISTS from './wordlists';
+import { saveAs } from 'file-saver';
 
 export function generateRandomSentence(template = 'adverb verb noun adjective noun adverb verb noun adjective noun adjective verbed adjective noun', maxWordLength = 0, capitalize = true) {
     const partsOfSpeechMap = {
@@ -83,63 +84,19 @@ export const createAccount = async()=> {
        
   }
 
-  export const  saveFileToDisk= async(data, qortAddress) => {
+  export const saveFileToDisk = async (data, qortAddress) => {
     try {
-    const dataString = JSON.stringify(data)
-        const blob = new Blob([dataString], { type: 'text/plain;charset=utf-8' })
-        const fileName = "qortal_backup_" + qortAddress + ".json"
-        // Feature detection. The API needs to be supported
-        // and the app not run in an iframe.
-        const supportsFileSystemAccess =
-        'showSaveFilePicker' in window &&
-        (() => {
-            try {
-                return window.self === window.top
-            } catch {
-                return false
-            }
-        })()
-        // If the File System Access API is supported...
-        if (supportsFileSystemAccess) {
-            try {
-            // Show the file save dialog.
-            const fileHandle = await window.showSaveFilePicker({
-            suggestedName: fileName,
-            types: [{
-                    description: "File",
-            }]
-        })
-            // Write the blob to the file.
-            const writable = await fileHandle.createWritable()
-            await writable.write(blob)
-            await writable.close()
-            console.log("FILE SAVED")
-            return
-        } catch (err) {
-            // Fail silently if the user has simply canceled the dialog.
-            if (err.name === 'AbortError') {
-            console.error(err.name, err.message)
-            return
-            }
-        }
-        }
-      // Fallback if the File System Access API is not supported...
-      // Create the blob URL.
-      const blobURL = URL.createObjectURL(blob)
-      // Create the `<a download>` element and append it invisibly.
-      const a = document.createElement('a')
-      a.href = blobURL
-      a.download = fileName
-      a.style.display = 'none'
-      document.body.append(a)
-      // Programmatically click the element.
-      a.click()
-      // Revoke the blob URL and remove the element.
-      setTimeout(() => {
-        URL.revokeObjectURL(blobURL);
-        a.remove();
-      }, 1000);
+        const dataString = JSON.stringify(data);
+        const blob = new Blob([dataString], { type: 'application/json' });
+    const fileName = "qortal_backup_" + qortAddress + ".json";
+
+    saveAs(blob, fileName);
     } catch (error) {
-        console.log({error})
+        console.log({ error });
+        if (error.name === 'AbortError') {
+            return;
+        }
+        // This fallback will only be executed if the `showSaveFilePicker` method fails.
+        FileSaver.saveAs(blob, fileName); // Ensure FileSaver is properly imported or available in your environment.
     }
 }

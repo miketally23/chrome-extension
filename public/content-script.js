@@ -62,6 +62,36 @@ document.addEventListener('qortalExtensionRequests', async (event) => {
         }));
       }
     });
+  } else if (type === 'REQUEST_OAUTH') {
+    const hostname = window.location.hostname
+    const res = await connection(hostname)
+    if(!res){
+      document.dispatchEvent(new CustomEvent('qortalExtensionResponses', {
+        detail: { type: "OAUTH", data: {
+          error: "Not authorized"
+        }, requestId }
+      }));
+      return
+    }
+
+    chrome.runtime.sendMessage({ action: "oauth", payload: {
+      nodeBaseUrl: payload.nodeBaseUrl,
+      senderAddress: payload.senderAddress,
+      senderPublicKey: payload.senderPublicKey, timestamp: payload.timestamp
+    }}, (response) => {
+      if (response.error) {
+        document.dispatchEvent(new CustomEvent('qortalExtensionResponses', {
+          detail: { type: "OAUTH", data: {
+            error: response.error
+          }, requestId }
+        }));
+      } else {
+        // Include the requestId in the detail when dispatching the response
+        document.dispatchEvent(new CustomEvent('qortalExtensionResponses', {
+          detail: { type: "OAUTH", data: response, requestId }
+        }));
+      }
+    });
   } else if (type === 'REQUEST_AUTHENTICATION') {
     const hostname = window.location.hostname
     const res = await connection(hostname)
@@ -147,4 +177,15 @@ document.addEventListener('qortalExtensionRequests', async (event) => {
     });
   }
   // Handle other request types as needed...
+});
+
+
+chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
+  if (message.type === "LOGOUT") {
+      // Notify the web page
+      window.postMessage({
+          type: "LOGOUT",
+          from: 'qortal'
+      }, "*");
+  }
 });
