@@ -19,9 +19,8 @@ export const walletVersion = 2;
 // List of your API endpoints
 const apiEndpoints = [
   "https://api.qortal.org",
-  "https://webapi.qortal.online",
-  "https://web-api.qortal.online",
-  "https://api.qortal.online",
+  "https://api2.qortal.org",
+  "https://appnode.qortal.org",
   "https://apinode.qortalnodes.live",
   "https://apinode1.qortalnodes.live",
   "https://apinode2.qortalnodes.live",
