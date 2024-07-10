@@ -1,6 +1,7 @@
 // @ts-nocheck
 import Base58 from "./deps/Base58";
 import { createTransaction } from "./transactions/transactions";
+import { decryptChatMessage } from "./utils/decryptChatMessage";
 import { decryptStoredWallet } from "./utils/decryptWallet";
 import PhraseWallet from "./utils/generateWallet/phrase-wallet";
 import { validateAddress } from "./utils/validateAddress";
@@ -18,9 +19,8 @@ export const walletVersion = 2;
 // List of your API endpoints
 const apiEndpoints = [
   "https://api.qortal.org",
-  "https://webapi.qortal.online",
-  "https://web-api.qortal.online",
-  "https://api.qortal.online",
+  "https://api2.qortal.org",
+  "https://appnode.qortal.org",
   "https://apinode.qortalnodes.live",
   "https://apinode1.qortalnodes.live",
   "https://apinode2.qortalnodes.live",
@@ -79,6 +79,15 @@ async function getAddressInfo(address) {
   return data;
 }
 
+async function getKeyPair() {
+  const res = await chrome.storage.local.get(["keyPair"]);
+  if (res?.keyPair) {
+    return res.keyPair;
+  } else {
+    throw new Error("Wallet not authenticated");
+  }
+}
+
 async function getSaveWallet() {
   const res = await chrome.storage.local.get(["walletInfo"]);
   if (res?.walletInfo) {
@@ -132,8 +141,10 @@ const processTransactionVersion2 = async (body: any, validApi: string) => {
   });
 };
 
-const transaction = async ({ type, params, apiVersion, keyPair }: any, validApi) => {
-
+const transaction = async (
+  { type, params, apiVersion, keyPair }: any,
+  validApi
+) => {
   const tx = createTransaction(type, keyPair, params);
   let res;
 
@@ -155,20 +166,22 @@ const makeTransactionRequest = async (
   keyPair,
   validApi
 ) => {
-
-  const myTxnrequest = await transaction({
-    nonce: 0,
-    type: 2,
-    params: {
-      recipient: receiver,
-      // recipientName: recipientName,
-      amount: amount,
-      lastReference: lastRef,
-      fee: fee,
+  const myTxnrequest = await transaction(
+    {
+      nonce: 0,
+      type: 2,
+      params: {
+        recipient: receiver,
+        // recipientName: recipientName,
+        amount: amount,
+        lastReference: lastRef,
+        fee: fee,
+      },
+      apiVersion: 2,
+      keyPair,
     },
-    apiVersion: 2,
-    keyPair,
-  }, validApi);
+    validApi
+  );
   return myTxnrequest;
 };
 
@@ -214,17 +227,70 @@ async function getNameOrAddress(receiver) {
     if (!response?.ok) throw new Error("Cannot fetch name");
     return { error: "cannot validate address or name" };
   } catch (error) {
-    throw new Error(error?.message || "cannot validate address or name")
+    throw new Error(error?.message || "cannot validate address or name");
   }
 }
-async function sendCoin({ password, amount, receiver }) {
+
+async function decryptWallet({password, wallet, walletVersion}) {
+  try {
+    const response = await decryptStoredWallet(password, wallet);
+    const wallet2 = new PhraseWallet(response, walletVersion);
+    const keyPair = wallet2._addresses[0].keyPair;
+    const toSave = {
+      privateKey: Base58.encode(keyPair.privateKey),
+  publicKey: Base58.encode(keyPair.publicKey)
+    }
+    const dataString = JSON.stringify(toSave)
+    await new Promise((resolve, reject) => {
+      chrome.storage.local.set({ keyPair: dataString }, () => {
+        if (chrome.runtime.lastError) {
+          reject(new Error(chrome.runtime.lastError.message));
+        } else {
+          resolve(true);
+        }
+      });
+    });
+
+    await new Promise((resolve, reject) => {
+      chrome.storage.local.set({ walletInfo: wallet }, () => {
+        if (chrome.runtime.lastError) {
+          reject(new Error(chrome.runtime.lastError.message));
+        } else {
+          resolve(true);
+        }
+      });
+    });
+
+    return true; 
+  } catch (error) {
+    console.log({error})
+    throw new Error(error.message);
+  }
+}
+
+async function sendCoin({ password, amount, receiver }, skipConfirmPassword) {
   try {
     const confirmReceiver = await getNameOrAddress(receiver);
     if (confirmReceiver.error)
       throw new Error("Invalid receiver address or name");
     const wallet = await getSaveWallet();
-    const response = await decryptStoredWallet(password, wallet);
+    let keyPair = ''
+    if(skipConfirmPassword){
+      const resKeyPair = await getKeyPair()
+      const parsedData = JSON.parse(resKeyPair)
+      const uint8PrivateKey = Base58.decode(parsedData.privateKey);
+      const uint8PublicKey = Base58.decode(parsedData.publicKey);
+      keyPair = {
+        privateKey: uint8PrivateKey,
+        publicKey: uint8PublicKey
+      };
+    } else {
+      const response = await decryptStoredWallet(password, wallet);
     const wallet2 = new PhraseWallet(response, walletVersion);
+
+    keyPair = wallet2._addresses[0].keyPair
+    }
+    
 
     const lastRef = await getLastRef();
     const fee = await sendQortFee();
@@ -235,11 +301,75 @@ async function sendCoin({ password, amount, receiver }) {
       lastRef,
       amount,
       fee,
-      wallet2._addresses[0].keyPair,
+      keyPair,
       validApi
     );
-    return {res, validApi};
+    return { res, validApi };
   } catch (error) {
+    throw new Error(error.message);
+  }
+}
+
+function fetchMessages(apiCall) {
+  let retryDelay = 2000; // Start with a 2-second delay
+  const maxDuration = 360000; // Maximum duration set to 6 minutes
+  const startTime = Date.now(); // Record the start time
+
+  // Promise to handle polling logic
+  return new Promise((resolve, reject) => {
+      const attemptFetch = async () => {
+          if (Date.now() - startTime > maxDuration) {
+              return reject(new Error("Maximum polling time exceeded"));
+          }
+
+          try {
+              const response = await fetch(apiCall);
+              const data = await response.json();
+              if (data && data.length > 0) {
+                  resolve(data[0]); // Resolve the promise when data is found
+              } else {
+                  setTimeout(attemptFetch, retryDelay);
+                  retryDelay = Math.min(retryDelay * 2, 360000); // Ensure delay does not exceed 6 minutes
+              }
+          } catch (error) {
+              reject(error); // Reject the promise on error
+          }
+      };
+
+      attemptFetch(); // Initial call to start the polling
+  });
+}
+
+async function listenForChatMessage({ nodeBaseUrl, senderAddress, senderPublicKey, timestamp }) {
+  try {
+    let validApi = "";
+    const checkIfNodeBaseUrlIsAcceptable = apiEndpoints.find(
+      (item) => item === nodeBaseUrl
+    );
+    if (checkIfNodeBaseUrlIsAcceptable) {
+      validApi = checkIfNodeBaseUrlIsAcceptable;
+    } else {
+      validApi = await findUsableApi();
+    }
+    const wallet = await getSaveWallet();
+    const address = wallet.address0;
+    const before = timestamp + 5000
+    const after = timestamp - 5000
+    const apiCall = `${validApi}/chat/messages?involving=${senderAddress}&involving=${address}&reverse=true&limit=1&before=${before}&after=${after}`;
+    const encodedMessageObj = await fetchMessages(apiCall)
+   
+    const resKeyPair = await getKeyPair()
+      const parsedData = JSON.parse(resKeyPair)
+      const uint8PrivateKey = Base58.decode(parsedData.privateKey);
+      const uint8PublicKey = Base58.decode(parsedData.publicKey);
+      const keyPair = {
+        privateKey: uint8PrivateKey,
+        publicKey: uint8PublicKey
+      };
+    const decodedMessage =  decryptChatMessage(encodedMessageObj.data, keyPair.privateKey, senderPublicKey, encodedMessageObj.reference)
+    return { secretCode: decodedMessage };
+  } catch (error) {
+    console.error(error)
     throw new Error(error.message);
   }
 }
@@ -261,15 +391,21 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         });
         break;
       case "getWalletInfo":
-        chrome.storage.local.get(["walletInfo"], (result) => {
-          if (chrome.runtime.lastError) {
-            sendResponse({ error: chrome.runtime.lastError.message });
-          } else if (result.walletInfo) {
-            sendResponse({ walletInfo: result.walletInfo });
-          } else {
-            sendResponse({ error: "No wallet info found" });
-          }
-        });
+       
+          getKeyPair().then(()=> {
+            chrome.storage.local.get(["walletInfo"], (result) => {
+              if (chrome.runtime.lastError) {
+                sendResponse({ error: chrome.runtime.lastError.message });
+              } else if (result.walletInfo) {
+                sendResponse({ walletInfo: result.walletInfo });
+              } else {
+                sendResponse({ error: "No wallet info found" });
+              }
+            });
+          }).catch((error)=> {
+            sendResponse({ error: error.message });
+          })
+        
         break;
       case "validApi":
         findUsableApi()
@@ -298,6 +434,22 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             console.error(error.message);
           });
         break;
+        case "decryptWallet": {
+          const { password, wallet } = request.payload;
+
+          decryptWallet({
+            password, wallet, walletVersion
+          })
+            .then((hasDecrypted) => {
+              sendResponse(hasDecrypted);
+            })
+            .catch((error) => {
+              sendResponse({ error: error?.message });
+              console.error(error.message);
+            });
+        }
+       
+        break;
       case "balance":
         getBalanceInfo()
           .then((balance) => {
@@ -321,6 +473,21 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         }
 
         break;
+
+      case "oauth": {
+        const { nodeBaseUrl, senderAddress, senderPublicKey, timestamp } = request.payload;
+
+        listenForChatMessage({ nodeBaseUrl, senderAddress, senderPublicKey, timestamp })
+          .then(({ secretCode }) => {
+            sendResponse(secretCode);
+          })
+          .catch((error) => {
+            sendResponse({ error: error.message });
+            console.error(error.message);
+          });
+
+        break;
+      }
       case "authentication":
         {
           getSaveWallet()
@@ -333,7 +500,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
               chrome.windows.getAll(
                 { populate: true, windowTypes: ["popup"] },
                 (windows) => {
-                  
                   // Attempt to find an existing popup window that has a tab with the correct URL
                   const existingPopup = windows.find(
                     (w) =>
@@ -396,7 +562,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                   let intervalId = null;
                   const startTime = Date.now();
                   const checkInterval = 3000; // Check every 3 seconds
-                  const timeout = request.timeout ? 0.75 * (request.timeout * 1000) : 60000; // Stop after 15 seconds
+                  const timeout = request.timeout
+                    ? 0.75 * (request.timeout * 1000)
+                    : 60000; // Stop after 15 seconds
 
                   const checkFunction = () => {
                     getSaveWallet()
@@ -439,7 +607,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
               chrome.windows.getAll(
                 { populate: true, windowTypes: ["popup"] },
                 (windows) => {
-              
                   // Attempt to find an existing popup window that has a tab with the correct URL
                   const existingPopup = windows.find(
                     (w) =>
@@ -515,7 +682,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           chrome.windows.getAll(
             { populate: true, windowTypes: ["popup"] },
             (windows) => {
-           
               // Attempt to find an existing popup window that has a tab with the correct URL
               const existingPopup = windows.find(
                 (w) =>
@@ -556,7 +722,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
               }
 
               const interactionId = Date.now().toString(); // Simple example; consider a better unique ID
-
 
               setTimeout(() => {
                 chrome.runtime.sendMessage({
@@ -602,13 +767,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
               sendResponse(true);
             }
           }
+
+          pendingResponses.delete(interactionId3);
         }
 
         break;
       case "sendQortConfirmation":
         const { password, amount, receiver, isDecline } = request.payload;
         const interactionId2 = request.payload.interactionId;
-
         // Retrieve the stored sendResponse callback
         const originalSendResponse = pendingResponses.get(interactionId2);
 
@@ -616,13 +782,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           if (isDecline) {
             originalSendResponse({ error: "User has declined" });
             sendResponse(false);
+            pendingResponses.delete(interactionId2);
             return;
           }
-          sendCoin({ password, amount, receiver })
+          sendCoin({ password, amount, receiver }, true)
             .then((res) => {
               sendResponse(true);
               // Use the sendResponse callback to respond to the original message
               originalSendResponse(res);
+              // Remove the callback from the Map as it's no longer needed
+              pendingResponses.delete(interactionId2);
               // chrome.runtime.sendMessage({
               //   action: "closePopup",
               // });
@@ -633,38 +802,38 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
               originalSendResponse({ error: error.message });
             });
 
-          // Remove the callback from the Map as it's no longer needed
-          pendingResponses.delete(interactionId2);
         }
 
         break;
-      case "logout" : {
-        chrome.storage.local.remove('walletInfo', () => {
-          if (chrome.runtime.lastError) {
-            // Handle error
-            console.error(chrome.runtime.lastError.message);
-          } else {
-            // Data removed successfully
-            sendResponse(true)
-          }
-        });
-        
+      case "logout":
+        {
+          chrome.storage.local.remove(["keyPair", "walletInfo"], () => {
+            if (chrome.runtime.lastError) {
+              // Handle error
+              console.error(chrome.runtime.lastError.message);
+            } else {
+              chrome.tabs.query({}, function(tabs) {
+                tabs.forEach(tab => {
+                    chrome.tabs.sendMessage(tab.id, { type: "LOGOUT" });
+                });
+            });
+              // Data removed successfully
+              sendResponse(true);
+            }
+          });
+        }
 
-      }
-
-      break;
+        break;
     }
   }
   return true;
 });
-
 
 chrome.action.onClicked.addListener((tab) => {
   const popupUrl = chrome.runtime.getURL("index.html");
   chrome.windows.getAll(
     { populate: true, windowTypes: ["popup"] },
     (windows) => {
-     
       // Attempt to find an existing popup window that has a tab with the correct URL
       const existingPopup = windows.find(
         (w) =>
