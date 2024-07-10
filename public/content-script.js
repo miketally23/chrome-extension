@@ -63,7 +63,6 @@ document.addEventListener('qortalExtensionRequests', async (event) => {
       }
     });
   } else if (type === 'REQUEST_OAUTH') {
-    console.log('oauth enter')
     const hostname = window.location.hostname
     const res = await connection(hostname)
     if(!res){
@@ -74,7 +73,6 @@ document.addEventListener('qortalExtensionRequests', async (event) => {
       }));
       return
     }
-    console.log('oauth enter2')
 
     chrome.runtime.sendMessage({ action: "oauth", payload: {
       nodeBaseUrl: payload.nodeBaseUrl,
@@ -183,7 +181,6 @@ document.addEventListener('qortalExtensionRequests', async (event) => {
 
 
 chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
-  console.log({message})
   if (message.type === "LOGOUT") {
       // Notify the web page
       window.postMessage({
