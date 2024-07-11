@@ -41,7 +41,7 @@ import {
 } from "./App-styles";
 import { Spacer } from "./common/Spacer";
 import { Loader } from "./components/Loader";
-import { PasswordField } from "./components";
+import { PasswordField, ErrorText } from "./components";
 
 type extStates =
   | "not-authenticated"
@@ -805,12 +805,7 @@ function App() {
             />
           </Box>
           <Spacer height="10px" />
-          <Typography sx={{
-            color: "red",
-            fontSize: "12px",
-            fontFamily: "Inter",
-            fontWeight: '600'
-          }}>{sendPaymentError}</Typography>
+          <ErrorText>{sendPaymentError}</ErrorText>
           {/* <Typography>{sendPaymentSuccess}</Typography> */}
           <Spacer height="25px" />
           <CustomButton
@@ -893,7 +888,7 @@ function App() {
               decline
             </CustomButton>
           </Box>
-          <Typography color="errror">{sendPaymentError}</Typography>
+          <ErrorText>{sendPaymentError}</ErrorText>
         </>
       )}
       {extState === "web-app-request-connection" && (
@@ -1073,9 +1068,9 @@ function App() {
               <CustomButton onClick={authenticateWallet} >
                 Authenticate
               </CustomButton>
-              <Typography color="error">
+              <ErrorText>
                 {walletToBeDecryptedError}
-              </Typography>
+              </ErrorText>
             </>
         </>
       )}
@@ -1144,9 +1139,9 @@ function App() {
               <CustomButton onClick={confirmPasswordToDownload}>
                 Confirm password
               </CustomButton>
-              <Typography color="error">
+              <ErrorText>
                 {walletToBeDownloadedError}
-              </Typography>
+              </ErrorText>
             </>
           )}
 
@@ -1229,9 +1224,9 @@ function App() {
               <CustomButton onClick={createAccountFunc}>
                 Create Account
               </CustomButton>
-              <Typography color="error">
+              <ErrorText>
                 {walletToBeDownloadedError}
-              </Typography>
+              </ErrorText>
             </>
           )}
 
