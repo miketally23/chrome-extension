@@ -104,6 +104,7 @@ async function getUserInfo() {
   const name = await getNameInfo();
   return {
     name,
+    publicKey: wallet.publicKey,
     ...addressInfo,
   };
 }
@@ -250,9 +251,12 @@ async function decryptWallet({password, wallet, walletVersion}) {
         }
       });
     });
-
+    const newWallet = {
+      ...wallet,
+      publicKey: Base58.encode(keyPair.publicKey)
+    }
     await new Promise((resolve, reject) => {
-      chrome.storage.local.set({ walletInfo: wallet }, () => {
+      chrome.storage.local.set({ walletInfo: newWallet }, () => {
         if (chrome.runtime.lastError) {
           reject(new Error(chrome.runtime.lastError.message));
         } else {
@@ -366,6 +370,7 @@ async function listenForChatMessage({ nodeBaseUrl, senderAddress, senderPublicKe
         privateKey: uint8PrivateKey,
         publicKey: uint8PublicKey
       };
+      
     const decodedMessage =  decryptChatMessage(encodedMessageObj.data, keyPair.privateKey, senderPublicKey, encodedMessageObj.reference)
     return { secretCode: decodedMessage };
   } catch (error) {
