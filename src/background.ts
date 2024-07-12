@@ -118,8 +118,7 @@ async function getBalanceInfo() {
   const address = wallet.address0;
   const validApi = await findUsableApi();
   const response = await fetch(validApi + "/addresses/balance/" + address);
-// Start Point: ideas - decide on what level to fix this problem: api, background.ts, or on the UI.
-// https://github.com/Qortal/chrome-extension/issues/7
+
   if (!response?.ok) throw new Error("Cannot fetch balance");
   const data = await response.json();
   return data;
