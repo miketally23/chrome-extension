@@ -655,7 +655,7 @@ function App() {
               </AddressBox>
             </CopyToClipboard>
             <Spacer height="10px" />
-            {balance && (
+            {(balance >= 0) && (
                <TextP
                sx={{
                  textAlign: "center",
