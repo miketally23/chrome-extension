@@ -10,7 +10,6 @@
 // In your content script
 document.addEventListener('qortalExtensionRequests', async (event) => {
   const { type, payload, requestId, timeout } = event.detail; // Capture the requestId
-
   if (type === 'REQUEST_USER_INFO') {
     const hostname = window.location.hostname
     const res = await connection(hostname)
@@ -92,7 +91,37 @@ document.addEventListener('qortalExtensionRequests', async (event) => {
         }));
       }
     });
-  } else if (type === 'REQUEST_AUTHENTICATION') {
+  } else if (type === 'REQUEST_BUY_ORDER') {
+    const hostname = window.location.hostname
+    const res = await connection(hostname)
+    if(!res){
+      document.dispatchEvent(new CustomEvent('qortalExtensionResponses', {
+        detail: { type: "BUY_ORDER", data: {
+          error: "Not authorized"
+        }, requestId }
+      }));
+      return
+    }
+
+    chrome.runtime.sendMessage({ action: "buyOrder", payload: {
+      qortalAtAddress: payload.qortalAtAddress,
+      hostname
+      
+    }, timeout}, (response) => {
+      if (response.error) {
+        document.dispatchEvent(new CustomEvent('qortalExtensionResponses', {
+          detail: { type: "BUY_ORDER", data: {
+            error: response.error
+          }, requestId }
+        }));
+      } else {
+        // Include the requestId in the detail when dispatching the response
+        document.dispatchEvent(new CustomEvent('qortalExtensionResponses', {
+          detail: { type: "BUY_ORDER", data: response, requestId }
+        }));
+      }
+    });
+  }  else if (type === 'REQUEST_AUTHENTICATION') {
     const hostname = window.location.hostname
     const res = await connection(hostname)
     if(!res){

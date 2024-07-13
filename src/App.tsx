@@ -55,6 +55,7 @@ type extStates =
   | "transfer-success-regular"
   | "transfer-success-request"
   | "wallet-dropped"
+  | "web-app-request-buy-order"
   ;
 
 function App() {
@@ -63,6 +64,8 @@ function App() {
   const [rawWallet, setRawWallet] = useState<any>(null);
   const [decryptedWallet, setdecryptedWallet] = useState<any>(null);
   const [requestConnection, setRequestConnection] = useState<any>(null);
+  const [requestBuyOrder, setRequestBuyOrder] = useState<any>(null);
+
   const [requestAuthentication, setRequestAuthentication] = useState<any>(null);
   const [userInfo, setUserInfo] = useState<any>(null);
   const [balance, setBalance] = useState<any>(null);
@@ -266,6 +269,10 @@ function App() {
         // Update the component state with the received 'sendqort' state
         setRequestConnection(message.payload);
         setExtstate("web-app-request-connection");
+      } else if (message.action === "UPDATE_STATE_REQUEST_BUY_ORDER") {
+        // Update the component state with the received 'sendqort' state
+        setRequestBuyOrder(message.payload);
+        setExtstate("web-app-request-buy-order");
       } else if (message.action === "UPDATE_STATE_REQUEST_AUTHENTICATION") {
         // Update the component state with the received 'sendqort' state
         setRequestAuthentication(message.payload);
@@ -301,10 +308,7 @@ function App() {
       );
       return;
     }
-    // if (!paymentPassword) {
-    //   setSendPaymentError("Please enter your wallet password");
-    //   return;
-    // }
+
     setIsLoading(true)
     chrome.runtime.sendMessage(
       {
@@ -321,7 +325,49 @@ function App() {
         if (response === true) {
           setExtstate("transfer-success-request");
           setCountdown(null);
-          // setSendPaymentSuccess("Payment successfully sent");
+        } else {
+         
+          setSendPaymentError(
+            response?.error || "Unable to perform payment. Please try again."
+          );
+        }
+        setIsLoading(false)
+      }
+    );
+  };
+
+  const confirmBuyOrder = (isDecline: boolean) => {
+    if (isDecline) {
+      chrome.runtime.sendMessage(
+        {
+          action: "buyOrderConfirmation",
+          payload: {
+            crosschainAtInfo: requestBuyOrder?.crosschainAtInfo,
+            interactionId: requestBuyOrder?.interactionId,
+            isDecline: true,
+          },
+        },
+        (response) => {
+            window.close();
+        }
+      );
+      return;
+    }
+
+    setIsLoading(true)
+    chrome.runtime.sendMessage(
+      {
+        action: "buyOrderConfirmation",
+        payload: {
+          crosschainAtInfo: requestBuyOrder?.crosschainAtInfo,
+            interactionId: requestBuyOrder?.interactionId,
+            isDecline: false,
+        },
+      },
+      (response) => {
+        if (response === true) {
+          setExtstate("transfer-success-request");
+          setCountdown(null);
         } else {
          
           setSendPaymentError(
@@ -362,7 +408,7 @@ function App() {
       chrome.runtime.sendMessage({ action: "getWalletInfo" }, (response) => {
         if (response && response?.walletInfo) {
           setRawWallet(response?.walletInfo);
-          if(holdRefExtState.current === 'web-app-request-payment' || holdRefExtState.current === 'web-app-request-connection') return
+          if(holdRefExtState.current === 'web-app-request-payment' || holdRefExtState.current === 'web-app-request-connection' || holdRefExtState.current === 'web-app-request-buy-order') return
           setExtstate("authenticated");
         }
       });
@@ -510,6 +556,7 @@ function App() {
     setRawWallet(null);
     setdecryptedWallet(null);
     setRequestConnection(null);
+    setRequestBuyOrder(null)
     setRequestAuthentication(null);
     setUserInfo(null);
     setBalance(null);
@@ -815,6 +862,90 @@ function App() {
           >
             Send
           </CustomButton>
+        </>
+      )}
+       {extState === "web-app-request-buy-order" && (
+        <>
+          <Spacer height="100px" />
+
+          <TextP
+            sx={{
+              textAlign: "center",
+              lineHeight: "15px",
+            }}
+          >
+            The Application <br></br>{" "}
+            <TextItalic>{requestBuyOrder?.hostname}</TextItalic> <br></br>
+            <TextSpan>is requesting a buy order</TextSpan>
+          </TextP>
+          <Spacer height="10px" />
+          <TextP
+            sx={{
+              textAlign: "center",
+              lineHeight: "15px",
+              fontSize: "10px",
+            }}
+          >
+            {requestBuyOrder?.crosschainAtInfo?.qortAmount} QORT
+          </TextP>
+          <Spacer height="15px" />
+          <TextP
+            sx={{
+              textAlign: "center",
+              lineHeight: "15px",
+              fontSize: "10px",
+            }}
+          >
+            FOR
+          </TextP>
+          <Spacer height="15px" />
+          <TextP
+            sx={{
+              textAlign: "center",
+              lineHeight: "24px",
+              fontSize: "20px",
+              fontWeight: 700,
+            }}
+          >
+            {requestBuyOrder?.crosschainAtInfo?.expectedForeignAmount} {requestBuyOrder?.crosschainAtInfo?.foreignBlockchain}
+          </TextP>
+          {/* <Spacer height="29px" />
+
+          <CustomLabel htmlFor="standard-adornment-password">
+            Confirm Wallet Password
+          </CustomLabel>
+          <Spacer height="5px" />
+          <PasswordField
+            id="standard-adornment-password"
+            value={paymentPassword}
+            onChange={(e) => setPaymentPassword(e.target.value)}
+          /> */}
+          <Spacer height="29px" />
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: "14px",
+            }}
+          >
+            <CustomButton
+              sx={{
+                minWidth: "102px",
+              }}
+              onClick={() => confirmBuyOrder(false)}
+            >
+              accept
+            </CustomButton>
+            <CustomButton
+              sx={{
+                minWidth: "102px",
+              }}
+              onClick={() => confirmBuyOrder(true)}
+            >
+              decline
+            </CustomButton>
+          </Box>
+          <ErrorText>{sendPaymentError}</ErrorText>
         </>
       )}
       {extState === "web-app-request-payment" && (
