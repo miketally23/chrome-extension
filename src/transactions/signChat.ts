@@ -4,7 +4,6 @@ import nacl from '../deps/nacl-fast'
 import utils from '../utils/utils'
 
 export const signChat = (chatBytes, nonce, keyPair) => {
-
 	if (!chatBytes) {
 		throw new Error('Chat Bytes not defined')
 	}

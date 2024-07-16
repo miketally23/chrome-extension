@@ -216,5 +216,13 @@ chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
           type: "LOGOUT",
           from: 'qortal'
       }, "*");
-  }
+  } else if (message.type === "RESPONSE_FOR_TRADES") {
+    // Notify the web page
+    window.postMessage({
+        type: "RESPONSE_FOR_TRADES",
+        from: 'qortal',
+        payload: message.message
+    }, "*");
+}
 });
+

@@ -22,6 +22,9 @@ const apiEndpoints = [
   "https://apinode4.qortalnodes.live",
 ];
 
+const buyTradeNodeBaseUrl = 'https://appnode.qortal.org'
+const proxyAccountAddress = 'QXPejUe5Za1KD3zCMViWCX35AreMQ9H7ku'
+const proxyAccountPublicKey = '5hP6stDWybojoDw5t8z9D51nV945oMPX7qBd29rhX1G7'
 const pendingResponses = new Map();
 
 // Function to check each API endpoint
@@ -109,9 +112,8 @@ async function connection(hostname) {
 }
 
 async function getTradeInfo(qortalAtAddress) {
-  const validApi = await findUsableApi();
-  const response = await fetch(validApi + "/crosschain/trade/" + qortalAtAddress);
-
+  const response = await fetch(buyTradeNodeBaseUrl + "/crosschain/trade/" + qortalAtAddress);
+  console.log({})
   if (!response?.ok) throw new Error("Cannot crosschain trade information");
   const data = await response.json();
   return data;
@@ -253,7 +255,7 @@ async function getNameOrAddress(receiver) {
   }
 }
 
-async function decryptWallet({password, wallet, walletVersion}) {
+async function decryptWallet({ password, wallet, walletVersion }) {
   try {
     const response = await decryptStoredWallet(password, wallet);
     const wallet2 = new PhraseWallet(response, walletVersion);
@@ -261,8 +263,8 @@ async function decryptWallet({password, wallet, walletVersion}) {
     const ltcPrivateKey = wallet2._addresses[0].ltcWallet.derivedMasterPrivateKey
     const toSave = {
       privateKey: Base58.encode(keyPair.privateKey),
-  publicKey: Base58.encode(keyPair.publicKey),
-  ltcPrivateKey: ltcPrivateKey
+      publicKey: Base58.encode(keyPair.publicKey),
+      ltcPrivateKey: ltcPrivateKey
     }
     const dataString = JSON.stringify(toSave)
     await new Promise((resolve, reject) => {
@@ -288,154 +290,161 @@ async function decryptWallet({password, wallet, walletVersion}) {
       });
     });
 
-    return true; 
+    return true;
   } catch (error) {
-    console.log({error})
+    console.log({ error })
     throw new Error(error.message);
   }
 }
 
-async function signChatFunc(chatBytesArray, chatNonce, validApi, keyPair ){
+async function signChatFunc(chatBytesArray, chatNonce, validApi, keyPair) {
+  console.log({ chatBytesArray, chatNonce, validApi, keyPair })
   let response
-		try {
-			const signedChatBytes =  signChat(
-				chatBytesArray,
-				chatNonce,
-				keyPair
-			)
-			const	res = await processTransactionVersion2Chat(signedChatBytes, validApi)
-			response = res
-		} catch (e) {
-			console.error(e)
-			console.error(e.message)
-			response = false
-		}
-		return response
+  try {
+    const signedChatBytes = signChat(
+      chatBytesArray,
+      chatNonce,
+      keyPair
+    )
+    const res = await processTransactionVersion2Chat(signedChatBytes, validApi)
+    response = res
+  } catch (e) {
+    console.error(e)
+    console.error(e.message)
+    response = false
+  }
+  return response
 }
 function sbrk(size, heap) {
-	let brk = 512 * 1024 // stack top
-	let old = brk
-	brk += size
-	if (brk > heap.length) throw new Error('heap exhausted')
-	return old
+  let brk = 512 * 1024 // stack top
+  let old = brk
+  brk += size
+  if (brk > heap.length) throw new Error('heap exhausted')
+  return old
 }
 
-const computePow = async ({chatBytes, path, difficulty}) => {
-	let response = null
-	await new Promise((resolve, reject) => {
-		const _chatBytesArray = Object.keys(chatBytes).map(function (key) {
-			return chatBytes[key]
-		})
-		const chatBytesArray = new Uint8Array(_chatBytesArray)
-		const chatBytesHash = new Sha256().process(chatBytesArray).finish().result
+const computePow = async ({ chatBytes, path, difficulty }) => {
+  let response = null
+  await new Promise((resolve, reject) => {
+    const _chatBytesArray = Object.keys(chatBytes).map(function (key) {
+      return chatBytes[key]
+    })
+    const chatBytesArray = new Uint8Array(_chatBytesArray)
+    const chatBytesHash = new Sha256().process(chatBytesArray).finish().result
     const memory = new WebAssembly.Memory({ initial: 256, maximum: 256 })
-const heap = new Uint8Array(memory.buffer)
+    const heap = new Uint8Array(memory.buffer)
 
-		const hashPtr = sbrk(32, heap)
-		const hashAry = new Uint8Array(memory.buffer, hashPtr, 32)
-		hashAry.set(chatBytesHash)
-		const workBufferLength = 8 * 1024 * 1024
-		const workBufferPtr = sbrk(workBufferLength, heap)
-		const importObject = {
-			env: {
-				memory: memory
-			}
-		}
-		function loadWebAssembly(filename, imports) {
-			// Fetch the file and compile it
-			return fetch(filename).then(response => response.arrayBuffer()).then(buffer => WebAssembly.compile(buffer)).then(module => {
-				// Create the instance.
-				return new WebAssembly.Instance(module, importObject)
-			})
-		}
-		loadWebAssembly(path)
-			.then(wasmModule => {
-				response = {
-					nonce: wasmModule.exports.compute2(hashPtr, workBufferPtr, workBufferLength, difficulty), chatBytesArray
-				}
-				resolve()
-			})
-	})
-	return response
+    const hashPtr = sbrk(32, heap)
+    const hashAry = new Uint8Array(memory.buffer, hashPtr, 32)
+    hashAry.set(chatBytesHash)
+    const workBufferLength = 8 * 1024 * 1024
+    const workBufferPtr = sbrk(workBufferLength, heap)
+    const importObject = {
+      env: {
+        memory: memory
+      }
+    }
+    function loadWebAssembly(filename, imports) {
+      // Fetch the file and compile it
+      return fetch(filename).then(response => response.arrayBuffer()).then(buffer => WebAssembly.compile(buffer)).then(module => {
+        // Create the instance.
+        return new WebAssembly.Instance(module, importObject)
+      })
+    }
+    loadWebAssembly(path)
+      .then(wasmModule => {
+        response = {
+          nonce: wasmModule.exports.compute2(hashPtr, workBufferPtr, workBufferLength, difficulty), chatBytesArray
+        }
+        resolve()
+      })
+  })
+  return response
 }
 
-async function sendChat({qortAddress, recipientPublicKey, message }){
-      
+async function sendChat({ qortAddress, recipientPublicKey, message }) {
+
   let _reference = new Uint8Array(64);
   self.crypto.getRandomValues(_reference);
 
-        let sendTimestamp = Date.now()
+  let sendTimestamp = Date.now()
 
-        let reference = Base58.encode(_reference)
-        const resKeyPair = await getKeyPair()
-      const parsedData = JSON.parse(resKeyPair)
-      const uint8PrivateKey = Base58.decode(parsedData.privateKey);
-      const uint8PublicKey = Base58.decode(parsedData.publicKey);
-      const keyPair = {
-        privateKey: uint8PrivateKey,
-        publicKey: uint8PublicKey
-      };
-      const difficulty = 8;
-      const callRequest = `curl -X 'POST' 'http://localhost:12391/crosschain/tradebot/respond' -H 'accept: text/plain' -H 'X-API-KEY: keykeykeykey' -H 'Content-Type: application/json' -d '{ "atAddress": "${message.atAddress}", "foreignKey": "${message.foreignKey}", "receivingAddress": "${message.receivingAddress}" }'`;
+  let reference = Base58.encode(_reference)
+  const resKeyPair = await getKeyPair()
+  const parsedData = JSON.parse(resKeyPair)
+  const uint8PrivateKey = Base58.decode(parsedData.privateKey);
+  const uint8PublicKey = Base58.decode(parsedData.publicKey);
+  const keyPair = {
+    privateKey: uint8PrivateKey,
+    publicKey: uint8PublicKey
+  };
+  const difficulty = 8;
+  const jsonData = {
+    atAddress: message.atAddress,
+    foreignKey: message.foreignKey,
+    receivingAddress: message.receivingAddress
+  };
+  const finalJson = {
+    callRequest: jsonData,
+    extra: "whatever additional data goes here"
+  };
+  const messageStringified = JSON.stringify(finalJson)
+  const { chatBytes } = await createTransaction(
+    18,
+    keyPair,
+    {
+      timestamp: sendTimestamp,
+      recipient: qortAddress,
+      recipientPublicKey: recipientPublicKey,
+      hasChatReference: 0,
+      message: messageStringified,
+      lastReference: reference,
+      proofOfWorkNonce: 0,
+      isEncrypted: 1,
+      isText: 1
+    },
 
-// Construct the final JSON object
-const finalJson = {
-  callRequest: callRequest,
-  extra: "whatever additional data goes here"
-};
-      const messageStringified = JSON.stringify(finalJson)
-        const {chatBytes} = await createTransaction(
-          18,
-          keyPair,
- {
-                timestamp: sendTimestamp,
-                recipient: qortAddress,
-                recipientPublicKey: recipientPublicKey,
-                hasChatReference:  0,
-                message: messageStringified,
-                lastReference: reference,
-                proofOfWorkNonce: 0,
-                isEncrypted: 1,
-                isText: 1
-            },
-            
-        )
-        const path = chrome.runtime.getURL('memory-pow.wasm.full');
-    
+  )
+  const path = chrome.runtime.getURL('memory-pow.wasm.full');
 
-		
 
-      const {nonce, chatBytesArray} = await computePow({ chatBytes, path, difficulty })
-            let _response = await signChatFunc(chatBytesArray,
-               nonce, "https://appnode.qortal.org", keyPair
-            )
-            return _response
+
+
+  const { nonce, chatBytesArray } = await computePow({ chatBytes, path, difficulty })
+  let _response = await signChatFunc(chatBytesArray,
+    nonce, "https://appnode.qortal.org", keyPair
+  )
+  if (_response?.error) {
+    throw new Error(_response?.message)
+  }
+  return _response
 }
 
-async function createBuyOrderTx({crosschainAtInfo}){
+async function createBuyOrderTx({ crosschainAtInfo }) {
   try {
     const wallet = await getSaveWallet();
     const address = wallet.address0;
 
     const resKeyPair = await getKeyPair()
-      const parsedData = JSON.parse(resKeyPair)
+    const parsedData = JSON.parse(resKeyPair)
     const message = {
       atAddress: crosschainAtInfo.qortalAtAddress,
       foreignKey: parsedData.ltcPrivateKey,
       receivingAddress: address
     }
-    const res = await sendChat({qortAddress: "QXPejUe5Za1KD3zCMViWCX35AreMQ9H7ku", recipientPublicKey: "5hP6stDWybojoDw5t8z9D51nV945oMPX7qBd29rhX1G7", message })
-    if(res?.signature){
-      const decryptedMessage = await listenForChatMessageForBuyOrder({
-        nodeBaseUrl: "https://appnode.qortal.org",
-        senderAddress: "QXPejUe5Za1KD3zCMViWCX35AreMQ9H7ku",
-        senderPublicKey: "5hP6stDWybojoDw5t8z9D51nV945oMPX7qBd29rhX1G7",
+    const res = await sendChat({ qortAddress: proxyAccountAddress, recipientPublicKey: proxyAccountPublicKey, message })
+    if (res?.signature) {
+
+      listenForChatMessageForBuyOrder({
+        nodeBaseUrl: buyTradeNodeBaseUrl,
+        senderAddress: proxyAccountAddress,
+        senderPublicKey: proxyAccountPublicKey,
         signature: res?.signature,
-    
+
       })
-      return decryptedMessage
+      return { atAddress: crosschainAtInfo.qortalAtAddress, chatSignature: res?.signature, node: buyTradeNodeBaseUrl }
     }
-    
+
   } catch (error) {
     throw new Error(error.message);
   }
@@ -448,7 +457,7 @@ async function sendCoin({ password, amount, receiver }, skipConfirmPassword) {
       throw new Error("Invalid receiver address or name");
     const wallet = await getSaveWallet();
     let keyPair = ''
-    if(skipConfirmPassword){
+    if (skipConfirmPassword) {
       const resKeyPair = await getKeyPair()
       const parsedData = JSON.parse(resKeyPair)
       const uint8PrivateKey = Base58.decode(parsedData.privateKey);
@@ -459,11 +468,11 @@ async function sendCoin({ password, amount, receiver }, skipConfirmPassword) {
       };
     } else {
       const response = await decryptStoredWallet(password, wallet);
-    const wallet2 = new PhraseWallet(response, walletVersion);
+      const wallet2 = new PhraseWallet(response, walletVersion);
 
-    keyPair = wallet2._addresses[0].keyPair
+      keyPair = wallet2._addresses[0].keyPair
     }
-    
+
 
     const lastRef = await getLastRef();
     const fee = await sendQortFee();
@@ -490,26 +499,78 @@ function fetchMessages(apiCall) {
 
   // Promise to handle polling logic
   return new Promise((resolve, reject) => {
-      const attemptFetch = async () => {
-          if (Date.now() - startTime > maxDuration) {
-              return reject(new Error("Maximum polling time exceeded"));
-          }
+    const attemptFetch = async () => {
+      if (Date.now() - startTime > maxDuration) {
+        return reject(new Error("Maximum polling time exceeded"));
+      }
 
-          try {
-              const response = await fetch(apiCall);
-              const data = await response.json();
-              if (data && data.length > 0) {
-                  resolve(data[0]); // Resolve the promise when data is found
-              } else {
-                  setTimeout(attemptFetch, retryDelay);
-                  retryDelay = Math.min(retryDelay * 2, 360000); // Ensure delay does not exceed 6 minutes
-              }
-          } catch (error) {
-              reject(error); // Reject the promise on error
-          }
-      };
+      try {
+        const response = await fetch(apiCall);
+        const data = await response.json();
+        if (data && data.length > 0) {
+          resolve(data[0]); // Resolve the promise when data is found
+        } else {
+          setTimeout(attemptFetch, retryDelay);
+          retryDelay = Math.min(retryDelay * 2, 360000); // Ensure delay does not exceed 6 minutes
+        }
+      } catch (error) {
+        reject(error); // Reject the promise on error
+      }
+    };
 
-      attemptFetch(); // Initial call to start the polling
+    attemptFetch(); // Initial call to start the polling
+  });
+}
+
+function fetchMessagesForBuyOrders(apiCall, signature, senderPublicKey) {
+  let retryDelay = 2000; // Start with a 2-second delay
+  const maxDuration = 360000 * 2; // Maximum duration set to 12 minutes
+  const startTime = Date.now(); // Record the start time
+  let triedChatMessage = []
+  // Promise to handle polling logic
+  return new Promise((resolve, reject) => {
+    const attemptFetch = async () => {
+      if (Date.now() - startTime > maxDuration) {
+        return reject(new Error("Maximum polling time exceeded"));
+      }
+
+      try {
+        const response = await fetch(apiCall);
+        let data = await response.json();
+        data = data.filter((item) => !triedChatMessage.includes(item.signature))
+        console.log({data})
+        if (data && data.length > 0) {
+          const encodedMessageObj = data[0]
+          const resKeyPair = await getKeyPair()
+          const parsedData = JSON.parse(resKeyPair)
+          const uint8PrivateKey = Base58.decode(parsedData.privateKey);
+          const uint8PublicKey = Base58.decode(parsedData.publicKey);
+          const keyPair = {
+            privateKey: uint8PrivateKey,
+            publicKey: uint8PublicKey
+          };
+
+          const decodedMessage = decryptChatMessage(encodedMessageObj.data, keyPair.privateKey, senderPublicKey, encodedMessageObj.reference)
+          const parsedMessage = JSON.parse(decodedMessage)
+          console.log({parsedMessage})
+          if (parsedMessage?.extra?.chatRequestSignature === signature) {
+            resolve(parsedMessage);
+          } else {
+            triedChatMessage.push(encodedMessageObj.signature)
+            setTimeout(attemptFetch, retryDelay);
+            retryDelay = Math.min(retryDelay * 2, 360000); // Ensure delay does not exceed 6 minutes
+          }
+          // Resolve the promise when data is found
+        } else {
+          setTimeout(attemptFetch, retryDelay);
+          retryDelay = Math.min(retryDelay * 2, 360000); // Ensure delay does not exceed 6 minutes
+        }
+      } catch (error) {
+        reject(error); // Reject the promise on error
+      }
+    };
+
+    attemptFetch(); // Initial call to start the polling
   });
 }
 
@@ -530,17 +591,17 @@ async function listenForChatMessage({ nodeBaseUrl, senderAddress, senderPublicKe
     const after = timestamp - 5000
     const apiCall = `${validApi}/chat/messages?involving=${senderAddress}&involving=${address}&reverse=true&limit=1&before=${before}&after=${after}`;
     const encodedMessageObj = await fetchMessages(apiCall)
-   
+
     const resKeyPair = await getKeyPair()
-      const parsedData = JSON.parse(resKeyPair)
-      const uint8PrivateKey = Base58.decode(parsedData.privateKey);
-      const uint8PublicKey = Base58.decode(parsedData.publicKey);
-      const keyPair = {
-        privateKey: uint8PrivateKey,
-        publicKey: uint8PublicKey
-      };
-      
-    const decodedMessage =  decryptChatMessage(encodedMessageObj.data, keyPair.privateKey, senderPublicKey, encodedMessageObj.reference)
+    const parsedData = JSON.parse(resKeyPair)
+    const uint8PrivateKey = Base58.decode(parsedData.privateKey);
+    const uint8PublicKey = Base58.decode(parsedData.publicKey);
+    const keyPair = {
+      privateKey: uint8PrivateKey,
+      publicKey: uint8PublicKey
+    };
+
+    const decodedMessage = decryptChatMessage(encodedMessageObj.data, keyPair.privateKey, senderPublicKey, encodedMessageObj.reference)
     return { secretCode: decodedMessage };
   } catch (error) {
     console.error(error)
@@ -564,20 +625,24 @@ async function listenForChatMessageForBuyOrder({ nodeBaseUrl, senderAddress, sen
     const before = Date.now() + 1200000
     const after = Date.now()
     const apiCall = `${validApi}/chat/messages?involving=${senderAddress}&involving=${address}&reverse=true&limit=1&before=${before}&after=${after}`;
-    const encodedMessageObj = await fetchMessages(apiCall)
-   
-    const resKeyPair = await getKeyPair()
-      const parsedData = JSON.parse(resKeyPair)
-      const uint8PrivateKey = Base58.decode(parsedData.privateKey);
-      const uint8PublicKey = Base58.decode(parsedData.publicKey);
-      const keyPair = {
-        privateKey: uint8PrivateKey,
-        publicKey: uint8PublicKey
-      };
-      
-    const decodedMessage =  decryptChatMessage(encodedMessageObj.data, keyPair.privateKey, senderPublicKey, encodedMessageObj.reference)
-    const parsedMessage = JSON.parse(decodedMessage)
-    return parsedMessage
+    const parsedMessageObj = await fetchMessagesForBuyOrders(apiCall, signature, senderPublicKey)
+
+    // const resKeyPair = await getKeyPair()
+    //   const parsedData = JSON.parse(resKeyPair)
+    //   const uint8PrivateKey = Base58.decode(parsedData.privateKey);
+    //   const uint8PublicKey = Base58.decode(parsedData.publicKey);
+    //   const keyPair = {
+    //     privateKey: uint8PrivateKey,
+    //     publicKey: uint8PublicKey
+    //   };
+
+    // const decodedMessage =  decryptChatMessage(encodedMessageObj.data, keyPair.privateKey, senderPublicKey, encodedMessageObj.reference)
+    // const parsedMessage = JSON.parse(decodedMessage)
+    chrome.tabs.query({}, function (tabs) {
+      tabs.forEach(tab => {
+        chrome.tabs.sendMessage(tab.id, { type: "RESPONSE_FOR_TRADES", message: parsedMessageObj });
+      });
+    });
   } catch (error) {
     console.error(error)
     throw new Error(error.message);
@@ -601,21 +666,21 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         });
         break;
       case "getWalletInfo":
-       
-          getKeyPair().then(()=> {
-            chrome.storage.local.get(["walletInfo"], (result) => {
-              if (chrome.runtime.lastError) {
-                sendResponse({ error: chrome.runtime.lastError.message });
-              } else if (result.walletInfo) {
-                sendResponse({ walletInfo: result.walletInfo });
-              } else {
-                sendResponse({ error: "No wallet info found" });
-              }
-            });
-          }).catch((error)=> {
-            sendResponse({ error: error.message });
-          })
-        
+
+        getKeyPair().then(() => {
+          chrome.storage.local.get(["walletInfo"], (result) => {
+            if (chrome.runtime.lastError) {
+              sendResponse({ error: chrome.runtime.lastError.message });
+            } else if (result.walletInfo) {
+              sendResponse({ walletInfo: result.walletInfo });
+            } else {
+              sendResponse({ error: "No wallet info found" });
+            }
+          });
+        }).catch((error) => {
+          sendResponse({ error: error.message });
+        })
+
         break;
       case "validApi":
         findUsableApi()
@@ -644,21 +709,21 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             console.error(error.message);
           });
         break;
-        case "decryptWallet": {
-          const { password, wallet } = request.payload;
+      case "decryptWallet": {
+        const { password, wallet } = request.payload;
 
-          decryptWallet({
-            password, wallet, walletVersion
+        decryptWallet({
+          password, wallet, walletVersion
+        })
+          .then((hasDecrypted) => {
+            sendResponse(hasDecrypted);
           })
-            .then((hasDecrypted) => {
-              sendResponse(hasDecrypted);
-            })
-            .catch((error) => {
-              sendResponse({ error: error?.message });
-              console.error(error.message);
-            });
-        }
-       
+          .catch((error) => {
+            sendResponse({ error: error?.message });
+            console.error(error.message);
+          });
+      }
+
         break;
       case "balance":
         getBalanceInfo()
@@ -805,86 +870,86 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             });
         }
         break;
-        case "buyOrder": {
-          const { qortalAtAddress, hostname } = request.payload;
-          getTradeInfo(qortalAtAddress)
-            .then((crosschainAtInfo) => {
-                const popupUrl = chrome.runtime.getURL("index.html");
-  
-                chrome.windows.getAll(
-                  { populate: true, windowTypes: ["popup"] },
-                  (windows) => {
-                    // Attempt to find an existing popup window that has a tab with the correct URL
-                    const existingPopup = windows.find(
-                      (w) =>
-                        w.tabs &&
-                        w.tabs.some(
-                          (tab) => tab.url && tab.url.startsWith(popupUrl)
-                        )
-                    );
-                    if (existingPopup) {
-                      // If the popup exists but is minimized or not focused, focus it
-                      chrome.windows.update(existingPopup.id, {
-                        focused: true,
-                        state: "normal",
-                      });
-                    } else {
-                      // No existing popup found, create a new one
-                      chrome.system.display.getInfo((displays) => {
-                        // Assuming the primary display is the first one (adjust logic as needed)
-                        const primaryDisplay = displays[0];
-                        const screenWidth = primaryDisplay.bounds.width;
-                        const windowHeight = 500; // Your window height
-                        const windowWidth = 400; // Your window width
-  
-                        // Calculate left position for the window to appear on the right of the screen
-                        const leftPosition = screenWidth - windowWidth;
-  
-                        // Calculate top position for the window, adjust as desired
-                        const topPosition =
-                          (primaryDisplay.bounds.height - windowHeight) / 2;
-  
-                        chrome.windows.create({
-                          url: chrome.runtime.getURL("index.html"),
-                          type: "popup",
-                          width: windowWidth,
-                          height: windowHeight,
-                          left: leftPosition,
-                          top: 0,
-                        });
-                      });
-                    }
-  
-                    const interactionId = Date.now().toString(); // Simple example; consider a better unique ID
-  
-                    setTimeout(() => {
-                      chrome.runtime.sendMessage({
-                        action: "SET_COUNTDOWN",
-                        payload: request.timeout ? 0.9 * request.timeout : 20,
-                      });
-                      chrome.runtime.sendMessage({
-                        action: "UPDATE_STATE_REQUEST_BUY_ORDER",
-                        payload: {
-                          hostname,
-                          crosschainAtInfo,
-                          interactionId,
-                        },
-                      });
-                    }, 500);
-  
-                    // Store sendResponse callback with the interaction ID
-                    pendingResponses.set(interactionId, sendResponse);
-                  }
-                );
-              
+      case "buyOrder": {
+        const { qortalAtAddress, hostname } = request.payload;
+        getTradeInfo(qortalAtAddress)
+          .then((crosschainAtInfo) => {
+            const popupUrl = chrome.runtime.getURL("index.html");
 
-            })
-            .catch((error) => {
-              console.error(error.message);
-            });
-        }
-         
-          break;
+            chrome.windows.getAll(
+              { populate: true, windowTypes: ["popup"] },
+              (windows) => {
+                // Attempt to find an existing popup window that has a tab with the correct URL
+                const existingPopup = windows.find(
+                  (w) =>
+                    w.tabs &&
+                    w.tabs.some(
+                      (tab) => tab.url && tab.url.startsWith(popupUrl)
+                    )
+                );
+                if (existingPopup) {
+                  // If the popup exists but is minimized or not focused, focus it
+                  chrome.windows.update(existingPopup.id, {
+                    focused: true,
+                    state: "normal",
+                  });
+                } else {
+                  // No existing popup found, create a new one
+                  chrome.system.display.getInfo((displays) => {
+                    // Assuming the primary display is the first one (adjust logic as needed)
+                    const primaryDisplay = displays[0];
+                    const screenWidth = primaryDisplay.bounds.width;
+                    const windowHeight = 500; // Your window height
+                    const windowWidth = 400; // Your window width
+
+                    // Calculate left position for the window to appear on the right of the screen
+                    const leftPosition = screenWidth - windowWidth;
+
+                    // Calculate top position for the window, adjust as desired
+                    const topPosition =
+                      (primaryDisplay.bounds.height - windowHeight) / 2;
+
+                    chrome.windows.create({
+                      url: chrome.runtime.getURL("index.html"),
+                      type: "popup",
+                      width: windowWidth,
+                      height: windowHeight,
+                      left: leftPosition,
+                      top: 0,
+                    });
+                  });
+                }
+
+                const interactionId = Date.now().toString(); // Simple example; consider a better unique ID
+
+                setTimeout(() => {
+                  chrome.runtime.sendMessage({
+                    action: "SET_COUNTDOWN",
+                    payload: request.timeout ? 0.9 * request.timeout : 20,
+                  });
+                  chrome.runtime.sendMessage({
+                    action: "UPDATE_STATE_REQUEST_BUY_ORDER",
+                    payload: {
+                      hostname,
+                      crosschainAtInfo,
+                      interactionId,
+                    },
+                  });
+                }, 500);
+
+                // Store sendResponse callback with the interaction ID
+                pendingResponses.set(interactionId, sendResponse);
+              }
+            );
+
+
+          })
+          .catch((error) => {
+            console.error(error.message);
+          });
+      }
+
+        break;
       case "connection": {
         const { hostname } = request.payload;
         connection(hostname)
@@ -964,7 +1029,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             console.error(error.message);
           });
       }
-        
+
         break;
       case "sendQort":
         {
@@ -1097,34 +1162,34 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         }
 
         break;
-        case "buyOrderConfirmation": {
-          const { crosschainAtInfo, isDecline } = request.payload;
-          const interactionId2 = request.payload.interactionId;
-          // Retrieve the stored sendResponse callback
-          const originalSendResponse = pendingResponses.get(interactionId2);
-  
-          if (originalSendResponse) {
-            if (isDecline) {
-              originalSendResponse({ error: "User has declined" });
-              sendResponse(false);
-              pendingResponses.delete(interactionId2);
-              return;
-            }
-            createBuyOrderTx({ crosschainAtInfo })
-              .then((res) => {
-                sendResponse(true);
-                originalSendResponse(res);
-                pendingResponses.delete(interactionId2);
-              })
-              .catch((error) => {
-                console.error(error.message);
-                sendResponse({ error: error.message });
-                originalSendResponse({ error: error.message });
-              });
-  
+      case "buyOrderConfirmation": {
+        const { crosschainAtInfo, isDecline } = request.payload;
+        const interactionId2 = request.payload.interactionId;
+        // Retrieve the stored sendResponse callback
+        const originalSendResponse = pendingResponses.get(interactionId2);
+
+        if (originalSendResponse) {
+          if (isDecline) {
+            originalSendResponse({ error: "User has declined" });
+            sendResponse(false);
+            pendingResponses.delete(interactionId2);
+            return;
           }
+          createBuyOrderTx({ crosschainAtInfo })
+            .then((res) => {
+              sendResponse(true);
+              originalSendResponse(res);
+              pendingResponses.delete(interactionId2);
+            })
+            .catch((error) => {
+              console.error(error.message);
+              sendResponse({ error: error.message });
+              originalSendResponse({ error: error.message });
+            });
+
         }
-       
+      }
+
 
         break;
       case "logout":
@@ -1134,11 +1199,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
               // Handle error
               console.error(chrome.runtime.lastError.message);
             } else {
-              chrome.tabs.query({}, function(tabs) {
+              chrome.tabs.query({}, function (tabs) {
                 tabs.forEach(tab => {
-                    chrome.tabs.sendMessage(tab.id, { type: "LOGOUT" });
+                  chrome.tabs.sendMessage(tab.id, { type: "LOGOUT" });
                 });
-            });
+              });
               // Data removed successfully
               sendResponse(true);
             }
