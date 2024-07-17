@@ -56,6 +56,7 @@ type extStates =
   | "transfer-success-request"
   | "wallet-dropped"
   | "web-app-request-buy-order"
+  | "buy-order-submitted"
   ;
 
 function App() {
@@ -366,7 +367,7 @@ function App() {
       },
       (response) => {
         if (response === true) {
-          setExtstate("transfer-success-request");
+          setExtstate("buy-order-submitted");
           setCountdown(null);
         } else {
          
@@ -1430,6 +1431,29 @@ function App() {
             }}
           >
             Continue
+          </CustomButton>
+        </>
+      )}
+      {extState === "buy-order-submitted" && (
+        <>
+          <Spacer height="48px" />
+          <img src={Success} />
+          <Spacer height="45px" />
+          <TextP
+            sx={{
+              textAlign: "center",
+              lineHeight: "15px",
+            }}
+          >
+            Your buy order was submitted
+          </TextP>
+          <Spacer height="100px" />
+          <CustomButton
+            onClick={() => {
+              window.close();
+            }}
+          >
+            Close
           </CustomButton>
         </>
       )}

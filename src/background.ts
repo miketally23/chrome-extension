@@ -129,6 +129,27 @@ async function getBalanceInfo() {
   const data = await response.json();
   return data;
 }
+async function getLTCBalance() {
+  const wallet = await getSaveWallet();
+  let _url = `${buyTradeNodeBaseUrl}/crosschain/ltc/walletbalance`;
+  const keyPair = await getKeyPair()
+  const parsedKeyPair = JSON.parse(keyPair)
+  let _body = parsedKeyPair.ltcPublicKey
+  const response = await fetch(_url, {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json'
+    },
+    body: _body
+});
+if(response?.ok){
+  const data = await response.text();
+  const dataLTCBalance = (Number(data) / 1e8).toFixed(8);
+  return +dataLTCBalance
+
+} else throw new Error('Onable to get LTC balance')
+
+}
 
 const processTransactionVersion2Chat = async (body: any, validApi: string) => {
   // const validApi = await findUsableApi();
@@ -261,10 +282,13 @@ async function decryptWallet({ password, wallet, walletVersion }) {
     const wallet2 = new PhraseWallet(response, walletVersion);
     const keyPair = wallet2._addresses[0].keyPair;
     const ltcPrivateKey = wallet2._addresses[0].ltcWallet.derivedMasterPrivateKey
+    const ltcPublicKey = wallet2._addresses[0].ltcWallet.derivedMasterPublicKey
+
     const toSave = {
       privateKey: Base58.encode(keyPair.privateKey),
       publicKey: Base58.encode(keyPair.publicKey),
-      ltcPrivateKey: ltcPrivateKey
+      ltcPrivateKey: ltcPrivateKey,
+      ltcPublicKey : ltcPublicKey
     }
     const dataString = JSON.stringify(toSave)
     await new Promise((resolve, reject) => {
@@ -442,7 +466,9 @@ async function createBuyOrderTx({ crosschainAtInfo }) {
         signature: res?.signature,
 
       })
-      return { atAddress: crosschainAtInfo.qortalAtAddress, chatSignature: res?.signature, node: buyTradeNodeBaseUrl }
+      return { atAddress: crosschainAtInfo.qortalAtAddress, chatSignature: res?.signature, node: buyTradeNodeBaseUrl, qortAddress: address }
+    } else {
+      throw new Error("Unable to send buy order message")
     }
 
   } catch (error) {
@@ -522,12 +548,17 @@ function fetchMessages(apiCall) {
   });
 }
 
-function fetchMessagesForBuyOrders(apiCall, signature, senderPublicKey) {
+async function fetchMessagesForBuyOrders(apiCall, signature, senderPublicKey) {
   let retryDelay = 2000; // Start with a 2-second delay
   const maxDuration = 360000 * 2; // Maximum duration set to 12 minutes
   const startTime = Date.now(); // Record the start time
   let triedChatMessage = []
   // Promise to handle polling logic
+  await new Promise((res)=> {
+    setTimeout(() => {
+        res()
+    }, 40000);
+  })
   return new Promise((resolve, reject) => {
     const attemptFetch = async () => {
       if (Date.now() - startTime > maxDuration) {
@@ -734,6 +765,18 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             console.error(error.message);
           });
         break;
+      case "ltcBalance": {
+        getLTCBalance()
+        .then((balance) => {
+          sendResponse(balance);
+        })
+        .catch((error) => {
+          console.error(error.message);
+        });
+
+        
+      }
+      break;
       case "sendCoin":
         {
           const { receiver, password, amount } = request.payload;
@@ -1184,7 +1227,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             .catch((error) => {
               console.error(error.message);
               sendResponse({ error: error.message });
-              originalSendResponse({ error: error.message });
+              // originalSendResponse({ error: error.message });
             });
 
         }
