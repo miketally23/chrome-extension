@@ -113,7 +113,6 @@ async function connection(hostname) {
 
 async function getTradeInfo(qortalAtAddress) {
   const response = await fetch(buyTradeNodeBaseUrl + "/crosschain/trade/" + qortalAtAddress);
-  console.log({})
   if (!response?.ok) throw new Error("Cannot crosschain trade information");
   const data = await response.json();
   return data;
@@ -283,7 +282,7 @@ async function decryptWallet({ password, wallet, walletVersion }) {
     const keyPair = wallet2._addresses[0].keyPair;
     const ltcPrivateKey = wallet2._addresses[0].ltcWallet.derivedMasterPrivateKey
     const ltcPublicKey = wallet2._addresses[0].ltcWallet.derivedMasterPublicKey
-
+    const ltcAddress = wallet2._addresses[0].ltcWallet.address
     const toSave = {
       privateKey: Base58.encode(keyPair.privateKey),
       publicKey: Base58.encode(keyPair.publicKey),
@@ -302,7 +301,8 @@ async function decryptWallet({ password, wallet, walletVersion }) {
     });
     const newWallet = {
       ...wallet,
-      publicKey: Base58.encode(keyPair.publicKey)
+      publicKey: Base58.encode(keyPair.publicKey),
+      ltcAddress: ltcAddress
     }
     await new Promise((resolve, reject) => {
       chrome.storage.local.set({ walletInfo: newWallet }, () => {
@@ -322,7 +322,6 @@ async function decryptWallet({ password, wallet, walletVersion }) {
 }
 
 async function signChatFunc(chatBytesArray, chatNonce, validApi, keyPair) {
-  console.log({ chatBytesArray, chatNonce, validApi, keyPair })
   let response
   try {
     const signedChatBytes = signChat(
@@ -569,7 +568,6 @@ async function fetchMessagesForBuyOrders(apiCall, signature, senderPublicKey) {
         const response = await fetch(apiCall);
         let data = await response.json();
         data = data.filter((item) => !triedChatMessage.includes(item.signature))
-        console.log({data})
         if (data && data.length > 0) {
           const encodedMessageObj = data[0]
           const resKeyPair = await getKeyPair()
@@ -583,7 +581,6 @@ async function fetchMessagesForBuyOrders(apiCall, signature, senderPublicKey) {
 
           const decodedMessage = decryptChatMessage(encodedMessageObj.data, keyPair.privateKey, senderPublicKey, encodedMessageObj.reference)
           const parsedMessage = JSON.parse(decodedMessage)
-          console.log({parsedMessage})
           if (parsedMessage?.extra?.chatRequestSignature === signature) {
             resolve(parsedMessage);
           } else {
