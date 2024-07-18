@@ -719,7 +719,7 @@ function App() {
                 </CopyToClipboard>
                 <Spacer height="10px" />
                 {ltcBalanceLoading && <CircularProgress color="success" size={16} />}
-                {ltcBalance && !ltcBalanceLoading && (
+                {ltcBalance && !isNaN(+ltcBalance) && !ltcBalanceLoading && (
                   <Box sx={{
                     gap: '10px',
                     display: 'flex',
@@ -733,7 +733,7 @@ function App() {
                         fontWeight: 700,
                       }}
                     >
-                      {ltcBalance?.toFixed(5)} LTC
+                      {ltcBalance} LTC
                     </TextP>
                     <RefreshIcon onClick={getLtcBalanceFunc} sx={{
                       fontSize: '16px',
@@ -776,7 +776,7 @@ function App() {
                       fontWeight: 700,
                     }}
                   >
-                    {balance?.toFixed(2)} QORT
+                    {balance} QORT
                   </TextP>
                 )}
 
@@ -891,7 +891,7 @@ function App() {
                 fontWeight: 700,
               }}
             >
-              {balance?.toFixed(2)} QORT
+              {balance} QORT
             </TextP>
           </Box>
           <Spacer height="35px" />
@@ -960,18 +960,19 @@ function App() {
           <TextP
             sx={{
               textAlign: "center",
-              lineHeight: "15px",
-              fontSize: "10px",
+              lineHeight: "24px",
+              fontSize: "20px",
+              fontWeight: 700,
             }}
           >
-            {requestBuyOrder?.crosschainAtInfo?.qortAmount} QORT
+            {+requestBuyOrder?.crosschainAtInfo?.qortAmount} QORT
           </TextP>
           <Spacer height="15px" />
           <TextP
             sx={{
               textAlign: "center",
               lineHeight: "15px",
-              fontSize: "10px",
+              fontSize: "14px",
             }}
           >
             FOR
