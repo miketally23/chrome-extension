@@ -443,7 +443,6 @@ function App() {
         }
       });
       getBalanceFunc();
-      getLtcBalanceFunc()
     } catch (error) { }
   }, [address]);
 
@@ -452,6 +451,12 @@ function App() {
       console.log("exit");
     };
   }, []);
+
+  useEffect(()=> {
+    if(authenticatedMode === 'ltc' && !ltcBalanceLoading && ltcBalance === null ){
+      getLtcBalanceFunc()
+    }
+  }, [authenticatedMode])
 
   const confirmPasswordToDownload = async () => {
     try {
