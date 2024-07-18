@@ -103,6 +103,7 @@ function App() {
     }
   }, [extState])
 
+
   const address = useMemo(() => {
     if (!rawWallet?.address0) return "";
     return rawWallet.address0;
@@ -212,7 +213,7 @@ function App() {
   const getBalanceFunc = () => {
     setQortBalanceLoading(true)
     chrome.runtime.sendMessage({ action: "balance" }, (response) => {
-      if (response && !response?.error) {
+      if (!response?.error && !isNaN(+response)) {
         setBalance(response);
       }
       setQortBalanceLoading(false)
@@ -221,7 +222,7 @@ function App() {
   const getLtcBalanceFunc = () => {
     setLtcBalanceLoading(true)
     chrome.runtime.sendMessage({ action: "ltcBalance" }, (response) => {
-      if (response && !response?.error) {
+      if (!response?.error && !isNaN(+response)) {
         setLtcBalance(response);
       }
       setLtcBalanceLoading(false)
@@ -577,6 +578,7 @@ function App() {
 
   const resetAllStates = () => {
     setExtstate("not-authenticated");
+    setAuthenticatedMode('qort')
     setBackupjson(null);
     setRawWallet(null);
     setdecryptedWallet(null);
@@ -625,6 +627,11 @@ function App() {
             }
           });
           getBalanceFunc();
+          chrome.runtime.sendMessage({ action: "getWalletInfo" }, (response) => {
+            if (response && response?.walletInfo) {
+              setRawWallet(response?.walletInfo);
+            }
+          });
         } else if (response?.error) {
           setIsLoading(false)
           setWalletToBeDecryptedError(response.error)
@@ -724,7 +731,7 @@ function App() {
                 </CopyToClipboard>
                 <Spacer height="10px" />
                 {ltcBalanceLoading && <CircularProgress color="success" size={16} />}
-                {ltcBalance && !isNaN(+ltcBalance) && !ltcBalanceLoading && (
+                {!isNaN(+ltcBalance) && !ltcBalanceLoading && (
                   <Box sx={{
                     gap: '10px',
                     display: 'flex',
@@ -772,19 +779,18 @@ function App() {
                 </CopyToClipboard>
                 <Spacer height="10px" />
                 {qortBalanceLoading && <CircularProgress color="success" size={16} />}
-                {balance && (
-                  <TextP
-                    sx={{
-                      textAlign: "center",
-                      lineHeight: "24px",
-                      fontSize: "20px",
-                      fontWeight: 700,
-                    }}
-                  >
-                    {balance} QORT
-                  </TextP>
-                )}
-
+                {(balance >= 0) && (
+               <TextP
+               sx={{
+                 textAlign: "center",
+                 lineHeight: "24px",
+                 fontSize: "20px",
+                 fontWeight: 700,
+               }}
+             >
+               {balance?.toFixed(2)} QORT
+             </TextP>
+            )}
                 <Spacer height="55px" />
                 <CustomButton
                   onClick={() => {
@@ -896,7 +902,7 @@ function App() {
                 fontWeight: 700,
               }}
             >
-              {balance} QORT
+              {balance?.toFixed(2)} QORT
             </TextP>
           </Box>
           <Spacer height="35px" />
