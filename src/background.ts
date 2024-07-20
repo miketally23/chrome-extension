@@ -401,7 +401,9 @@ async function sendChat({ qortAddress, recipientPublicKey, message }) {
     privateKey: uint8PrivateKey,
     publicKey: uint8PublicKey
   };
-  const difficulty = 8;
+  const balance = await getBalanceInfo()
+  const hasEnoughBalance = +balance < 4 ? false : true
+  const difficulty =  8
   const jsonData = {
     atAddress: message.atAddress,
     foreignKey: message.foreignKey,
@@ -412,7 +414,8 @@ async function sendChat({ qortAddress, recipientPublicKey, message }) {
     extra: "whatever additional data goes here"
   };
   const messageStringified = JSON.stringify(finalJson)
-  const { chatBytes } = await createTransaction(
+  
+  const tx = await createTransaction(
     18,
     keyPair,
     {
@@ -428,12 +431,20 @@ async function sendChat({ qortAddress, recipientPublicKey, message }) {
     },
 
   )
+  if(!hasEnoughBalance){
+   const _encryptedMessage = tx._encryptedMessage
+   const encryptedMessageToBase58 = Base58.encode(_encryptedMessage)
+    return {
+      encryptedMessageToBase58,
+      signature: 'id-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+      reference
+    }
+  }
   const path = chrome.runtime.getURL('memory-pow.wasm.full');
 
+  
 
-
-
-  const { nonce, chatBytesArray } = await computePow({ chatBytes, path, difficulty })
+  const { nonce, chatBytesArray } = await computePow({ chatBytes: tx.chatBytes, path, difficulty })
   let _response = await signChatFunc(chatBytesArray,
     nonce, "https://appnode.qortal.org", keyPair
   )
@@ -465,6 +476,9 @@ async function createBuyOrderTx({ crosschainAtInfo }) {
         signature: res?.signature,
 
       })
+      if(res?.encryptedMessageToBase58){
+        return { atAddress: crosschainAtInfo.qortalAtAddress, encryptedMessageToBase58: res?.encryptedMessageToBase58, node: buyTradeNodeBaseUrl, qortAddress: address, chatSignature: res?.signature, senderPublicKey: parsedData.publicKey, sender: address, reference: res?.reference  }
+      }
       return { atAddress: crosschainAtInfo.qortalAtAddress, chatSignature: res?.signature, node: buyTradeNodeBaseUrl, qortAddress: address }
     } else {
       throw new Error("Unable to send buy order message")
