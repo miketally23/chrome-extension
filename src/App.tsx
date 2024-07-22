@@ -779,7 +779,12 @@ function App() {
                 </CopyToClipboard>
                 <Spacer height="10px" />
                 {qortBalanceLoading && <CircularProgress color="success" size={16} />}
-                {(balance >= 0) && (
+                {!qortBalanceLoading && (balance >= 0) && (
+                   <Box sx={{
+                    gap: '10px',
+                    display: 'flex',
+                    alignItems: 'center'
+                  }}>
                <TextP
                sx={{
                  textAlign: "center",
@@ -790,6 +795,12 @@ function App() {
              >
                {balance?.toFixed(2)} QORT
              </TextP>
+             <RefreshIcon onClick={getBalanceFunc} sx={{
+                      fontSize: '16px',
+                      color: 'white',
+                      cursor: 'pointer'
+                    }} />
+             </Box>
             )}
                 <Spacer height="55px" />
                 <CustomButton
@@ -801,7 +812,22 @@ function App() {
                 </CustomButton>
               </>
             )}
-
+             <TextP
+               sx={{
+                 textAlign: "center",
+                 lineHeight: "24px",
+                 fontSize: "12px",
+                 fontWeight: 500,
+                 cursor: 'pointer',
+                 marginTop: '10px',
+                 textDecoration: 'underline'
+               }}
+               onClick={()=> {
+                chrome.tabs.create({ url: 'https://www.qort.trade' });
+               }}
+             >
+               Get QORT at qort.trade
+             </TextP>
           </AuthenticatedContainerInnerLeft>
           <AuthenticatedContainerInnerRight>
             <Spacer height="20px" />
