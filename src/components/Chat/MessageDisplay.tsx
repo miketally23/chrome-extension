@@ -3,12 +3,13 @@ import DOMPurify from 'dompurify';
 import './styles.css'; // Ensure this CSS file is imported
 
 export const MessageDisplay = ({ htmlContent }) => {
+
   const linkify = (text) => {
     // Regular expression to find URLs starting with https://, http://, or www.
     const urlPattern = /(\bhttps?:\/\/[^\s<]+|\bwww\.[^\s<]+)/g;
 
     // Replace plain text URLs with anchor tags
-    return text.replace(urlPattern, (url) => {
+    return text?.replace(urlPattern, (url) => {
       const href = url.startsWith('http') ? url : `https://${url}`;
       return `<a href="${href}" class="auto-link">${DOMPurify.sanitize(url)}</a>`;
     });

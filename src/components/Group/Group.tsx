@@ -762,6 +762,7 @@ export const Group = ({
   const getMembers = async (groupId) => {
     try {
       const res = await getGroupMembers(groupId);
+      if(groupId !== selectedGroupRef.current?.groupId) return
       setMembers(res);
     } catch (error) {}
   };
@@ -773,7 +774,6 @@ export const Group = ({
   }, [selectedGroup?.groupId]);
 
   const shouldReEncrypt = useMemo(() => {
-   
     if (triedToFetchSecretKey && !secretKeyPublishDate) return true;
     if (
       !secretKeyPublishDate ||
