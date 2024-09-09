@@ -909,6 +909,66 @@ export const Group = ({
       unsubscribeFromEvent("openDirectMessage", openDirectChatFromNotification);
     };
   }, [directs, selectedDirect]);
+
+  const resetAllStatesAndRefs = () => {
+    // Reset all useState values to their initial states
+    setSecretKey(null);
+    setSecretKeyPublishDate(null);
+    setSecretKeyDetails(null);
+    setNewEncryptionNotification(null);
+    setMemberCountFromSecretKeyData(null);
+    setSelectedGroup(null);
+    setSelectedDirect(null);
+    setGroups([]);
+    setDirects([]);
+    setAdmins([]);
+    setAdminsWithNames([]);
+    setMembers([]);
+    setGroupOwner(null);
+    setTriedToFetchSecretKey(false);
+    setOpenAddGroup(false);
+    setIsInitialGroups(false);
+    setOpenManageMembers(false);
+    setMemberGroups([]);  // Assuming you're clearing the context here as well
+    setTimestampEnterData({});
+    setChatMode("groups");
+    setNewChat(false);
+    setOpenSnack(false);
+    setInfoSnack(null);
+    setIsLoadingNotifyAdmin(false);
+    setIsLoadingGroups(false);
+    setIsLoadingGroup(false);
+    setFirstSecretKeyInCreation(false);
+    setGroupSection("home");
+    setGroupAnnouncements({});
+    setDefaultThread(null);
+  
+    // Reset all useRef values to their initial states
+    hasInitialized.current = false;
+    hasInitializedWebsocket.current = false;
+    lastGroupNotification.current = null;
+    isFocusedRef.current = true;
+    selectedGroupRef.current = null;
+    selectedDirectRef.current = null;
+    groupSectionRef.current = null;
+    checkGroupInterval.current = null;
+    isLoadingOpenSectionFromNotification.current = false;
+    setupGroupWebsocketInterval.current = null;
+    settimeoutForRefetchSecretKey.current = null;
+  };
+  
+
+  const logoutEventFunc = ()=> {
+    resetAllStatesAndRefs()
+  }
+
+  useEffect(() => {
+    subscribeToEvent("logout-event", logoutEventFunc);
+
+    return () => {
+      unsubscribeFromEvent("logout-event", logoutEventFunc);
+    };
+  }, []);
   const openGroupChatFromNotification = (e) => {
     if (isLoadingOpenSectionFromNotification.current) return;
 

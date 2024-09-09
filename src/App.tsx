@@ -818,6 +818,7 @@ function App() {
       chrome.runtime.sendMessage({ action: "logout" }, (response) => {
         if (response) {
           resetAllStates();
+          executeEvent("logout-event", {});
         }
       });
     } catch (error) {}
@@ -864,6 +865,8 @@ function App() {
     setHasLocalNode(false);
     setOpenAdvancedSettings(false);
     setConfirmUseOfLocal(false)
+    setTxList([])
+    setMemberGroups([])
   };
 
   const authenticateWallet = async () => {
