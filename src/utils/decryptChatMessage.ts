@@ -8,7 +8,15 @@ import {Sha256} from 'asmcrypto.js'
 
 export const decryptChatMessage = (encryptedMessage, privateKey, recipientPublicKey, lastReference) => {
 	const test = encryptedMessage
-	let _encryptedMessage = Base58.decode(encryptedMessage)
+	let _encryptedMessage = atob(encryptedMessage)
+	const binaryLength = _encryptedMessage.length
+	const bytes = new Uint8Array(binaryLength)
+
+	for (let i = 0; i < binaryLength; i++) {
+		bytes[i] = _encryptedMessage.charCodeAt(i)
+	}
+
+	
 	const _base58RecipientPublicKey = recipientPublicKey instanceof Uint8Array ? Base58.encode(recipientPublicKey) : recipientPublicKey
 	const _recipientPublicKey = Base58.decode(_base58RecipientPublicKey)
 
@@ -20,10 +28,11 @@ export const decryptChatMessage = (encryptedMessage, privateKey, recipientPublic
 	nacl.lowlevel.crypto_scalarmult(sharedSecret, convertedPrivateKey, convertedPublicKey)
 
 	const _chatEncryptionSeed = new Sha256().process(sharedSecret).finish().result
-	const _decryptedMessage = nacl.secretbox.open(_encryptedMessage, _lastReference.slice(0, 24), _chatEncryptionSeed)
+	const _decryptedMessage = nacl.secretbox.open(bytes, _lastReference.slice(0, 24), _chatEncryptionSeed)
 
 	let decryptedMessage = ''
 
 	_decryptedMessage === false ? decryptedMessage : decryptedMessage = new TextDecoder('utf-8').decode(_decryptedMessage)
+	
 	return decryptedMessage
 }

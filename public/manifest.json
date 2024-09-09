@@ -14,7 +14,7 @@
   },
   "action": {
   },
-  "permissions": [ "storage", "system.display", "activeTab", "tabs"
+  "permissions": [ "storage", "system.display", "activeTab", "tabs", "notifications", "alarms"
 ],
 
   "content_scripts": [
@@ -24,6 +24,6 @@
     }
   ],
   "content_security_policy": {
-          "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; connect-src 'self' https://api.qortal.org https://api2.qortal.org https://appnode.qortal.org https://apinode.qortalnodes.live https://apinode1.qortalnodes.live https://apinode2.qortalnodes.live https://apinode3.qortalnodes.live https://apinode4.qortalnodes.live;"
+          "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; connect-src 'self' https://api.qortal.org https://api2.qortal.org https://appnode.qortal.org https://apinode.qortalnodes.live https://apinode1.qortalnodes.live https://apinode2.qortalnodes.live https://apinode3.qortalnodes.live https://apinode4.qortalnodes.live https://ext-node.qortal.link wss://appnode.qortal.org wss://ext-node.qortal.link ws://127.0.0.1:12391 http://127.0.0.1:12391 https://ext-node.qortal.link; "
   }
 }

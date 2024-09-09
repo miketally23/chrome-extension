@@ -19,6 +19,7 @@ export default class ChatBase {
 	}
 
 	constructor() {
+	
 		this.fee = 0
 		this.groupID = 0
 		this.tests = [
@@ -47,6 +48,7 @@ export default class ChatBase {
 				return true
 			},
 			() => {
+			
 				if (!(this._lastReference instanceof Uint8Array && this._lastReference.byteLength == 64)) {
 					return 'Invalid last reference: ' + this._lastReference
 				}
@@ -93,6 +95,7 @@ export default class ChatBase {
 	}
 
 	set lastReference(lastReference) {
+
 		this._lastReference = lastReference instanceof Uint8Array ? lastReference : this.constructor.Base58.decode(lastReference)
 	}
 

@@ -1,18 +1,40 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import reactLogo from "./assets/react.svg";
 import viteLogo from "/vite.svg";
 import "./App.css";
 import { useDropzone } from "react-dropzone";
-import { Box, CircularProgress, Input, InputLabel, Tooltip, Typography } from "@mui/material";
+import {
+  Box,
+  Button,
+  Checkbox,
+  CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  Input,
+  InputLabel,
+  Popover,
+  Tooltip,
+  Typography,
+} from "@mui/material";
 import { decryptStoredWallet } from "./utils/decryptWallet";
 import { CountdownCircleTimer } from "react-countdown-circle-timer";
 import Logo1 from "./assets/svgs/Logo1.svg";
 import Logo1Dark from "./assets/svgs/Logo1Dark.svg";
-import RefreshIcon from '@mui/icons-material/Refresh';
+import RefreshIcon from "@mui/icons-material/Refresh";
 import Logo2 from "./assets/svgs/Logo2.svg";
 import Copy from "./assets/svgs/Copy.svg";
-import ltcLogo from './assets/ltc.png';
-import qortLogo from './assets/qort.png'
+import ltcLogo from "./assets/ltc.png";
+import qortLogo from "./assets/qort.png";
 import { CopyToClipboard } from "react-copy-to-clipboard";
 import Download from "./assets/svgs/Download.svg";
 import Logout from "./assets/svgs/Logout.svg";
@@ -44,6 +66,23 @@ import {
 import { Spacer } from "./common/Spacer";
 import { Loader } from "./components/Loader";
 import { PasswordField, ErrorText } from "./components";
+import { ChatGroup } from "./components/Chat/ChatGroup";
+import { Group, requestQueueMemberNames } from "./components/Group/Group";
+import { TaskManger } from "./components/TaskManager/TaskManger";
+import { useModal } from "./common/useModal";
+import { LoadingButton } from "@mui/lab";
+import { Label } from "./components/Group/AddGroup";
+import { CustomizedSnackbars } from "./components/Snackbar/Snackbar";
+import {
+  getFee,
+  groupApi,
+  groupApiLocal,
+  groupApiSocket,
+  groupApiSocketLocal,
+} from "./background";
+import { executeEvent } from "./utils/events";
+import { requestQueueCommentCount, requestQueuePublishedAccouncements } from "./components/Chat/GroupAnnouncements";
+import { requestQueueGroupJoinRequests } from "./components/Group/GroupJoinRequests";
 
 type extStates =
   | "not-authenticated"
@@ -59,22 +98,113 @@ type extStates =
   | "wallet-dropped"
   | "web-app-request-buy-order"
   | "buy-order-submitted"
-  ;
+  | "group";
 
+interface MyContextInterface {
+  txList: any[];
+  memberGroups: any[];
+  setTxList: (val) => void;
+  setMemberGroups: (val) => void;
+  isShow: boolean;
+  onCancel: () => void;
+  onOk: () => void;
+  show: () => void;
+  message: any;
+}
+
+const defaultValues: MyContextInterface = {
+  txList: [],
+  memberGroups: [],
+  setTxList: () => {},
+  setMemberGroups: () => {},
+  isShow: false,
+  onCancel: () => {},
+  onOk: () => {},
+  show: () => {},
+  message: {
+    publishFee: "",
+    message: "",
+  },
+};
+
+export const allQueues = {
+  requestQueueCommentCount: requestQueueCommentCount,
+  requestQueuePublishedAccouncements: requestQueuePublishedAccouncements,
+  requestQueueMemberNames: requestQueueMemberNames,
+  requestQueueGroupJoinRequests: requestQueueGroupJoinRequests
+}
+
+const controlAllQueues = (action) => {
+  Object.keys(allQueues).forEach((key) => {
+    const val = allQueues[key];
+    try {
+      if (typeof val[action] === 'function') {
+        val[action]();
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  });
+};
+
+export const clearAllQueues = () => {
+  Object.keys(allQueues).forEach((key) => {
+    const val = allQueues[key];
+    try {
+      val.clear();
+    } catch (error) {
+      console.error(error);
+    }
+  });
+}
+
+export const pauseAllQueues = () => controlAllQueues('pause');
+export const resumeAllQueues = () => controlAllQueues('resume');
+
+
+export const MyContext = createContext<MyContextInterface>(defaultValues);
+
+export let globalApiKey: string | null = null;
+
+export const getBaseApiReact = (customApi?: string) => {
+  
+  if (customApi) {
+    return customApi;
+  }
+
+  if (globalApiKey) {
+    return groupApiLocal;
+  } else {
+    return groupApi;
+  }
+};
+export const getBaseApiReactSocket = (customApi?: string) => {
+  
+  if (customApi) {
+    return customApi;
+  }
+
+  if (globalApiKey) {
+    return groupApiSocketLocal;
+  } else {
+    return groupApiSocket;
+  }
+};
+export const isMainWindow = window?.location?.href?.includes("?main=true");
 function App() {
   const [extState, setExtstate] = useState<extStates>("not-authenticated");
   const [backupjson, setBackupjson] = useState<any>(null);
   const [rawWallet, setRawWallet] = useState<any>(null);
   const [ltcBalanceLoading, setLtcBalanceLoading] = useState<boolean>(false);
-  const [qortBalanceLoading, setQortBalanceLoading] = useState<boolean>(false)
+  const [qortBalanceLoading, setQortBalanceLoading] = useState<boolean>(false);
   const [decryptedWallet, setdecryptedWallet] = useState<any>(null);
   const [requestConnection, setRequestConnection] = useState<any>(null);
   const [requestBuyOrder, setRequestBuyOrder] = useState<any>(null);
-  const [authenticatedMode, setAuthenticatedMode] = useState('qort')
+  const [authenticatedMode, setAuthenticatedMode] = useState("qort");
   const [requestAuthentication, setRequestAuthentication] = useState<any>(null);
   const [userInfo, setUserInfo] = useState<any>(null);
   const [balance, setBalance] = useState<any>(null);
-  const [ltcBalance, setLtcBalance] = useState<any>(null)
+  const [ltcBalance, setLtcBalance] = useState<any>(null);
   const [paymentTo, setPaymentTo] = useState<string>("");
   const [paymentAmount, setPaymentAmount] = useState<number>(0);
   const [paymentPassword, setPaymentPassword] = useState<string>("");
@@ -84,10 +214,13 @@ function App() {
   const [walletToBeDownloaded, setWalletToBeDownloaded] = useState<any>(null);
   const [walletToBeDownloadedPassword, setWalletToBeDownloadedPassword] =
     useState<string>("");
-  const [authenticatePassword, setAuthenticatePassword] =
-    useState<string>("");
+  const [isMain, setIsMain] = useState<boolean>(
+    window?.location?.href?.includes("?main=true")
+  );
+  const isMainRef = useRef(false);
+  const [authenticatePassword, setAuthenticatePassword] = useState<string>("");
   const [sendqortState, setSendqortState] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false)
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   const [
     walletToBeDownloadedPasswordConfirm,
     setWalletToBeDownloadedPasswordConfirm,
@@ -96,13 +229,80 @@ function App() {
     useState<string>("");
   const [walletToBeDecryptedError, setWalletToBeDecryptedError] =
     useState<string>("");
-  const holdRefExtState = useRef<extStates>("not-authenticated")
+  const [txList, setTxList] = useState([]);
+  const [memberGroups, setMemberGroups] = useState([]);
+  const [isFocused, setIsFocused] = useState(true);
+ 
+  const holdRefExtState = useRef<extStates>("not-authenticated");
+  const isFocusedRef = useRef<boolean>(true);
+  const { isShow, onCancel, onOk, show, message } = useModal();
+  const [openRegisterName, setOpenRegisterName] = useState(false);
+  const registerNamePopoverRef = useRef(null);
+  const [isLoadingRegisterName, setIsLoadingRegisterName] = useState(false);
+  const [registerNameValue, setRegisterNameValue] = useState("");
+  const [infoSnack, setInfoSnack] = useState(null);
+  const [openSnack, setOpenSnack] = useState(false);
+  const [hasLocalNode, setHasLocalNode] = useState(false);
+  const [openAdvancedSettings, setOpenAdvancedSettings] = useState(false);
+  const [useLocalNode, setUseLocalNode] = useState(false);
+  const [confirmUseOfLocal, setConfirmUseOfLocal] = useState(false);
+
+  const [apiKey, setApiKey] = useState("");
+
+  useEffect(() => {
+    chrome.runtime.sendMessage({ action: "getApiKey" }, (response) => {
+      if (response) {
+       
+        globalApiKey = response;
+        setApiKey(response);
+        setUseLocalNode(true)
+        setConfirmUseOfLocal(true)
+        setOpenAdvancedSettings(true)
+      }
+    });
+  }, []);
   useEffect(() => {
     if (extState) {
-      holdRefExtState.current = extState
+      holdRefExtState.current = extState;
     }
-  }, [extState])
+  }, [extState]);
 
+  useEffect(() => {
+    isFocusedRef.current = isFocused;
+  }, [isFocused]);
+
+  // Handler for file selection
+  const handleFileChangeApiKey = (event) => {
+    const file = event.target.files[0]; // Get the selected file
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const text = e.target.result; // Get the file content
+        setApiKey(text); // Store the file content in the state
+      };
+      reader.readAsText(file); // Read the file as text
+    }
+  };
+ 
+  const checkIfUserHasLocalNode = useCallback(async () => {
+    try {
+      const url = `http://127.0.0.1:12391/admin/status`;
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      const data = await response.json();
+      if (data?.isSynchronizing === false && data?.syncPercent === 100) {
+        setHasLocalNode(true);
+      }
+    } catch (error) {}
+  }, []);
+
+  useEffect(() => {
+    checkIfUserHasLocalNode();
+  }, [extState]);
 
   const address = useMemo(() => {
     if (!rawWallet?.address0) return "";
@@ -135,7 +335,7 @@ function App() {
       try {
         if (typeof fileContents !== "string") return;
         pf = JSON.parse(fileContents);
-      } catch (e) { }
+      } catch (e) {}
 
       try {
         const requiredFields = [
@@ -163,8 +363,6 @@ function App() {
     },
   });
 
-
-
   const saveWalletFunc = async (password: string) => {
     let wallet = structuredClone(rawWallet);
 
@@ -173,7 +371,7 @@ function App() {
     wallet = await wallet2.generateSaveWalletData(
       password,
       crypto.kdfThreads,
-      () => { }
+      () => {}
     );
 
     setWalletToBeDownloaded({
@@ -201,31 +399,28 @@ function App() {
         chrome.tabs.sendMessage(
           tabs[0].id,
           { from: "popup", subject: "anySubject" },
-          function (response) {
-
-          }
+          function (response) {}
         );
       }
     );
   };
 
-
   const getBalanceFunc = () => {
-    setQortBalanceLoading(true)
+    setQortBalanceLoading(true);
     chrome.runtime.sendMessage({ action: "balance" }, (response) => {
       if (!response?.error && !isNaN(+response)) {
         setBalance(response);
       }
-      setQortBalanceLoading(false)
+      setQortBalanceLoading(false);
     });
   };
   const getLtcBalanceFunc = () => {
-    setLtcBalanceLoading(true)
+    setLtcBalanceLoading(true);
     chrome.runtime.sendMessage({ action: "ltcBalance" }, (response) => {
       if (!response?.error && !isNaN(+response)) {
         setLtcBalance(response);
       }
-      setLtcBalanceLoading(false)
+      setLtcBalanceLoading(false);
     });
   };
   const sendCoinFunc = () => {
@@ -243,7 +438,7 @@ function App() {
       setSendPaymentError("Please enter your wallet password");
       return;
     }
-    setIsLoading(true)
+    setIsLoading(true);
     chrome.runtime.sendMessage(
       {
         action: "sendCoin",
@@ -260,11 +455,10 @@ function App() {
           setExtstate("transfer-success-regular");
           // setSendPaymentSuccess("Payment successfully sent");
         }
-        setIsLoading(false)
+        setIsLoading(false);
       }
     );
   };
-
 
   const clearAllStates = () => {
     setRequestConnection(null);
@@ -274,29 +468,73 @@ function App() {
   useEffect(() => {
     // Listen for messages from the background script
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-
       // Check if the message is to update the state
-      if (message.action === "UPDATE_STATE_CONFIRM_SEND_QORT") {
+      if (
+        message.action === "UPDATE_STATE_CONFIRM_SEND_QORT" &&
+        !isMainWindow
+      ) {
         // Update the component state with the received 'sendqort' state
         setSendqortState(message.payload);
         setExtstate("web-app-request-payment");
-      } else if (message.action === "closePopup") {
+      } else if (message.action === "closePopup" && !isMainWindow) {
         // Update the component state with the received 'sendqort' state
         window.close();
-      } else if (message.action === "UPDATE_STATE_REQUEST_CONNECTION") {
+      } else if (
+        message.action === "UPDATE_STATE_REQUEST_CONNECTION" &&
+        !isMainWindow
+      ) {
+   
         // Update the component state with the received 'sendqort' state
         setRequestConnection(message.payload);
         setExtstate("web-app-request-connection");
-      } else if (message.action === "UPDATE_STATE_REQUEST_BUY_ORDER") {
+      } else if (
+        message.action === "UPDATE_STATE_REQUEST_BUY_ORDER" &&
+        !isMainWindow
+      ) {
         // Update the component state with the received 'sendqort' state
         setRequestBuyOrder(message.payload);
         setExtstate("web-app-request-buy-order");
-      } else if (message.action === "UPDATE_STATE_REQUEST_AUTHENTICATION") {
+      } else if (
+        message.action === "UPDATE_STATE_REQUEST_AUTHENTICATION" &&
+        !isMainWindow
+      ) {
         // Update the component state with the received 'sendqort' state
         setRequestAuthentication(message.payload);
         setExtstate("web-app-request-authentication");
-      } else if (message.action === "SET_COUNTDOWN") {
+      } else if (message.action === "SET_COUNTDOWN" && !isMainWindow) {
         setCountdown(message.payload);
+      } else if (message.action === "INITIATE_MAIN") {
+        // Update the component state with the received 'sendqort' state
+        setIsMain(true);
+        isMainRef.current = true;
+      } else if (message.action === "CHECK_FOCUS" && isMainWindow) {
+        
+        sendResponse(isFocusedRef.current);
+      } else if (
+        message.action === "NOTIFICATION_OPEN_DIRECT" &&
+        isMainWindow
+      ) {
+        executeEvent("openDirectMessage", {
+          from: message.payload.from,
+        });
+      } else if (message.action === "NOTIFICATION_OPEN_GROUP" && isMainWindow) {
+        executeEvent("openGroupMessage", {
+          from: message.payload.from,
+        });
+      } else if (
+        message.action === "NOTIFICATION_OPEN_ANNOUNCEMENT_GROUP" &&
+        isMainWindow
+      ) {
+        executeEvent("openGroupAnnouncement", {
+          from: message.payload.from,
+        });
+      } else if (
+        message.action === "NOTIFICATION_OPEN_THREAD_NEW_POST" &&
+        isMainWindow
+      ) {
+        executeEvent("openThreadNewPost", {
+          data: message.payload.data,
+        });
       }
     });
   }, []);
@@ -327,7 +565,7 @@ function App() {
       return;
     }
 
-    setIsLoading(true)
+    setIsLoading(true);
     chrome.runtime.sendMessage(
       {
         action: "sendQortConfirmation",
@@ -344,12 +582,11 @@ function App() {
           setExtstate("transfer-success-request");
           setCountdown(null);
         } else {
-
           setSendPaymentError(
             response?.error || "Unable to perform payment. Please try again."
           );
         }
-        setIsLoading(false)
+        setIsLoading(false);
       }
     );
   };
@@ -372,7 +609,7 @@ function App() {
       return;
     }
 
-    setIsLoading(true)
+    setIsLoading(true);
     chrome.runtime.sendMessage(
       {
         action: "buyOrderConfirmation",
@@ -387,12 +624,11 @@ function App() {
           setExtstate("buy-order-submitted");
           setCountdown(null);
         } else {
-
           setSendPaymentError(
             response?.error || "Unable to perform payment. Please try again."
           );
         }
-        setIsLoading(false)
+        setIsLoading(false);
       }
     );
   };
@@ -422,29 +658,48 @@ function App() {
 
   useEffect(() => {
     try {
-      setIsLoading(true)
+      setIsLoading(true);
       chrome.runtime.sendMessage({ action: "getWalletInfo" }, (response) => {
         if (response && response?.walletInfo) {
           setRawWallet(response?.walletInfo);
-          if (holdRefExtState.current === 'web-app-request-payment' || holdRefExtState.current === 'web-app-request-connection' || holdRefExtState.current === 'web-app-request-buy-order') return
+          if (
+            holdRefExtState.current === "web-app-request-payment" ||
+            holdRefExtState.current === "web-app-request-connection" ||
+            holdRefExtState.current === "web-app-request-buy-order"
+          )
+            return;
+
+         
           setExtstate("authenticated");
         }
       });
-    } catch (error) { } finally {
-      setIsLoading(false)
+    } catch (error) {
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
-  useEffect(() => {
-    if (!address) return;
+  const getUserInfo = useCallback(async (useTimer?: boolean) => {
     try {
+      if (useTimer) {
+        await new Promise((res) => {
+          setTimeout(() => {
+            res(null);
+          }, 10000);
+        });
+      }
       chrome.runtime.sendMessage({ action: "userInfo" }, (response) => {
         if (response && !response.error) {
           setUserInfo(response);
         }
       });
       getBalanceFunc();
-    } catch (error) { }
+    } catch (error) {}
+  }, []);
+
+  useEffect(() => {
+    if (!address) return;
+    getUserInfo();
   }, [address]);
 
   useEffect(() => {
@@ -453,11 +708,15 @@ function App() {
     };
   }, []);
 
-  useEffect(()=> {
-    if(authenticatedMode === 'ltc' && !ltcBalanceLoading && ltcBalance === null ){
-      getLtcBalanceFunc()
+  useEffect(() => {
+    if (
+      authenticatedMode === "ltc" &&
+      !ltcBalanceLoading &&
+      ltcBalance === null
+    ) {
+      getLtcBalanceFunc();
     }
-  }, [authenticatedMode])
+  }, [authenticatedMode]);
 
   const confirmPasswordToDownload = async () => {
     try {
@@ -466,18 +725,17 @@ function App() {
         setSendPaymentError("Please enter your password");
         return;
       }
-      setIsLoading(true)
+      setIsLoading(true);
       await new Promise<void>((res) => {
         setTimeout(() => {
-          res()
-        }, 250)
-      })
+          res();
+        }, 250);
+      });
       const res = await saveWalletFunc(walletToBeDownloadedPassword);
     } catch (error: any) {
       setWalletToBeDownloadedError(error?.message);
     } finally {
-      setIsLoading(false)
-
+      setIsLoading(false);
     }
   };
 
@@ -509,48 +767,49 @@ function App() {
         setWalletToBeDownloadedError("Password fields do not match!");
         return;
       }
-      setIsLoading(true)
+      setIsLoading(true);
       await new Promise<void>((res) => {
         setTimeout(() => {
-          res()
-        }, 250)
-      })
+          res();
+        }, 250);
+      });
       const res = await createAccount();
       const wallet = await res.generateSaveWalletData(
         walletToBeDownloadedPassword,
         crypto.kdfThreads,
-        () => { }
+        () => {}
       );
-      chrome.runtime.sendMessage({
-        action: "decryptWallet", payload: {
-          password: walletToBeDownloadedPassword,
-          wallet
-        }
-      }, (response) => {
-        if (response && !response?.error) {
-          setRawWallet(wallet);
-          setWalletToBeDownloaded({
+      chrome.runtime.sendMessage(
+        {
+          action: "decryptWallet",
+          payload: {
+            password: walletToBeDownloadedPassword,
             wallet,
-            qortAddress: wallet.address0,
-          });
-          chrome.runtime.sendMessage({ action: "userInfo" }, (response2) => {
-            setIsLoading(false)
-            if (response2 && !response2.error) {
-              setUserInfo(response);
-            }
-          });
-          getBalanceFunc();
-        } else if (response?.error) {
-          setIsLoading(false)
-          setWalletToBeDecryptedError(response.error)
+          },
+        },
+        (response) => {
+          if (response && !response?.error) {
+            setRawWallet(wallet);
+            setWalletToBeDownloaded({
+              wallet,
+              qortAddress: wallet.address0,
+            });
+            chrome.runtime.sendMessage({ action: "userInfo" }, (response2) => {
+              setIsLoading(false);
+              if (response2 && !response2.error) {
+                setUserInfo(response);
+              }
+            });
+            getBalanceFunc();
+          } else if (response?.error) {
+            setIsLoading(false);
+            setWalletToBeDecryptedError(response.error);
+          }
         }
-      });
-
-
-
+      );
     } catch (error: any) {
       setWalletToBeDownloadedError(error?.message);
-      setIsLoading(false)
+      setIsLoading(false);
     }
   };
 
@@ -561,7 +820,7 @@ function App() {
           resetAllStates();
         }
       });
-    } catch (error) { }
+    } catch (error) {}
   };
 
   const returnToMain = () => {
@@ -578,16 +837,16 @@ function App() {
 
   const resetAllStates = () => {
     setExtstate("not-authenticated");
-    setAuthenticatedMode('qort')
+    setAuthenticatedMode("qort");
     setBackupjson(null);
     setRawWallet(null);
     setdecryptedWallet(null);
     setRequestConnection(null);
-    setRequestBuyOrder(null)
+    setRequestBuyOrder(null);
     setRequestAuthentication(null);
     setUserInfo(null);
     setBalance(null);
-    setLtcBalance(null)
+    setLtcBalance(null);
     setPaymentTo("");
     setPaymentAmount(0);
     setPaymentPassword("");
@@ -599,58 +858,217 @@ function App() {
     setWalletToBeDownloadedPasswordConfirm("");
     setWalletToBeDownloadedError("");
     setSendqortState(null);
+    globalApiKey = null;
+    setApiKey("");
+    setUseLocalNode(false);
+    setHasLocalNode(false);
+    setOpenAdvancedSettings(false);
+    setConfirmUseOfLocal(false)
   };
 
   const authenticateWallet = async () => {
     try {
-      setIsLoading(true)
-      setWalletToBeDecryptedError('')
+      setIsLoading(true);
+      setWalletToBeDecryptedError("");
       await new Promise<void>((res) => {
         setTimeout(() => {
-          res()
-        }, 250)
-      })
-      chrome.runtime.sendMessage({
-        action: "decryptWallet", payload: {
-          password: authenticatePassword,
-          wallet: rawWallet
+          res();
+        }, 250);
+      });
+      chrome.runtime.sendMessage(
+        {
+          action: "decryptWallet",
+          payload: {
+            password: authenticatePassword,
+            wallet: rawWallet,
+          },
+        },
+        (response) => {
+          if (response && !response?.error) {
+            setAuthenticatePassword("");
+            setExtstate("authenticated");
+            setWalletToBeDecryptedError("");
+            chrome.runtime.sendMessage({ action: "userInfo" }, (response) => {
+              setIsLoading(false);
+              if (response && !response.error) {
+                setUserInfo(response);
+              }
+            });
+            getBalanceFunc();
+            chrome.runtime.sendMessage(
+              { action: "getWalletInfo" },
+              (response) => {
+                if (response && response?.walletInfo) {
+                  setRawWallet(response?.walletInfo);
+                }
+              }
+            );
+          } else if (response?.error) {
+            setIsLoading(false);
+            setWalletToBeDecryptedError(response.error);
+          }
         }
-      }, (response) => {
-        if (response && !response?.error) {
-          setAuthenticatePassword("");
-          setExtstate("authenticated");
-          setWalletToBeDecryptedError('')
-          chrome.runtime.sendMessage({ action: "userInfo" }, (response) => {
-            setIsLoading(false)
-            if (response && !response.error) {
-              setUserInfo(response);
+      );
+    } catch (error) {
+      setWalletToBeDecryptedError("Unable to authenticate. Wrong password");
+    }
+  };
+
+  // const handleBeforeUnload = (e)=> {
+  //   const shouldClose = confirm('Are you sure you want to close this window? You may have unsaved changes.');
+
+  //   if (!shouldClose) {
+  //     // Prevent the window from closing
+  //     e.preventDefault();
+  //     e.returnValue = ''; // Required for Chrome
+  //   } else {
+  //     // Allow the window to close
+  //     // No need to call preventDefault here; returnValue must be left empty
+  //   }
+  // }
+
+  // useEffect(()=> {
+  //   window.addEventListener('beforeunload', handleBeforeUnload);
+
+  //   return ()=> {
+  //     window.removeEventListener('beforeunload', handleBeforeUnload);
+  //   }
+  // }, [])
+
+  useEffect(() => {
+    if (!isMainWindow) return;
+    const handleBeforeUnload = (e) => {
+      e.preventDefault();
+      e.returnValue = ""; // This is required for Chrome to display the confirmation dialog.
+    };
+
+    // Add the event listener when the component mounts
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    // Clean up the event listener when the component unmounts
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isMainWindow) return;
+    // Handler for when the window gains focus
+    const handleFocus = () => {
+      setIsFocused(true);
+      console.log("Webview is focused");
+    };
+
+    // Handler for when the window loses focus
+    const handleBlur = () => {
+      setIsFocused(false);
+      console.log("Webview is not focused");
+    };
+
+    // Attach the event listeners
+    window.addEventListener("focus", handleFocus);
+    window.addEventListener("blur", handleBlur);
+
+    // Optionally, listen for visibility changes
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        setIsFocused(true);
+        console.log("Webview is visible");
+      } else {
+        setIsFocused(false);
+        console.log("Webview is hidden");
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    // Cleanup the event listeners on component unmount
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      window.removeEventListener("blur", handleBlur);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
+
+  const registerName = async () => {
+    try {
+      if (!userInfo?.address) throw new Error("Your address was not found");
+      const fee = await getFee("REGISTER_NAME");
+      await show({
+        message: "Would you like to register this name?",
+        publishFee: fee.fee + " QORT",
+      });
+      setIsLoadingRegisterName(true);
+      new Promise((res, rej) => {
+        chrome.runtime.sendMessage(
+          {
+            action: "registerName",
+            payload: {
+              name: registerNameValue,
+            },
+          },
+          (response) => {
+          
+            if (!response?.error) {
+              res(response);
+              setIsLoadingRegisterName(false);
+              setInfoSnack({
+                type: "success",
+                message:
+                  "Successfully registered. It may take a couple of minutes for the changes to propagate",
+              });
+              setOpenRegisterName(false);
+              setRegisterNameValue("");
+              setOpenSnack(true);
+              setTxList((prev) => [
+                {
+                  ...response,
+                  type: "register-name",
+                  label: `Registered name: awaiting confirmation. This may take a couple minutes.`,
+                  labelDone: `Registered name: success!`,
+                  done: false,
+                },
+                ...prev.filter((item) => !item.done),
+              ]);
+              return;
             }
-          });
-          getBalanceFunc();
-          chrome.runtime.sendMessage({ action: "getWalletInfo" }, (response) => {
-            if (response && response?.walletInfo) {
-              setRawWallet(response?.walletInfo);
-            }
-          });
-        } else if (response?.error) {
-          setIsLoading(false)
-          setWalletToBeDecryptedError(response.error)
-        }
+            setInfoSnack({
+              type: "error",
+              message: response?.error,
+            });
+            setOpenSnack(true);
+            rej(response.error);
+          }
+        );
       });
     } catch (error) {
-      setWalletToBeDecryptedError('Unable to authenticate. Wrong password')
+      if (error?.message) {
+        setInfoSnack({
+          type: "error",
+          message: error?.message,
+        });
+      }
+    } finally {
+      setIsLoadingRegisterName(false);
     }
-  }
+  };
 
   return (
     <AppContainer>
+      {/* {extState === 'group' && (
+        <Group myAddress={userInfo?.address} />
+      )} */}
+
       {extState === "not-authenticated" && (
         <>
           <Spacer height="48px" />
-          <div className="image-container" style={{
-            width: '136px',
-            height: '154px'
-          }}>
+          <div
+            className="image-container"
+            style={{
+              width: "136px",
+              height: "154px",
+            }}
+          >
             <img src={Logo1} className="base-image" />
             <img src={Logo1Dark} className="hover-image" />
           </div>
@@ -709,168 +1127,361 @@ function App() {
               }}
             />
           </Box>
+          {hasLocalNode && (
+            <>
+              <Spacer height="15px" />
+              <Box
+                sx={{
+                  display: "flex",
+                  gap: "10px",
+                  alignItems: "center",
+                  flexDirection: "column",
+                }}
+              >
+                
+                  <Typography
+                  sx={{
+                    cursor: 'pointer',
+                    fontSize: '14px'
+                  }}
+                    onClick={() => {
+                      setOpenAdvancedSettings(true);
+                    }}
+                  >
+                    Advanced settings
+                  </Typography>
+             
+                {openAdvancedSettings && (
+                  <>
+                  <Box
+                sx={{
+                  display: "flex",
+                  gap: "10px",
+                  alignItems: "center",
+                  justifyContent: 'center',
+                  width: '100%'
+                }}
+              >
+                    <Checkbox
+                      edge="start"
+                      checked={useLocalNode}
+                      tabIndex={-1}
+                      disableRipple
+                      onChange={(event) => {
+                        setUseLocalNode(event.target.checked);
+                      }}
+                      disabled={confirmUseOfLocal}
+                      sx={{
+                        "&.Mui-checked": {
+                          color: "white", // Customize the color when checked
+                        },
+                        "& .MuiSvgIcon-root": {
+                          color: "white",
+                        },
+                      }}
+                    />
+
+                    <Typography>Use local node</Typography>
+                    </Box>
+                    {useLocalNode && (
+                      <>
+                        <Button disabled={confirmUseOfLocal} variant="contained" component="label">
+                          Select apiKey.txt
+                          <input
+                            type="file"
+                            accept=".txt"
+                            hidden
+                            onChange={handleFileChangeApiKey} // File input handler
+                          />
+                        </Button>
+                        <Spacer height="5px" />
+                        <Typography
+                          sx={{
+                            fontSize: "12px",
+                          }}
+                        >
+                          {apiKey}
+                        </Typography>
+                        <Spacer height="5px" />
+                        <Button
+                          onClick={() => {
+                            const valueToSet = !confirmUseOfLocal
+                            const payload = valueToSet ? apiKey : null
+                            chrome.runtime.sendMessage(
+                              { action: "setApiKey", payload },
+                              (response) => {
+                                if (response) {
+                                  globalApiKey = payload;
+                               
+                                  setConfirmUseOfLocal(valueToSet)
+                                  if(!globalApiKey){
+                                    setUseLocalNode(false)
+                                    setOpenAdvancedSettings(false)
+                                    setApiKey('')
+                                  }
+                                }
+                              }
+                            );
+                          }}
+                          variant="contained"
+                          sx={{
+                            color: "white",
+                          }}
+                        >
+                          {!confirmUseOfLocal ? 'Confirm use of local node' : 'Switch back to gateway'}
+                          
+                        </Button>
+                      </>
+                    )}
+                  </>
+                )}
+              </Box>
+            </>
+          )}
         </>
       )}
       {/* {extState !== "not-authenticated" && (
         <button onClick={logoutFunc}>logout</button>
       )} */}
-      {extState === "authenticated" && (
-        <AuthenticatedContainer>
-          <AuthenticatedContainerInnerLeft>
-            <Spacer height="48px" />
+      {extState === "authenticated" && isMainWindow && (
+        <MyContext.Provider
+          value={{
+            txList,
+            setTxList,
+            memberGroups,
+            setMemberGroups,
+            isShow,
+            onCancel,
+            onOk,
+            show,
+            message,
+          }}
+        >
+          <Box
+            sx={{
+              width: "100vw",
+              height: "100vh",
+              display: "flex",
+            }}
+          >
+            <Group
+              balance={balance}
+              userInfo={userInfo}
+              myAddress={userInfo?.address}
+              isFocused={isFocused}
+              isMain={isMain}
+            />
+            <AuthenticatedContainer sx={{ width: "350px" }}>
+              <AuthenticatedContainerInnerLeft>
+                <Spacer height="48px" />
 
-            {authenticatedMode === 'ltc' ? (
-              <>
-                <img src={ltcLogo} />
-                <Spacer height="32px" />
-                <CopyToClipboard text={rawWallet?.ltcAddress}>
-                  <AddressBox>
-                    {rawWallet?.ltcAddress?.slice(0, 6)}...
-                    {rawWallet?.ltcAddress?.slice(-4)} <img src={Copy} />
-                  </AddressBox>
-                </CopyToClipboard>
-                <Spacer height="10px" />
-                {ltcBalanceLoading && <CircularProgress color="success" size={16} />}
-                {!isNaN(+ltcBalance) && !ltcBalanceLoading && (
-                  <Box sx={{
-                    gap: '10px',
-                    display: 'flex',
-                    alignItems: 'center'
-                  }}>
+                {authenticatedMode === "ltc" ? (
+                  <>
+                    <img src={ltcLogo} />
+                    <Spacer height="32px" />
+                    <CopyToClipboard text={rawWallet?.ltcAddress}>
+                      <AddressBox>
+                        {rawWallet?.ltcAddress?.slice(0, 6)}...
+                        {rawWallet?.ltcAddress?.slice(-4)} <img src={Copy} />
+                      </AddressBox>
+                    </CopyToClipboard>
+                    <Spacer height="10px" />
+                    {ltcBalanceLoading && (
+                      <CircularProgress color="success" size={16} />
+                    )}
+                    {!isNaN(+ltcBalance) && !ltcBalanceLoading && (
+                      <Box
+                        sx={{
+                          gap: "10px",
+                          display: "flex",
+                          alignItems: "center",
+                        }}
+                      >
+                        <TextP
+                          sx={{
+                            textAlign: "center",
+                            lineHeight: "24px",
+                            fontSize: "20px",
+                            fontWeight: 700,
+                          }}
+                        >
+                          {ltcBalance} LTC
+                        </TextP>
+                        <RefreshIcon
+                          onClick={getLtcBalanceFunc}
+                          sx={{
+                            fontSize: "16px",
+                            color: "white",
+                            cursor: "pointer",
+                          }}
+                        />
+                      </Box>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <img src={Logo2} />
+                    <Spacer height="32px" />
                     <TextP
                       sx={{
                         textAlign: "center",
                         lineHeight: "24px",
                         fontSize: "20px",
-                        fontWeight: 700,
                       }}
                     >
-                      {ltcBalance} LTC
+                      {userInfo?.name}
                     </TextP>
-                    <RefreshIcon onClick={getLtcBalanceFunc} sx={{
-                      fontSize: '16px',
-                      color: 'white',
-                      cursor: 'pointer'
-                    }} />
-                  </Box>
+                    <Spacer height="10px" />
+                    <CopyToClipboard text={rawWallet?.address0}>
+                      <AddressBox>
+                        {rawWallet?.address0?.slice(0, 6)}...
+                        {rawWallet?.address0?.slice(-4)} <img src={Copy} />
+                      </AddressBox>
+                    </CopyToClipboard>
+                    <Spacer height="10px" />
+                    {qortBalanceLoading && (
+                      <CircularProgress color="success" size={16} />
+                    )}
+                    {!qortBalanceLoading && balance >= 0 && (
+                      <Box
+                        sx={{
+                          gap: "10px",
+                          display: "flex",
+                          alignItems: "center",
+                        }}
+                      >
+                        <TextP
+                          sx={{
+                            textAlign: "center",
+                            lineHeight: "24px",
+                            fontSize: "20px",
+                            fontWeight: 700,
+                          }}
+                        >
+                          {balance?.toFixed(2)} QORT
+                        </TextP>
+                        <RefreshIcon
+                          onClick={getBalanceFunc}
+                          sx={{
+                            fontSize: "16px",
+                            color: "white",
+                            cursor: "pointer",
+                          }}
+                        />
+                      </Box>
+                    )}
 
+                    <Spacer height="35px" />
+                    {userInfo && !userInfo?.name && (
+                      <TextP
+                        ref={registerNamePopoverRef}
+                        sx={{
+                          textAlign: "center",
+                          lineHeight: 1.2,
+                          fontSize: "16px",
+                          fontWeight: 500,
+                          cursor: "pointer",
+                          marginTop: "10px",
+                          color: "red",
+                          textDecoration: "underline",
+                        }}
+                        onClick={() => {
+                          setOpenRegisterName(true);
+                        }}
+                      >
+                        REGISTER NAME
+                      </TextP>
+                    )}
+                    <Spacer height="20px" />
+                    <CustomButton
+                      onClick={() => {
+                        setExtstate("send-qort");
+                      }}
+                    >
+                      Transfer QORT
+                    </CustomButton>
+                  </>
                 )}
-
-              </>
-            ) : (
-              <>
-                <img src={Logo2} />
-                <Spacer height="32px" />
                 <TextP
                   sx={{
                     textAlign: "center",
                     lineHeight: "24px",
-                    fontSize: "20px",
+                    fontSize: "12px",
+                    fontWeight: 500,
+                    cursor: "pointer",
+                    marginTop: "10px",
+                    textDecoration: "underline",
                   }}
-                >
-                  {userInfo?.name}
-                </TextP>
-                <Spacer height="10px" />
-                <CopyToClipboard text={rawWallet?.address0}>
-                  <AddressBox>
-                    {rawWallet?.address0?.slice(0, 6)}...
-                    {rawWallet?.address0?.slice(-4)} <img src={Copy} />
-                  </AddressBox>
-                </CopyToClipboard>
-                <Spacer height="10px" />
-                {qortBalanceLoading && <CircularProgress color="success" size={16} />}
-                {!qortBalanceLoading && (balance >= 0) && (
-                   <Box sx={{
-                    gap: '10px',
-                    display: 'flex',
-                    alignItems: 'center'
-                  }}>
-               <TextP
-               sx={{
-                 textAlign: "center",
-                 lineHeight: "24px",
-                 fontSize: "20px",
-                 fontWeight: 700,
-               }}
-             >
-               {balance?.toFixed(2)} QORT
-             </TextP>
-             <RefreshIcon onClick={getBalanceFunc} sx={{
-                      fontSize: '16px',
-                      color: 'white',
-                      cursor: 'pointer'
-                    }} />
-             </Box>
-            )}
-                <Spacer height="55px" />
-                <CustomButton
                   onClick={() => {
-                    setExtstate("send-qort");
+                    chrome.tabs.create({ url: "https://www.qort.trade" });
                   }}
                 >
-                  Transfer QORT
-                </CustomButton>
-              </>
-            )}
-             <TextP
-               sx={{
-                 textAlign: "center",
-                 lineHeight: "24px",
-                 fontSize: "12px",
-                 fontWeight: 500,
-                 cursor: 'pointer',
-                 marginTop: '10px',
-                 textDecoration: 'underline'
-               }}
-               onClick={()=> {
-                chrome.tabs.create({ url: 'https://www.qort.trade' });
-               }}
-             >
-               Get QORT at qort.trade
-             </TextP>
-          </AuthenticatedContainerInnerLeft>
-          <AuthenticatedContainerInnerRight>
-            <Spacer height="20px" />
-            <img
-              onClick={() => {
-                setExtstate("download-wallet");
-              }}
-              src={Download}
-              style={{
-                cursor: "pointer",
-              }}
-            />
-            <Spacer height="20px" />
-            <img
-              src={Logout}
-              onClick={logoutFunc}
-              style={{
-                cursor: "pointer",
-              }}
-            />
-            <Spacer height="20px" />
-            {authenticatedMode === 'qort' && (
-              <img onClick={() => {
-                setAuthenticatedMode('ltc')
-              }} src={ltcLogo} style={{
-                cursor: "pointer",
-                width: '20px',
-                height: 'auto'
-              }} />
-            )}
-            {authenticatedMode === 'ltc' && (
-              <img onClick={() => {
-                setAuthenticatedMode('qort')
-              }} src={qortLogo} style={{
-                cursor: "pointer",
-                width: '20px',
-                height: 'auto'
-              }} />
-            )}
-          </AuthenticatedContainerInnerRight>
-        </AuthenticatedContainer>
+                  Get QORT at qort.trade
+                </TextP>
+              </AuthenticatedContainerInnerLeft>
+              <AuthenticatedContainerInnerRight>
+                <Spacer height="20px" />
+                <img
+                  onClick={() => {
+                    setExtstate("download-wallet");
+                  }}
+                  src={Download}
+                  style={{
+                    cursor: "pointer",
+                  }}
+                />
+                <Spacer height="20px" />
+                <img
+                  src={Logout}
+                  onClick={logoutFunc}
+                  style={{
+                    cursor: "pointer",
+                  }}
+                />
+                <Spacer height="20px" />
+                {authenticatedMode === "qort" && (
+                  <img
+                    onClick={() => {
+                      setAuthenticatedMode("ltc");
+                    }}
+                    src={ltcLogo}
+                    style={{
+                      cursor: "pointer",
+                      width: "20px",
+                      height: "auto",
+                    }}
+                  />
+                )}
+                {authenticatedMode === "ltc" && (
+                  <img
+                    onClick={() => {
+                      setAuthenticatedMode("qort");
+                    }}
+                    src={qortLogo}
+                    style={{
+                      cursor: "pointer",
+                      width: "20px",
+                      height: "auto",
+                    }}
+                  />
+                )}
+              </AuthenticatedContainerInnerRight>
+            </AuthenticatedContainer>
+          </Box>
+          <Box
+            sx={{
+              position: "fixed",
+              right: "25px",
+              bottom: "25px",
+              width: "350px",
+              zIndex: 100000,
+            }}
+          >
+            <TaskManger getUserInfo={getUserInfo} />
+          </Box>
+        </MyContext.Provider>
       )}
-      {extState === "send-qort" && (
+      {extState === "send-qort" && isMainWindow && (
         <>
           <Spacer height="22px" />
           <Box
@@ -979,7 +1590,7 @@ function App() {
           </CustomButton>
         </>
       )}
-      {extState === "web-app-request-buy-order" && (
+      {extState === "web-app-request-buy-order" && !isMainWindow && (
         <>
           <Spacer height="100px" />
 
@@ -1023,7 +1634,8 @@ function App() {
               fontWeight: 700,
             }}
           >
-            {requestBuyOrder?.crosschainAtInfo?.expectedForeignAmount} {requestBuyOrder?.crosschainAtInfo?.foreignBlockchain}
+            {requestBuyOrder?.crosschainAtInfo?.expectedForeignAmount}{" "}
+            {requestBuyOrder?.crosschainAtInfo?.foreignBlockchain}
           </TextP>
           {/* <Spacer height="29px" />
 
@@ -1064,7 +1676,7 @@ function App() {
           <ErrorText>{sendPaymentError}</ErrorText>
         </>
       )}
-      {extState === "web-app-request-payment" && (
+      {extState === "web-app-request-payment" && !isMainWindow && (
         <>
           <Spacer height="100px" />
 
@@ -1138,13 +1750,16 @@ function App() {
           <ErrorText>{sendPaymentError}</ErrorText>
         </>
       )}
-      {extState === "web-app-request-connection" && (
+      {extState === "web-app-request-connection" && !isMainWindow && (
         <>
           <Spacer height="48px" />
-          <div className="image-container" style={{
-            width: '136px',
-            height: '154px'
-          }}>
+          <div
+            className="image-container"
+            style={{
+              width: "136px",
+              height: "154px",
+            }}
+          >
             <img src={Logo1} className="base-image" />
             <img src={Logo1Dark} className="hover-image" />
           </div>
@@ -1198,13 +1813,16 @@ function App() {
           </Box>
         </>
       )}
-      {extState === "web-app-request-authentication" && (
+      {extState === "web-app-request-authentication" && !isMainWindow && (
         <>
           <Spacer height="48px" />
-          <div className="image-container" style={{
-            width: '136px',
-            height: '154px'
-          }}>
+          <div
+            className="image-container"
+            style={{
+              width: "136px",
+              height: "154px",
+            }}
+          >
             <img src={Logo1} className="base-image" />
             <img src={Logo1Dark} className="hover-image" />
           </div>
@@ -1242,7 +1860,7 @@ function App() {
           </CustomButton>
         </>
       )}
-      {rawWallet && extState === 'wallet-dropped' && (
+      {rawWallet && extState === "wallet-dropped" && (
         <>
           <Spacer height="22px" />
           <Box
@@ -1266,10 +1884,13 @@ function App() {
             />
           </Box>
           <Spacer height="10px" />
-          <div className="image-container" style={{
-            width: '136px',
-            height: '154px'
-          }}>
+          <div
+            className="image-container"
+            style={{
+              width: "136px",
+              height: "154px",
+            }}
+          >
             <img src={Logo1} className="base-image" />
             <img src={Logo1Dark} className="hover-image" />
           </div>
@@ -1302,9 +1923,7 @@ function App() {
             <PasswordField
               id="standard-adornment-password"
               value={authenticatePassword}
-              onChange={(e) =>
-                setAuthenticatePassword(e.target.value)
-              }
+              onChange={(e) => setAuthenticatePassword(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   authenticateWallet();
@@ -1312,12 +1931,10 @@ function App() {
               }}
             />
             <Spacer height="20px" />
-            <CustomButton onClick={authenticateWallet} >
+            <CustomButton onClick={authenticateWallet}>
               Authenticate
             </CustomButton>
-            <ErrorText>
-              {walletToBeDecryptedError}
-            </ErrorText>
+            <ErrorText>{walletToBeDecryptedError}</ErrorText>
           </>
         </>
       )}
@@ -1342,10 +1959,13 @@ function App() {
             />
           </Box>
           <Spacer height="10px" />
-          <div className="image-container" style={{
-            width: '136px',
-            height: '154px'
-          }}>
+          <div
+            className="image-container"
+            style={{
+              width: "136px",
+              height: "154px",
+            }}
+          >
             <img src={Logo1} className="base-image" />
             <img src={Logo1Dark} className="hover-image" />
           </div>
@@ -1386,9 +2006,7 @@ function App() {
               <CustomButton onClick={confirmPasswordToDownload}>
                 Confirm password
               </CustomButton>
-              <ErrorText>
-                {walletToBeDownloadedError}
-              </ErrorText>
+              <ErrorText>{walletToBeDownloadedError}</ErrorText>
             </>
           )}
 
@@ -1420,16 +2038,19 @@ function App() {
                     cursor: "pointer",
                   }}
                   onClick={() => {
-                    setExtstate("not-authenticated")
+                    setExtstate("not-authenticated");
                   }}
                   src={Return}
                 />
               </Box>
               <Spacer height="15px" />
-              <div className="image-container" style={{
-                width: '136px',
-                height: '154px'
-              }}>
+              <div
+                className="image-container"
+                style={{
+                  width: "136px",
+                  height: "154px",
+                }}
+              >
                 <img src={Logo1} className="base-image" />
                 <img src={Logo1Dark} className="hover-image" />
               </div>
@@ -1471,9 +2092,7 @@ function App() {
               <CustomButton onClick={createAccountFunc}>
                 Create Account
               </CustomButton>
-              <ErrorText>
-                {walletToBeDownloadedError}
-              </ErrorText>
+              <ErrorText>{walletToBeDownloadedError}</ErrorText>
             </>
           )}
 
@@ -1597,6 +2216,83 @@ function App() {
         </Box>
       )}
       {isLoading && <Loader />}
+      {isShow && (
+        <Dialog
+          open={isShow}
+          aria-labelledby="alert-dialog-title"
+          aria-describedby="alert-dialog-description"
+        >
+          <DialogTitle id="alert-dialog-title">{"Publish"}</DialogTitle>
+          <DialogContent>
+            <DialogContentText id="alert-dialog-description">
+              {message.message}
+            </DialogContentText>
+            <DialogContentText id="alert-dialog-description2">
+              publish fee: {message.publishFee}
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button variant="contained" onClick={onCancel}>
+              Disagree
+            </Button>
+            <Button variant="contained" onClick={onOk} autoFocus>
+              Agree
+            </Button>
+          </DialogActions>
+        </Dialog>
+      )}
+      <Popover
+        open={openRegisterName}
+        anchorEl={registerNamePopoverRef.current}
+        onClose={() => {
+          setOpenRegisterName(false);
+          setRegisterNameValue("");
+        }}
+        anchorOrigin={{
+          vertical: "bottom",
+          horizontal: "center",
+        }}
+        transformOrigin={{
+          vertical: "top",
+          horizontal: "center",
+        }}
+        style={{ marginTop: "8px" }}
+      >
+        <Box
+          sx={{
+            width: "325px",
+            height: "250px",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: "10px",
+            padding: "10px",
+          }}
+        >
+          <Label>Choose a name</Label>
+          <Input
+            onChange={(e) => setRegisterNameValue(e.target.value)}
+            value={registerNameValue}
+            placeholder="Choose a name"
+          />
+          <Spacer height="25px" />
+          <LoadingButton
+            loading={isLoadingRegisterName}
+            loadingPosition="start"
+            variant="contained"
+            disabled={!registerNameValue}
+            onClick={registerName}
+          >
+            Register Name
+          </LoadingButton>
+        </Box>
+      </Popover>
+      <CustomizedSnackbars
+        open={openSnack}
+        setOpen={setOpenSnack}
+        info={infoSnack}
+        setInfo={setInfoSnack}
+      />
     </AppContainer>
   );
 }

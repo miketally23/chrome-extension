@@ -92,7 +92,7 @@ export const createAccount = async()=> {
 
     saveAs(blob, fileName);
     } catch (error) {
-        console.log({ error });
+     
         if (error.name === 'AbortError') {
             return;
         }

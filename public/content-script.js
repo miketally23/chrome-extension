@@ -1,3 +1,4 @@
+
  async function connection(hostname) {
   const isConnected = await chrome.storage.local.get([hostname]);
   let connected = false
@@ -48,6 +49,7 @@ document.addEventListener('qortalExtensionRequests', async (event) => {
       }
     });
   } else if (type === 'REQUEST_CONNECTION') {
+    console.log('REQUEST_CONNECTION')
     const hostname = window.location.hostname
     chrome.runtime.sendMessage({ action: "connection", payload: {
       hostname
@@ -122,7 +124,7 @@ document.addEventListener('qortalExtensionRequests', async (event) => {
       }
     });
   } else if(type === 'REQUEST_LTC_BALANCE'){
-
+   
     
     const hostname = window.location.hostname
     const res = await connection(hostname)
@@ -137,6 +139,7 @@ document.addEventListener('qortalExtensionRequests', async (event) => {
     chrome.runtime.sendMessage({ action: "ltcBalance", payload: {
       hostname
     },  timeout }, (response) => {
+      
       if (response.error) {
         document.dispatchEvent(new CustomEvent('qortalExtensionResponses', {
           detail: { type: "LTC_BALANCE", data: {

@@ -40,6 +40,15 @@ export const AuthenticatedContainerInnerRight = styled(Box)(({ theme }) => ({
   background: "rgba(0, 0, 0, 0.1)"
 
 }));
+export const AuthenticatedContainerInnerTop = styled(Box)(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "flex-start",
+  width: "100%px",
+  height: "60px",
+  background: "rgba(0, 0, 0, 0.1)",
+  padding: '20px'
+}));
 
 export const TextP = styled(Typography)(({ theme }) => ({
   fontSize: "13px",
