@@ -159,7 +159,10 @@ export const TaskManger = ({getUserInfo}) => {
         {open ? <ExpandLess /> : <ExpandMore />}
       </ListItemButton>
       <Collapse in={open} timeout="auto" unmountOnExit>
-        <List component="div" disablePadding>
+        <List component="div" disablePadding sx={{
+          maxHeight: '400px',
+          overflow: 'auto'
+        }}>
           {txList.map((item) => {
             return (
               <ListItemButton key={item?.signature} sx={{ pl: 4 }}>
