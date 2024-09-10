@@ -7,10 +7,10 @@ import { formatTimestamp } from "../../utils/time";
 import { getBaseApi } from "../../background";
 import { getBaseApiReact } from "../../App";
 
-export const MessageItem = ({ message, onSeen }) => {
+export const MessageItem = ({ message, onSeen, isLast }) => {
 
   const { ref, inView } = useInView({
-    threshold: 1.0, // Fully visible
+    threshold: 0.7, // Fully visible
     triggerOnce: true, // Only trigger once when it becomes visible
   });
 
@@ -22,7 +22,7 @@ export const MessageItem = ({ message, onSeen }) => {
 
   return (
     <div
-      ref={ref}
+      ref={isLast ? ref : null}
       style={{
         padding: "10px",
         backgroundColor: "#232428",

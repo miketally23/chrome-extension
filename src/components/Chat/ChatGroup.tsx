@@ -334,7 +334,7 @@ const clearEditorContent = () => {
       }}>
 
      
-      <Tiptap setEditorRef={setEditorRef} onEnter={sendMessage} />
+      <Tiptap setEditorRef={setEditorRef} onEnter={sendMessage} isChat />
       </div>
       <CustomButton
               onClick={()=> {

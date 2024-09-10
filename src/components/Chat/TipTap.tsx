@@ -25,7 +25,7 @@ import CustomImage from './CustomImage';
 import Compressor from 'compressorjs'
 
 import ImageResize from 'tiptap-extension-resize-image'; // Import the ResizeImage extension
-const MenuBar = ({ setEditorRef }) => {
+const MenuBar = ({ setEditorRef, isChat }) => {
   const { editor } = useCurrentEditor();
   const fileInputRef = useRef(null); 
   if (!editor) {
@@ -222,7 +222,9 @@ const MenuBar = ({ setEditorRef }) => {
         >
           <RedoIcon />
         </IconButton>
-        <IconButton
+        {!isChat && (
+          <>
+           <IconButton
           onClick={triggerImageUpload}
           sx={{
             color: 'gray'
@@ -237,6 +239,9 @@ const MenuBar = ({ setEditorRef }) => {
           onChange={handleImageUpload}
           accept="image/*" // Limit file types to images only
         />
+          </>
+        )}
+       
       </div>
     </div>
   );
@@ -263,11 +268,13 @@ const extensions = [
 
 const content = ``;
 
-export default ({ setEditorRef, onEnter, disableEnter }) => {
+export default ({ setEditorRef, onEnter, disableEnter, isChat }) => {
+  console.log('exte', extensions)
+  const extensionsFiltered = isChat ? extensions.filter((item)=> item?.name !== 'image') :  extensions
   return (
     <EditorProvider
-      slotBefore={<MenuBar setEditorRef={setEditorRef} />}
-      extensions={extensions}
+      slotBefore={<MenuBar setEditorRef={setEditorRef} isChat={isChat} />}
+      extensions={extensionsFiltered}
       content={content}
       editorProps={{
         handleKeyDown(view, event) {

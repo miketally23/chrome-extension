@@ -19,8 +19,10 @@ export const ChatList = ({ initialMessages, myAddress }) => {
   }, [])
   const handleMessageSeen = useCallback((messageId) => {
     setMessages((prevMessages) =>
-      prevMessages.map((msg) =>
-        msg.id === messageId ? { ...msg, unread: false } : msg
+      prevMessages.map((msg) => {
+        return { ...msg, unread: false } 
+      }
+        
       )
     );
   }, []);
@@ -36,6 +38,18 @@ export const ChatList = ({ initialMessages, myAddress }) => {
     }
   };
 
+  const debounce = (func, delay) => {
+    let timer;
+    return (...args) => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        func(...args);
+      }, delay);
+    };
+  };
+  
+  const handleScrollDebounced = debounce(handleScroll, 100);
+
   const scrollToBottom = () => {
     if (listRef.current) {
       listRef.current?.recomputeRowHeights();
@@ -50,33 +64,49 @@ export const ChatList = ({ initialMessages, myAddress }) => {
     }
   };
 
+  const preserveScrollPosition = (callback) => {
+    if (listRef.current) {
+      const scrollContainer = listRef.current.Grid._scrollingContainer;
+      const currentScrollTop = scrollContainer.scrollTop; // Get current scroll position
+  
+      callback(); // Perform the action that could change the layout (e.g., recompute row heights)
+  
+      // Restore the scroll position after the layout change
+      setTimeout(() => {
+        scrollContainer.scrollTop = currentScrollTop;
+      }, 0);
+    }
+  };
+  
+
   const rowRenderer = ({ index, key, parent, style }) => {
     const message = messages[index];
 
     return (
       <CellMeasurer
-        key={key}
-        cache={cache}
-        parent={parent}
-        columnIndex={0}
-        rowIndex={index}
+  key={key}
+  cache={cache}
+  parent={parent}
+  columnIndex={0}
+  rowIndex={index}
+>
+  {({ measure }) => (
+    <div style={style}>
+      <div
+        onLoad={() => preserveScrollPosition(measure)} // Prevent jumps while measuring
+        style={{
+          marginBottom: '10px',
+          width: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+        }}
       >
-        {({ measure }) => (
-                  <div style={style}>
-
-          <div  onLoad={measure} style={{
-            marginBottom: '10px',
-            width: '100%',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center'
-          }}>
-            <MessageItem message={message} onSeen={handleMessageSeen} />
-          </div>
-          </div>
-
-        )}
-      </CellMeasurer>
+        <MessageItem isLast={index === messages.length - 1} message={message} onSeen={handleMessageSeen} />
+      </div>
+    </div>
+  )}
+</CellMeasurer>
     );
   };
 
@@ -116,7 +146,7 @@ export const ChatList = ({ initialMessages, myAddress }) => {
             rowCount={messages.length}
             rowHeight={cache.rowHeight}
             rowRenderer={rowRenderer}
-            onScroll={handleScroll}
+            onScroll={handleScrollDebounced}
             deferredMeasurementCache={cache}
           />
         )}
