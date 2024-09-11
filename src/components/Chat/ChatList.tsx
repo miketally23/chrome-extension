@@ -1,6 +1,7 @@
 import React, { useCallback, useState, useEffect, useRef, useMemo } from 'react';
 import { List, AutoSizer, CellMeasurerCache, CellMeasurer } from 'react-virtualized';
 import { MessageItem } from './MessageItem';
+import { subscribeToEvent, unsubscribeFromEvent } from '../../utils/events';
 
 const cache = new CellMeasurerCache({
   fixedWidth: true,
@@ -69,6 +70,19 @@ export const ChatList = ({ initialMessages, myAddress, tempMessages }) => {
       listRef.current.recomputeRowHeights();
     }
   };
+
+  const sentNewMessageGroupFunc = ()=> {
+   
+    scrollToBottom()
+  }
+
+  useEffect(() => {
+    subscribeToEvent("sent-new-message-group", sentNewMessageGroupFunc);
+
+    return () => {
+      unsubscribeFromEvent("sent-new-message-group", sentNewMessageGroupFunc);
+    };
+  }, [messages]);
 
  
 

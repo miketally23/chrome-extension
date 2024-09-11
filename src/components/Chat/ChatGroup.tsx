@@ -14,6 +14,7 @@ import { getBaseApiReactSocket, pauseAllQueues, resumeAllQueues } from '../../Ap
 import { CustomizedSnackbars } from '../Snackbar/Snackbar'
 import { PUBLIC_NOTIFICATION_CODE_FIRST_SECRET_KEY } from '../../constants/codes'
 import { useMessageQueue } from '../../MessageQueueContext'
+import { executeEvent } from '../../utils/events'
 
 
 
@@ -305,6 +306,9 @@ const clearEditorContent = () => {
         }
         addToQueue(sendMessageFunc, messageObj, 'chat',
         selectedGroup );
+        setTimeout(() => {
+          executeEvent("sent-new-message-group", {})
+        }, 150);
         clearEditorContent()
         }
         // send chat message

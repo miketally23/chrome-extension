@@ -2,15 +2,95 @@ import { Box, Button, Typography } from '@mui/material'
 import React, { useContext } from 'react'
 import { CustomizedSnackbars } from '../Snackbar/Snackbar';
 import { LoadingButton } from '@mui/lab';
-import { MyContext } from '../../App';
+import { MyContext, getBaseApiReact, pauseAllQueues } from '../../App';
 import { getFee } from '../../background';
+import { decryptResource, getGroupAdimns, validateSecretKey } from '../Group/Group';
+import { base64ToUint8Array } from '../../qdn/encryption/group-encryption';
+import { uint8ArrayToObject } from '../../backgroundFunctions/encryption';
 
-export const CreateCommonSecret = ({groupId, secretKey, isOwner, myAddress, secretKeyDetails, userInfo, noSecretKey}) => {
+export const CreateCommonSecret = ({groupId, secretKey, isOwner,  myAddress, secretKeyDetails, userInfo, noSecretKey}) => {
   const { show, setTxList } = useContext(MyContext);
 
   const [openSnack, setOpenSnack] = React.useState(false);
   const [infoSnack, setInfoSnack] = React.useState(null);
   const [isLoading, setIsLoading] = React.useState(false)
+
+  const getPublishesFromAdmins = async (admins: string[]) => {
+    // const validApi = await findUsableApi();
+    const queryString = admins.map((name) => `name=${name}`).join("&");
+    const url = `${getBaseApiReact()}/arbitrary/resources/search?mode=ALL&service=DOCUMENT_PRIVATE&identifier=symmetric-qchat-group-${
+      groupId
+    }&exactmatchnames=true&limit=0&reverse=true&${queryString}`;
+    const response = await fetch(url);
+    if(!response.ok){
+      throw new Error('network error')
+    }
+    const adminData = await response.json();
+ 
+    const filterId = adminData.filter(
+      (data: any) =>
+        data.identifier === `symmetric-qchat-group-${groupId}`
+    );
+    if (filterId?.length === 0) {
+      return false;
+    }
+    const sortedData = filterId.sort((a: any, b: any) => {
+      // Get the most recent date for both a and b
+      const dateA = a.updated ? new Date(a.updated) : new Date(a.created);
+      const dateB = b.updated ? new Date(b.updated) : new Date(b.created);
+  
+      // Sort by most recent
+      return dateB.getTime() - dateA.getTime();
+    });
+    
+    return sortedData[0];
+  };
+  const getSecretKey = async (loadingGroupParam?: boolean, secretKeyToPublish?: boolean) => {
+    try {
+      pauseAllQueues()
+      
+     
+     
+      const groupAdmins = await getGroupAdimns(groupId);
+      if(!groupAdmins.length){
+        throw new Error('Network error')
+      }
+      const publish = await getPublishesFromAdmins(groupAdmins);
+   
+     
+      if (publish === false) {
+       
+        return false;
+      }
+    
+      const res = await fetch(
+        `${getBaseApiReact()}/arbitrary/DOCUMENT_PRIVATE/${publish.name}/${
+          publish.identifier
+        }?encoding=base64`
+      );
+      const data = await res.text();
+   
+      const decryptedKey: any = await decryptResource(data);
+    
+      const dataint8Array = base64ToUint8Array(decryptedKey.data);
+      const decryptedKeyToObject = uint8ArrayToObject(dataint8Array);
+     
+      if (!validateSecretKey(decryptedKeyToObject))
+        throw new Error("SecretKey is not valid");
+     
+      if (decryptedKeyToObject) {
+        
+        return decryptedKeyToObject;
+      } else {
+      }
+     
+    } catch (error) {
+  
+    
+    } finally {
+    }
+  };
+
     const createCommonSecret = async ()=> {
         try {
           const fee = await getFee('ARBITRARY')
@@ -18,12 +98,18 @@ export const CreateCommonSecret = ({groupId, secretKey, isOwner, myAddress, secr
             message: "Would you like to perform an ARBITRARY transaction?" ,
             publishFee: fee.fee + ' QORT'
           })
-
-          
           setIsLoading(true)
+
+          const secretKey2 = await getSecretKey()
+          if((!secretKey2 && secretKey2 !== false)) throw new Error('invalid secret key')
+          if (secretKey2 && !validateSecretKey(secretKey2)) throw new Error('invalid secret key')
+
+          const secretKeyToSend = !secretKey2 ? null : secretKey2
+       
+ 
             chrome.runtime.sendMessage({ action: "encryptAndPublishSymmetricKeyGroupChat", payload: {
                 groupId: groupId,
-                previousData: secretKey
+                previousData: secretKeyToSend
             } }, (response) => {
                 if (!response?.error) {
                   setInfoSnack({

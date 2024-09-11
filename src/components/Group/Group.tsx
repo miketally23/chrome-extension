@@ -148,7 +148,7 @@ export const getGroupMembers = async (groupNumber: number) => {
   return groupData;
 };
 
-const decryptResource = async (data: string) => {
+export const decryptResource = async (data: string) => {
   try {
     return new Promise((res, rej) => {
       chrome.runtime.sendMessage(
@@ -532,7 +532,7 @@ export const Group = ({
         settimeoutForRefetchSecretKey.current = setTimeout(() => {
           getSecretKey();
         }, 120000);
-        return;
+        return false;
       }
       setSecretKeyPublishDate(publish?.updated || publish?.created);
     
@@ -1671,6 +1671,7 @@ export const Group = ({
                         !secretKey &&
                         triedToFetchSecretKey
                       }
+                  
                     />
                   )}
               </Box>
