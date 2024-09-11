@@ -1775,6 +1775,7 @@ export const Group = ({
               sx={{
                 marginLeft: "auto",
                 width: "135px",
+                minWidth: "135px",
                 padding: "5px",
               }}
             >
