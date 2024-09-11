@@ -1,11 +1,11 @@
 import React, { useEffect, useRef } from 'react';
-import { getBaseApiReactSocket } from '../../App';
+import { getBaseApiReactSocket, pauseAllQueues, resumeAllQueues } from '../../App';
 
-export const WebSocketActive = ({ myAddress }) => {
+export const WebSocketActive = ({ myAddress, setIsLoadingGroups }) => {
   const socketRef = useRef(null); // WebSocket reference
   const timeoutIdRef = useRef(null); // Timeout ID reference
   const groupSocketTimeoutRef = useRef(null); // Group Socket Timeout reference
-
+  const initiateRef = useRef(null)
   const forceCloseWebSocket = () => {
     if (socketRef.current) {
       console.log('Force closing the WebSocket');
@@ -41,6 +41,11 @@ export const WebSocketActive = ({ myAddress }) => {
       const currentAddress = myAddress;
 
       try {
+        if(!initiateRef.current) {
+          setIsLoadingGroups(true)
+          pauseAllQueues()
+          
+        }
         const socketLink = `${getBaseApiReactSocket()}/websockets/chat/active/${currentAddress}?encoding=BASE64`;
         socketRef.current = new WebSocket(socketLink);
 
@@ -55,6 +60,12 @@ export const WebSocketActive = ({ myAddress }) => {
               clearTimeout(timeoutIdRef.current);
               groupSocketTimeoutRef.current = setTimeout(pingHeads, 45000); // Ping every 45 seconds
             } else {
+              if(!initiateRef.current) {
+                setIsLoadingGroups(false)
+                initiateRef.current = true
+                resumeAllQueues()
+      
+              }
               const data = JSON.parse(e.data);
               const filteredGroups = data.groups?.filter(item => item?.groupId !== 0) || [];
               const sortedGroups = filteredGroups.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));

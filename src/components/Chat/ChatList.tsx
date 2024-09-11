@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useEffect, useRef } from 'react';
+import React, { useCallback, useState, useEffect, useRef, useMemo } from 'react';
 import { List, AutoSizer, CellMeasurerCache, CellMeasurer } from 'react-virtualized';
 import { MessageItem } from './MessageItem';
 
@@ -7,35 +7,34 @@ const cache = new CellMeasurerCache({
   defaultHeight: 50,
 });
 
-export const ChatList = ({ initialMessages, myAddress }) => {
+export const ChatList = ({ initialMessages, myAddress, tempMessages }) => {
+ 
   const hasLoadedInitialRef = useRef(false);
   const listRef = useRef();
   const [messages, setMessages] = useState(initialMessages);
   const [showScrollButton, setShowScrollButton] = useState(false);
-
-
-  useEffect(()=> {
+ 
+  
+  useEffect(() => {
     cache.clearAll();
-  }, [])
-  const handleMessageSeen = useCallback((messageId) => {
+  }, []);
+
+  const handleMessageSeen = useCallback(() => {
     setMessages((prevMessages) =>
-      prevMessages.map((msg) => {
-        return { ...msg, unread: false } 
-      }
-        
-      )
+      prevMessages.map((msg) => ({
+        ...msg,
+        unread: false,
+      }))
     );
   }, []);
 
   const handleScroll = ({ scrollTop, scrollHeight, clientHeight }) => {
     const isAtBottom = scrollTop + clientHeight >= scrollHeight - 50;
     const hasUnreadMessages = messages.some((msg) => msg.unread);
-
-    if (!isAtBottom && hasUnreadMessages) {
-      setShowScrollButton(true);
-    } else {
-      setShowScrollButton(false);
+    if(isAtBottom){
+      handleMessageSeen()
     }
+    setShowScrollButton(!isAtBottom && hasUnreadMessages);
   };
 
   const debounce = (func, delay) => {
@@ -47,96 +46,113 @@ export const ChatList = ({ initialMessages, myAddress }) => {
       }, delay);
     };
   };
-  
+
   const handleScrollDebounced = debounce(handleScroll, 100);
 
-  const scrollToBottom = () => {
+  const scrollToBottom = (initialmsgs) => {
     if (listRef.current) {
+      const msgs = initialmsgs?.length ? initialmsgs : messages
+   
       listRef.current?.recomputeRowHeights();
-      listRef.current.scrollToRow(messages.length - 1);
+
+      listRef.current.scrollToRow(msgs.length - 1);
       setTimeout(() => {
-        listRef.current?.recomputeRowHeights();
-      listRef.current.scrollToRow(messages.length - 1);
+      
+        listRef.current.scrollToRow(msgs.length - 1);
       }, 100);
-  
-     
       setShowScrollButton(false);
     }
   };
 
-  const preserveScrollPosition = (callback) => {
+  const recomputeListHeights = () => {
     if (listRef.current) {
-      const scrollContainer = listRef.current.Grid._scrollingContainer;
-      const currentScrollTop = scrollContainer.scrollTop; // Get current scroll position
-  
-      callback(); // Perform the action that could change the layout (e.g., recompute row heights)
-  
-      // Restore the scroll position after the layout change
-      setTimeout(() => {
-        scrollContainer.scrollTop = currentScrollTop;
-      }, 0);
+      listRef.current.recomputeRowHeights();
     }
   };
-  
+
+ 
 
   const rowRenderer = ({ index, key, parent, style }) => {
-    const message = messages[index];
+    let message = messages[index];
+    const isLargeMessage = message.text?.length > 200; // Adjust based on your message size threshold
 
+    if(message?.message && message?.groupDirectId){
+      message = {
+        ...(message?.message || {}),
+        isTemp: true,
+        unread:  false
+      }
+    }
     return (
       <CellMeasurer
-  key={key}
-  cache={cache}
-  parent={parent}
-  columnIndex={0}
-  rowIndex={index}
->
-  {({ measure }) => (
-    <div style={style}>
-      <div
-        onLoad={() => preserveScrollPosition(measure)} // Prevent jumps while measuring
-        style={{
-          marginBottom: '10px',
-          width: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-        }}
+        key={key}
+        cache={cache}
+        parent={parent}
+        columnIndex={0}
+        rowIndex={index}
       >
-        <MessageItem isLast={index === messages.length - 1} message={message} onSeen={handleMessageSeen} />
-      </div>
-    </div>
-  )}
-</CellMeasurer>
+        {({ measure }) => (
+          <div style={style}>
+            <div
+              onLoad={() => {
+                if (isLargeMessage) {
+                  measure(); // Ensure large messages are properly measured
+                }
+              }}
+              style={{
+                marginBottom: '10px',
+                width: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+              }}
+            >
+              <MessageItem
+                isLast={index === messages.length - 1}
+                message={message}
+                onSeen={handleMessageSeen}
+                isTemp={!!message?.isTemp}
+              />
+            </div>
+          </div>
+        )}
+      </CellMeasurer>
     );
   };
 
   useEffect(() => {
-    setMessages(initialMessages);
+    
+    const totalMessages = [...initialMessages, ...(tempMessages || [])]
+    if(totalMessages.length === 0) return
+    setMessages(totalMessages);
+    // cache.clearAll(); // Clear cache so the list can properly re-render with new messages
     setTimeout(() => {
       if (listRef.current) {
-       // Accessing scrollTop, scrollHeight, clientHeight from List's methods
-      const scrollTop = listRef.current.Grid._scrollingContainer.scrollTop;
-      const scrollHeight = listRef.current.Grid._scrollingContainer.scrollHeight;
-      const clientHeight = listRef.current.Grid._scrollingContainer.clientHeight;
-
-      handleScroll({ scrollTop, scrollHeight, clientHeight });
+        const { scrollTop, scrollHeight, clientHeight } = listRef.current.Grid._scrollingContainer;
+        handleScroll({ scrollTop, scrollHeight, clientHeight });
+        recomputeListHeights(); // Ensure heights are recomputed on message load
+        setTimeout(() => {
+          if(!hasLoadedInitialRef.current){
+            scrollToBottom(totalMessages);
+            hasLoadedInitialRef.current = true
+          }
+        }, 100);
       }
-    }, 100);
-  }, [initialMessages]);
+    }, 500);
+  }, [tempMessages, initialMessages]);
 
-  useEffect(() => {
-    // Scroll to the bottom on initial load or when messages change
-    if (listRef.current && messages.length > 0 && hasLoadedInitialRef.current === false) {
-      scrollToBottom();
-      hasLoadedInitialRef.current = true;
-    } else if (messages.length > 0 && messages[messages.length - 1].sender === myAddress) {
-      scrollToBottom();
-    }
-  }, [messages, myAddress]);
+  // useEffect(() => {
+  //   // Scroll to the bottom on initial load or when messages change
+  //   if (listRef.current && messages.length > 0 && !hasLoadedInitialRef.current) {
+  //     scrollToBottom();
+  //     hasLoadedInitialRef.current = true;
+  //   } else if (messages.length > 0 && messages[messages.length - 1].sender === myAddress) {
+  //     scrollToBottom();
+  //   }
+  // }, [messages, myAddress]);
 
   return (
     <div style={{ position: 'relative', flexGrow: 1, width: '100%', display: 'flex', flexDirection: 'column', flexShrink: 1 }}>
-
       <AutoSizer>
         {({ height, width }) => (
           <List
@@ -148,6 +164,8 @@ export const ChatList = ({ initialMessages, myAddress }) => {
             rowRenderer={rowRenderer}
             onScroll={handleScrollDebounced}
             deferredMeasurementCache={cache}
+            onRowsRendered={recomputeListHeights} // Force recompute on render
+            overscanRowCount={10} // For performance: pre-render some rows
           />
         )}
       </AutoSizer>
@@ -168,7 +186,9 @@ export const ChatList = ({ initialMessages, myAddress }) => {
         >
           Scroll to Unread Messages
         </button>
+        
       )}
+     
     </div>
   );
 };

@@ -158,8 +158,28 @@ export const clearAllQueues = () => {
   });
 }
 
-export const pauseAllQueues = () => controlAllQueues('pause');
-export const resumeAllQueues = () => controlAllQueues('resume');
+export const pauseAllQueues = () => {
+  controlAllQueues('pause');
+  chrome.runtime.sendMessage(
+    {
+      action: "pauseAllQueues",
+      payload: {
+      
+      },
+    }
+  );
+} 
+export const resumeAllQueues = () => {
+  controlAllQueues('resume');
+  chrome.runtime.sendMessage(
+    {
+      action: "resumeAllQueues",
+      payload: {
+      
+      },
+    }
+  );
+}
 
 
 export const MyContext = createContext<MyContextInterface>(defaultValues);

@@ -39,7 +39,7 @@ import { Spacer } from "../../common/Spacer";
 import PeopleIcon from "@mui/icons-material/People";
 import { ManageMembers } from "./ManageMembers";
 import MarkChatUnreadIcon from "@mui/icons-material/MarkChatUnread";
-import { MyContext, clearAllQueues, getBaseApiReact } from "../../App";
+import { MyContext, clearAllQueues, getBaseApiReact, pauseAllQueues, resumeAllQueues } from "../../App";
 import { ChatDirect } from "../Chat/ChatDirect";
 import { CustomizedSnackbars } from "../Snackbar/Snackbar";
 import { LoadingButton } from "@mui/lab";
@@ -60,6 +60,7 @@ import { ListOfThreadPostsWatched } from "./ListOfThreadPostsWatched";
 import { RequestQueueWithPromise } from "../../utils/queue/queue";
 import { WebSocketActive } from "./WebsocketActive";
 import { flushSync } from "react-dom";
+import { useMessageQueue } from "../../MessageQueueContext";
 
 interface GroupProps {
   myAddress: string;
@@ -278,6 +279,7 @@ export const Group = ({
 }: GroupProps) => {
   const [secretKey, setSecretKey] = useState(null);
   const [secretKeyPublishDate, setSecretKeyPublishDate] = useState(null);
+  const lastFetchedSecretKey = useRef(null)
   const [secretKeyDetails, setSecretKeyDetails] = useState(null);
   const [newEncryptionNotification, setNewEncryptionNotification] =
     useState(null);
@@ -321,6 +323,7 @@ export const Group = ({
   const isLoadingOpenSectionFromNotification = useRef(false);
   const setupGroupWebsocketInterval = useRef(null);
   const settimeoutForRefetchSecretKey = useRef(null);
+  const { clearStatesMessageQueueProvider } = useMessageQueue();
 
 
   useEffect(() => {
@@ -470,7 +473,7 @@ export const Group = ({
     const queryString = admins.map((name) => `name=${name}`).join("&");
     const url = `${getBaseApiReact()}/arbitrary/resources/search?mode=ALL&service=DOCUMENT_PRIVATE&identifier=symmetric-qchat-group-${
       selectedGroup?.groupId
-    }&exactmatchnames=true&limit=10&reverse=true&${queryString}`;
+    }&exactmatchnames=true&limit=0&reverse=true&${queryString}`;
     const response = await fetch(url);
     if(!response.ok){
       throw new Error('network error')
@@ -484,10 +487,22 @@ export const Group = ({
     if (filterId?.length === 0) {
       return false;
     }
-    return filterId[0];
+    const sortedData = filterId.sort((a: any, b: any) => {
+      // Get the most recent date for both a and b
+      const dateA = a.updated ? new Date(a.updated) : new Date(a.created);
+      const dateB = b.updated ? new Date(b.updated) : new Date(b.created);
+  
+      // Sort by most recent
+      return dateB.getTime() - dateA.getTime();
+    });
+    
+    return sortedData[0];
   };
-  const getSecretKey = async (loadingGroupParam?: boolean) => {
+  const getSecretKey = async (loadingGroupParam?: boolean, secretKeyToPublish?: boolean) => {
     try {
+      pauseAllQueues()
+      
+      if(secretKeyToPublish && secretKey && lastFetchedSecretKey.current && Date.now() - lastFetchedSecretKey.current < 1800000) return secretKey
       if (loadingGroupParam) {
         setIsLoadingGroup(true);
       }
@@ -500,6 +515,7 @@ export const Group = ({
       const prevGroupId = selectedGroupRef.current.groupId;
       // const validApi = await findUsableApi();
       const groupAdmins = await getGroupAdimns(selectedGroup?.groupId);
+      setAdmins(groupAdmins)
       if(!groupAdmins.length){
         throw new Error('Network error')
       }
@@ -536,7 +552,7 @@ export const Group = ({
         throw new Error("SecretKey is not valid");
       setSecretKeyDetails(publish);
       setSecretKey(decryptedKeyToObject);
-     
+      lastFetchedSecretKey.current = Date.now()
       setMemberCountFromSecretKeyData(decryptedKey.count);
       if (decryptedKeyToObject) {
         setTriedToFetchSecretKey(true);
@@ -556,6 +572,12 @@ export const Group = ({
     
     } finally {
       setIsLoadingGroup(false);
+      if(!secretKeyToPublish){
+        await getAdmins(selectedGroup?.groupId);
+
+      }
+      resumeAllQueues()
+   
     }
   };
 
@@ -768,10 +790,12 @@ export const Group = ({
   };
   useEffect(() => {
     if (selectedGroup?.groupId) {
-      getAdmins(selectedGroup?.groupId);
+      // getAdmins(selectedGroup?.groupId);
       getMembers(selectedGroup?.groupId);
     }
   }, [selectedGroup?.groupId]);
+
+  
 
   const shouldReEncrypt = useMemo(() => {
     if (triedToFetchSecretKey && !secretKeyPublishDate) return true;
@@ -913,6 +937,7 @@ export const Group = ({
   const resetAllStatesAndRefs = () => {
     // Reset all useState values to their initial states
     setSecretKey(null);
+    lastFetchedSecretKey.current = null
     setSecretKeyPublishDate(null);
     setSecretKeyDetails(null);
     setNewEncryptionNotification(null);
@@ -960,6 +985,7 @@ export const Group = ({
 
   const logoutEventFunc = ()=> {
     resetAllStatesAndRefs()
+    clearStatesMessageQueueProvider()
   }
 
   useEffect(() => {
@@ -987,6 +1013,7 @@ export const Group = ({
 
       setNewChat(false);
       setSecretKey(null);
+      lastFetchedSecretKey.current = null
       setSecretKeyPublishDate(null);
       setAdmins([]);
       setSecretKeyDetails(null);
@@ -1034,6 +1061,7 @@ export const Group = ({
       setChatMode("groups");
       setSelectedGroup(null);
       setSecretKey(null);
+      lastFetchedSecretKey.current = null
       setSecretKeyPublishDate(null);
       setAdmins([]);
       setSecretKeyDetails(null);
@@ -1090,6 +1118,7 @@ export const Group = ({
       setChatMode("groups");
       setSelectedGroup(null);
       setSecretKey(null);
+      lastFetchedSecretKey.current = null
       setSecretKeyPublishDate(null);
       setAdmins([]);
       setSecretKeyDetails(null);
@@ -1125,7 +1154,7 @@ export const Group = ({
 
   return (
     <>
-      <WebSocketActive myAddress={myAddress} />
+      <WebSocketActive myAddress={myAddress} setIsLoadingGroups={setIsLoadingGroups} />
       <CustomizedSnackbars
         open={openSnack}
         setOpen={setOpenSnack}
@@ -1321,6 +1350,7 @@ export const Group = ({
                     setNewChat(false);
                     setSelectedGroup(null);
                     setSecretKey(null);
+                    lastFetchedSecretKey.current = null
                     setSecretKeyPublishDate(null);
                     setAdmins([]);
                     setSecretKeyDetails(null);
@@ -1511,6 +1541,7 @@ export const Group = ({
                 hide={groupSection !== "chat" || !secretKey}
                 handleSecretKeyCreationInProgress={handleSecretKeyCreationInProgress}
                 triedToFetchSecretKey={triedToFetchSecretKey}
+                myName={userInfo?.name}
               />
               )}
                {firstSecretKeyInCreation && triedToFetchSecretKey && !secretKeyPublishDate && (
@@ -1655,10 +1686,95 @@ export const Group = ({
               />
             )}
 
-            <AuthenticatedContainerInnerRight
+          
+          </>
+        )}
+
+        {selectedDirect && !newChat && (
+          <>
+            <Box
+              sx={{
+                position: "relative",
+                flexGrow: 1,
+                display: "flex",
+              }}
+            >
+              <ChatDirect
+                myAddress={myAddress}
+                isNewChat={newChat}
+                selectedDirect={selectedDirect}
+                setSelectedDirect={setSelectedDirect}
+                setNewChat={setNewChat}
+                getTimestampEnterChat={getTimestampEnterChat}
+              />
+            </Box>
+          </>
+        )}
+        {!selectedDirect &&
+          !selectedGroup &&
+          !newChat &&
+          groupSection === "home" && (
+            <Box
+              sx={{
+                display: "flex",
+                width: "100%",
+                flexDirection: "column",
+                gap: "20px",
+              }}
+            >
+              <Box
+                sx={{
+                  display: "flex",
+                  width: "100%",
+                  justifyContent: "flex-start",
+                }}
+              >
+                <Button
+                  variant="outlined"
+                  startIcon={<RefreshIcon />}
+                  onClick={refreshHomeDataFunc}
+                  sx={{
+                    color: "white",
+                  }}
+                >
+                  Refresh home data
+                </Button>
+              </Box>
+
+              <Box
+                sx={{
+                  display: "flex",
+                  gap: "40px",
+                  flexWrap: "wrap",
+                }}
+              >
+                <ThingsToDoInitial
+                  balance={balance}
+                  myAddress={myAddress}
+                  name={userInfo?.name}
+                  hasGroups={groups?.length !== 0}
+                />
+                <GroupJoinRequests
+                  setGroupSection={setGroupSection}
+                  setSelectedGroup={setSelectedGroup}
+                  getTimestampEnterChat={getTimestampEnterChat}
+                  setOpenManageMembers={setOpenManageMembers}
+                  myAddress={myAddress}
+                  groups={groups}
+                />
+                <GroupInvites
+                  setOpenAddGroup={setOpenAddGroup}
+                  myAddress={myAddress}
+                  groups={groups}
+                />
+                <ListOfThreadPostsWatched />
+              </Box>
+            </Box>
+          )}
+          <AuthenticatedContainerInnerRight
               sx={{
                 marginLeft: "auto",
-                width: "auto",
+                width: "135px",
                 padding: "5px",
               }}
             >
@@ -1685,6 +1801,7 @@ export const Group = ({
                   setNewChat(false);
                   setSelectedDirect(null);
                   setSecretKey(null);
+                  lastFetchedSecretKey.current = null
                   setSecretKeyPublishDate(null);
                   setAdmins([]);
                   setSecretKeyDetails(null);
@@ -1713,8 +1830,9 @@ export const Group = ({
                   Home
                 </Typography>
               </Box>
-
-              <Spacer height="20px" />
+                {selectedGroup && (
+                  <>
+                   <Spacer height="20px" />
               <Box
                 sx={{
                   display: "flex",
@@ -1894,6 +2012,9 @@ export const Group = ({
                 </Typography>
               </Box>
               <Spacer height="20px" />
+                  </>
+                )}
+             
               {/* <SettingsIcon
               sx={{
                 cursor: "pointer",
@@ -1901,100 +2022,17 @@ export const Group = ({
               }}
             /> */}
             </AuthenticatedContainerInnerRight>
-          </>
-        )}
-
-        {selectedDirect && !newChat && (
-          <>
-            <Box
-              sx={{
-                position: "relative",
-                flexGrow: 1,
-                display: "flex",
-              }}
-            >
-              <ChatDirect
-                myAddress={myAddress}
-                isNewChat={newChat}
-                selectedDirect={selectedDirect}
-                setSelectedDirect={setSelectedDirect}
-                setNewChat={setNewChat}
-                getTimestampEnterChat={getTimestampEnterChat}
-              />
-            </Box>
-          </>
-        )}
-        {!selectedDirect &&
-          !selectedGroup &&
-          !newChat &&
-          groupSection === "home" && (
-            <Box
-              sx={{
-                display: "flex",
-                width: "100%",
-                flexDirection: "column",
-                gap: "20px",
-              }}
-            >
-              <Box
-                sx={{
-                  display: "flex",
-                  width: "100%",
-                  justifyContent: "flex-start",
-                }}
-              >
-                <Button
-                  variant="outlined"
-                  startIcon={<RefreshIcon />}
-                  onClick={refreshHomeDataFunc}
-                  sx={{
-                    color: "white",
-                  }}
-                >
-                  Refresh home data
-                </Button>
-              </Box>
-
-              <Box
-                sx={{
-                  display: "flex",
-                  gap: "40px",
-                  flexWrap: "wrap",
-                }}
-              >
-                <ThingsToDoInitial
-                  balance={balance}
-                  myAddress={myAddress}
-                  name={userInfo?.name}
-                  hasGroups={groups?.length !== 0}
-                />
-                <GroupJoinRequests
-                  setGroupSection={setGroupSection}
-                  setSelectedGroup={setSelectedGroup}
-                  getTimestampEnterChat={getTimestampEnterChat}
-                  setOpenManageMembers={setOpenManageMembers}
-                  myAddress={myAddress}
-                  groups={groups}
-                />
-                <GroupInvites
-                  setOpenAddGroup={setOpenAddGroup}
-                  myAddress={myAddress}
-                  groups={groups}
-                />
-                <ListOfThreadPostsWatched />
-              </Box>
-            </Box>
-          )}
-        <LoadingSnackbar
-          open={isLoadingGroups}
-          info={{
-            message: "Loading groups... please wait.",
-          }}
-        />
         <LoadingSnackbar
           open={isLoadingGroup}
           info={{
             message: "Setting up group... please wait.",
+          }}
+        />
+
+<LoadingSnackbar
+          open={isLoadingGroups}
+          info={{
+            message: "Setting up groups... please wait.",
           }}
         />
       </div>

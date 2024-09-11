@@ -21,6 +21,7 @@ import { createTransaction } from "./transactions/transactions";
 import { decryptChatMessage } from "./utils/decryptChatMessage";
 import { decryptStoredWallet } from "./utils/decryptWallet";
 import PhraseWallet from "./utils/generateWallet/phrase-wallet";
+import { RequestQueueWithPromise } from "./utils/queue/queue";
 import { validateAddress } from "./utils/validateAddress";
 import { Sha256 } from "asmcrypto.js";
 
@@ -30,7 +31,38 @@ export const groupApiSocket = "wss://ext-node.qortal.link"
 export const groupApiLocal = "http://127.0.0.1:12391"
 export const groupApiSocketLocal = "ws://127.0.0.1:12391"
 const timeDifferenceForNotificationChatsBackground = 600000
+const requestQueueAnnouncements = new RequestQueueWithPromise(1)
 
+const allQueues = {
+  requestQueueAnnouncements: requestQueueAnnouncements,
+}
+
+const controlAllQueues = (action) => {
+  Object.keys(allQueues).forEach((key) => {
+    const val = allQueues[key];
+    try {
+      if (typeof val[action] === 'function') {
+        val[action]();
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  });
+};
+
+export const clearAllQueues = () => {
+  Object.keys(allQueues).forEach((key) => {
+    const val = allQueues[key];
+    try {
+      val.clear();
+    } catch (error) {
+      console.error(error);
+    }
+  });
+}
+
+ const pauseAllQueues = () => controlAllQueues('pause');
+ const resumeAllQueues = () => controlAllQueues('resume');
 const checkDifference = (createdTimestamp)=> {
   return (Date.now() - createdTimestamp) < timeDifferenceForNotificationChatsBackground
 }
@@ -612,33 +644,34 @@ const checkNewMessages =
       if(!groups || groups?.length === 0) return
       const savedtimestamp = await getTimestampGroupAnnouncement()
 
-      for (const group of groups){
+      await Promise.all(groups.map(async (group) => {
         try {
-        
           const identifier = `grp-${group.groupId}-anc-`;
-          const url = await createEndpoint(`/arbitrary/resources/search?mode=ALL&service=DOCUMENT&identifier=${identifier}&limit=1&includemetadata=false&offset=${0}&reverse=true&prefix=true`);
-          const response = await fetch(url, {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json'
-            }
-          })
-          const responseData = await response.json()
-         
-          const latestMessage = responseData.filter((pub)=> pub?.name !== myName)[0]
+          const url =  await createEndpoint(`/arbitrary/resources/search?mode=ALL&service=DOCUMENT&identifier=${identifier}&limit=1&includemetadata=false&offset=0&reverse=true&prefix=true`);
+          const response = await requestQueueAnnouncements.enqueue(()=> {
+           return  fetch(url, {
+              method: 'GET',
+              headers: {
+                'Content-Type': 'application/json'
+              }
+            });
+          }) 
+          const responseData = await response.json();
+          
+          const latestMessage = responseData.filter((pub) => pub?.name !== myName)[0];
           if (!latestMessage) {
-            continue
+            return; // continue to the next group
           }
-         
-          if(checkDifference(latestMessage.created) && !savedtimestamp[group.groupId] || latestMessage.created > savedtimestamp?.[group.groupId]?.notification){
-            newAnnouncements.push(group)
-            await addTimestampGroupAnnouncement({groupId: group.groupId, timestamp: Date.now()})
-            //save new timestamp
+      
+          if (checkDifference(latestMessage.created) && (!savedtimestamp[group.groupId] || latestMessage.created > savedtimestamp?.[group.groupId]?.notification)) {
+            newAnnouncements.push(group);
+            await addTimestampGroupAnnouncement({ groupId: group.groupId, timestamp: Date.now() });
+            // save new timestamp
           }
         } catch (error) {
-          
+          console.error(error); // Handle error if needed
         }
-      }
+      }));
      if(newAnnouncements.length > 0){
       const notificationId = 'chat_notification_' + Date.now() + '_type=group-announcement' + `_from=${newAnnouncements[0]?.groupId}`;
 
@@ -1487,7 +1520,7 @@ const data = await objectToBase64({
       secretKeyObject: secretKeyObject,
     })
       .then((res2) => {
-      
+        pauseAllQueues()
         sendChatGroup({
           groupId,
           typeMessage: undefined,
@@ -1497,7 +1530,9 @@ const data = await objectToBase64({
           .then(() => {})
           .catch((error) => {
             console.error('1',error.message);
-          });
+          }).finally(()=> {
+            resumeAllQueues()
+          })
       })
       .catch((error) => {
         console.error('2',error.message);
@@ -3361,6 +3396,19 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
         break;
       }
+      case "pauseAllQueues": {
+        pauseAllQueues()
+        sendResponse(res);
+
+        break;
+        break;
+      }
+      case "resumeAllQueues": {
+        resumeAllQueues()
+        sendResponse(res);
+
+        break;
+      }
       case "decryptSingleForPublishes": {
         const { data, secretKeyObject, skipDecodeBase64 } = request.payload;
 
@@ -3472,6 +3520,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           try {
             const logoutFunc = async()=> {
           forceCloseWebSocket()
+          clearAllQueues()
           if(interval){
             // for announcement notification
             clearInterval(interval)

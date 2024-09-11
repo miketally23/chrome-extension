@@ -7,7 +7,7 @@ import { formatTimestamp } from "../../utils/time";
 import { getBaseApi } from "../../background";
 import { getBaseApiReact } from "../../App";
 
-export const MessageItem = ({ message, onSeen, isLast }) => {
+export const MessageItem = ({ message, onSeen, isLast, isTemp }) => {
 
   const { ref, inView } = useInView({
     threshold: 0.7, // Fully visible
@@ -30,6 +30,7 @@ export const MessageItem = ({ message, onSeen, isLast }) => {
         width: "95%",
         display: "flex",
         gap: '7px',
+        opacity: isTemp ? 0.5 : 1
       }}
     >
       <Avatar
@@ -67,13 +68,23 @@ export const MessageItem = ({ message, onSeen, isLast }) => {
         <Box sx={{
           display: 'flex',
           justifyContent: 'flex-end',
-          width: '100%'
+          width: '100%',
+
         }}>
-          <Typography sx={{
-            fontSize: '14px',
-            color: 'gray',
-            fontFamily: 'Inter'
-          }}>{formatTimestamp(message.timestamp)}</Typography>
+          {isTemp ? (
+              <Typography sx={{
+                fontSize: '14px',
+                color: 'gray',
+                fontFamily: 'Inter'
+              }}>Sending...</Typography>
+          ): (
+            <Typography sx={{
+              fontSize: '14px',
+              color: 'gray',
+              fontFamily: 'Inter'
+            }}>{formatTimestamp(message.timestamp)}</Typography>
+          ) }
+        
         </Box>
       </Box>
 

@@ -241,7 +241,7 @@ const clearEditorContent = () => {
         </>
       )}
       
-              <ChatList initialMessages={messages} myAddress={myAddress}/>
+              <ChatList initialMessages={messages} myAddress={myAddress} tempMessages={[]}/>
 
    
       <div style={{

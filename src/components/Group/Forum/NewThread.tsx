@@ -244,7 +244,7 @@ export const NewThread = ({
         reply,
       };
     
-      const secretKey = await getSecretKey();
+      const secretKey = await getSecretKey(false, true);
       if (!secretKey) {
         throw new Error("Cannot get group secret key");
       }

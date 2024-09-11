@@ -269,7 +269,7 @@ const extensions = [
 const content = ``;
 
 export default ({ setEditorRef, onEnter, disableEnter, isChat }) => {
-  console.log('exte', extensions)
+  
   const extensionsFiltered = isChat ? extensions.filter((item)=> item?.name !== 'image') :  extensions
   return (
     <EditorProvider

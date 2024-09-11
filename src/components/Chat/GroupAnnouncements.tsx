@@ -28,7 +28,7 @@ const uid = new ShortUniqueId({ length: 8 });
 import CampaignIcon from '@mui/icons-material/Campaign';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { AnnouncementDiscussion } from "./AnnouncementDiscussion";
-import { MyContext, getBaseApiReact } from "../../App";
+import { MyContext, getBaseApiReact, pauseAllQueues, resumeAllQueues } from "../../App";
 import { RequestQueueWithPromise } from "../../utils/queue/queue";
 import { CustomizedSnackbars } from "../Snackbar/Snackbar";
 
@@ -248,6 +248,8 @@ export const GroupAnnouncements = ({
 
   const publishAnnouncement = async () => {
     try {
+
+      pauseAllQueues()
       const fee = await getFee('ARBITRARY')
       await show({
         message: "Would you like to perform a ARBITRARY transaction?" ,
@@ -263,7 +265,7 @@ export const GroupAnnouncements = ({
           extra: {},
           message: htmlContent
         }
-        const secretKeyObject = await getSecretKey();
+        const secretKeyObject = await getSecretKey(false, true);
         const message64: any = await objectToBase64(message);
         const encryptSingle = await encryptChatMessage(
           message64,
@@ -295,6 +297,7 @@ export const GroupAnnouncements = ({
       });
       setOpenSnack(true)
     } finally {
+      resumeAllQueues()
       setIsSending(false);
     }
   };

@@ -10,15 +10,16 @@ import Tiptap from './TipTap'
 import { CustomButton } from '../../App-styles'
 import CircularProgress from '@mui/material/CircularProgress';
 import { LoadingSnackbar } from '../Snackbar/LoadingSnackbar'
-import { getBaseApiReactSocket } from '../../App'
+import { getBaseApiReactSocket, pauseAllQueues, resumeAllQueues } from '../../App'
 import { CustomizedSnackbars } from '../Snackbar/Snackbar'
 import { PUBLIC_NOTIFICATION_CODE_FIRST_SECRET_KEY } from '../../constants/codes'
+import { useMessageQueue } from '../../MessageQueueContext'
 
 
 
 
 
-export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey, myAddress, handleNewEncryptionNotification, hide, handleSecretKeyCreationInProgress, triedToFetchSecretKey}) => {
+export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey, myAddress, handleNewEncryptionNotification, hide, handleSecretKeyCreationInProgress, triedToFetchSecretKey, myName}) => {
   const [messages, setMessages] = useState([])
   const [isSending, setIsSending] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -31,10 +32,19 @@ export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey,
   const timeoutIdRef = useRef(null); // Timeout ID reference
   const groupSocketTimeoutRef = useRef(null); // Group Socket Timeout reference
   const editorRef = useRef(null);
-
+  const { queueChats, addToQueue, } = useMessageQueue();
+ 
   const setEditorRef = (editorInstance) => {
     editorRef.current = editorInstance;
   };
+
+  const tempMessages = useMemo(()=> {
+    if(!selectedGroup) return []
+    if(queueChats[selectedGroup]){
+      return queueChats[selectedGroup]
+    }
+    return []
+  }, [selectedGroup, queueChats])
 
   const secretKeyRef = useRef(null)
 
@@ -88,7 +98,7 @@ export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey,
                     ...item,
                     id: item.signature,
                     text: item.text,
-                    unread:  true
+                    unread: item?.sender === myAddress ? false : true
                   }
                 } )
                 setMessages((prev)=> [...prev, ...formatted])
@@ -98,7 +108,7 @@ export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey,
                     ...item,
                     id: item.signature,
                     text: item.text,
-                    unread: false
+                    unread:  false
                   }
                 } )
                 setMessages(formatted)
@@ -199,6 +209,10 @@ export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey,
       forceCloseWebSocket()
       setMessages([])
       setIsLoading(true)
+      pauseAllQueues()
+      setTimeout(() => {
+        resumeAllQueues()
+      }, 6000);
         initWebsocketMessageGroup()
         hasInitializedWebsocket.current = true
     }, [secretKey])
@@ -262,18 +276,35 @@ const clearEditorContent = () => {
     const sendMessage = async ()=> {
       try {
         if(isSending) return
+        pauseAllQueues()
         if (editorRef.current) {
           const htmlContent = editorRef.current.getHTML();
        
           if(!htmlContent?.trim() || htmlContent?.trim() === '<p></p>') return
           setIsSending(true)
         const message = htmlContent
-        const secretKeyObject = await getSecretKey()
+        const secretKeyObject = await getSecretKey(false, true)
         const message64: any = await objectToBase64(message)
      
         const encryptSingle = await encryptChatMessage(message64, secretKeyObject)
-        const res = await sendChatGroup({groupId: selectedGroup,messageText: encryptSingle})
+        // const res = await sendChatGroup({groupId: selectedGroup,messageText: encryptSingle})
    
+        const sendMessageFunc = async () => {
+          await sendChatGroup({groupId: selectedGroup,messageText: encryptSingle})
+        };
+  
+        // Add the function to the queue
+        const messageObj = {
+          message: {
+            text: message,
+            timestamp: Date.now(),
+          senderName: myName,
+          sender: myAddress
+          },
+         
+        }
+        addToQueue(sendMessageFunc, messageObj, 'chat',
+        selectedGroup );
         clearEditorContent()
         }
         // send chat message
@@ -286,6 +317,7 @@ const clearEditorContent = () => {
         console.error(error)
       } finally {
         setIsSending(false)
+        resumeAllQueues()
       }
     }
 
@@ -305,12 +337,11 @@ const clearEditorContent = () => {
       flexDirection: 'column',
       width: '100%',
       opacity: hide ? 0 : 1,
-      visibility: hide && 'hidden',
-      position: hide ? 'fixed' : 'relative',
-    left: hide && '-1000px',
+      position: hide ? 'absolute' : 'relative',
+    left: hide && '-100000px',
     }}>
  
-              <ChatList initialMessages={messages} myAddress={myAddress}/>
+              <ChatList initialMessages={messages} myAddress={myAddress} tempMessages={tempMessages}/>
 
    
       <div style={{

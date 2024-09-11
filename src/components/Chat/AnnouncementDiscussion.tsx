@@ -10,7 +10,7 @@ import { decryptPublishes, getTempPublish, saveTempPublish } from "./GroupAnnoun
 import { AnnouncementList } from "./AnnouncementList";
 import { Spacer } from "../../common/Spacer";
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import { getBaseApiReact } from "../../App";
+import { getBaseApiReact, pauseAllQueues, resumeAllQueues } from "../../App";
 
 const tempKey = 'accouncement-comment'
 
@@ -107,6 +107,7 @@ export const AnnouncementDiscussion = ({
 
   const publishComment = async () => {
     try {
+      pauseAllQueues()
       const fee = await getFee('ARBITRARY')
       await show({
         message: "Would you like to perform a ARBITRARY transaction?" ,
@@ -123,7 +124,7 @@ export const AnnouncementDiscussion = ({
           extra: {},
           message: htmlContent,
         };
-        const secretKeyObject = await getSecretKey();
+        const secretKeyObject = await getSecretKey(false, true);
         const message64: any = await objectToBase64(message);
      
         const encryptSingle = await encryptChatMessage(
@@ -154,6 +155,7 @@ export const AnnouncementDiscussion = ({
     } catch (error) {
       console.error(error);
     } finally {
+      resumeAllQueues()
       setIsSending(false);
     }
   };
@@ -161,6 +163,7 @@ export const AnnouncementDiscussion = ({
   const getComments = React.useCallback(
     async (selectedAnnouncement) => {
       try {
+        
         setIsLoading(true);
 
         const offset = 0;
