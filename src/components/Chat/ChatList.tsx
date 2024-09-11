@@ -135,8 +135,16 @@ export const ChatList = ({ initialMessages, myAddress, tempMessages }) => {
   };
 
   useEffect(() => {
-    
-    const totalMessages = [...initialMessages, ...(tempMessages || [])]
+    let uniqueInitialMessagesMap = new Map();
+
+// Iterate over initialMessages and add only unique messages based on signature
+initialMessages.forEach((message) => {
+    uniqueInitialMessagesMap.set(message.signature, message);
+});
+
+// Convert the map back to an array and sort by timestamp (old to new)
+let uniqueInitialMessages = Array.from(uniqueInitialMessagesMap.values()).sort((a, b) => a.timestamp - b.timestamp);
+    const totalMessages = [...uniqueInitialMessages, ...(tempMessages || [])]
     if(totalMessages.length === 0) return
     setMessages(totalMessages);
     // cache.clearAll(); // Clear cache so the list can properly re-render with new messages

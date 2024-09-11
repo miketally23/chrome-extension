@@ -11,7 +11,7 @@ let messageQueue = []; // Global message queue
 export const MessageQueueProvider = ({ children }) => {
   const [queueChats, setQueueChats] = useState({}); // Stores chats and status for display
   const isProcessingRef = useRef(false); // To track if the queue is being processed
-  const maxRetries = 3;
+  const maxRetries = 4;
 
   const clearStatesMessageQueueProvider = useCallback(() => {
     setQueueChats({})
@@ -122,7 +122,7 @@ const processQueue = useCallback(async () => {
       }
   
       // Delay between processing each message to avoid overlap
-      await new Promise((res) => setTimeout(res, 3000));
+      await new Promise((res) => setTimeout(res, 5000));
     }
   
     // Reset the processing lock once all messages are processed
