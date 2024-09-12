@@ -108,7 +108,7 @@ export const AddGroupList = ({ setInfoSnack, setOpenSnack }) => {
           })
       setIsLoading(true);
       await new Promise((res, rej) => {
-        chrome.runtime.sendMessage(
+        chrome?.runtime?.sendMessage(
           {
             action: "joinGroup",
             payload: {

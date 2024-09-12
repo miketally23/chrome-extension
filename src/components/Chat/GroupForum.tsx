@@ -6,6 +6,7 @@ import React, {
   useState,
 } from "react";
 import { GroupMail } from "../Group/Forum/GroupMail";
+import { isMobile } from "../../App";
 
 
 
@@ -35,7 +36,7 @@ export const GroupForum = ({
   return (
     <div
     style={{
-      height: "100vh",
+      height: isMobile ? '100%' : "100vh",
       display: "flex",
       flexDirection: "column",
       width: "100%",

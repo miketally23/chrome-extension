@@ -107,7 +107,7 @@ export const CreateCommonSecret = ({groupId, secretKey, isOwner,  myAddress, sec
           const secretKeyToSend = !secretKey2 ? null : secretKey2
        
  
-            chrome.runtime.sendMessage({ action: "encryptAndPublishSymmetricKeyGroupChat", payload: {
+            chrome?.runtime?.sendMessage({ action: "encryptAndPublishSymmetricKeyGroupChat", payload: {
                 groupId: groupId,
                 previousData: secretKeyToSend
             } }, (response) => {
@@ -142,7 +142,7 @@ export const CreateCommonSecret = ({groupId, secretKey, isOwner,  myAddress, sec
       flexDirection: 'column',
       gap: '25px',
       maxWidth: '350px',
-      background: '#4444'
+      background: '#444444'
     }}>
       <LoadingButton loading={isLoading} loadingPosition="start" color="warning" variant='contained' onClick={createCommonSecret}>Re-encyrpt key</LoadingButton>
       {noSecretKey ? (

@@ -1,5 +1,6 @@
 import React from 'react'
 import { Box, Modal, useTheme } from '@mui/material'
+import { isMobile } from '../../../App'
 
 interface MyModalProps {
   open: boolean
@@ -40,7 +41,7 @@ export const ReusableModal: React.FC<MyModalProps> = ({
           top: '50%',
           left: '50%',
           transform: 'translate(-50%, -50%)',
-          width: '75%',
+          width: isMobile ? '95%' : '75%',
           bgcolor: theme.palette.primary.main,
           boxShadow: 24,
           p: 4,

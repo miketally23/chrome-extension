@@ -74,7 +74,7 @@ export const WebSocketActive = ({ myAddress, setIsLoadingGroups }) => {
               ).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
 
            
-              chrome.runtime.sendMessage({
+              chrome?.runtime?.sendMessage({
                 action: 'handleActiveGroupDataFromSocket',
                 payload: {
                   groups: sortedGroups,

@@ -23,7 +23,7 @@ document.addEventListener('qortalExtensionRequests', async (event) => {
       }));
       return
     }
-    chrome.runtime.sendMessage({ action: "userInfo" }, (response) => {
+    chrome?.runtime?.sendMessage({ action: "userInfo" }, (response) => {
       if (response.error) {
         document.dispatchEvent(new CustomEvent('qortalExtensionResponses', {
           detail: { type: "USER_INFO", data: {
@@ -38,7 +38,7 @@ document.addEventListener('qortalExtensionRequests', async (event) => {
       }
     });
   } else if (type === 'REQUEST_IS_INSTALLED') {
-    chrome.runtime.sendMessage({ action: "version" }, (response) => {
+    chrome?.runtime?.sendMessage({ action: "version" }, (response) => {
       if (response.error) {
         console.error("Error:", response.error);
       } else {
@@ -51,7 +51,7 @@ document.addEventListener('qortalExtensionRequests', async (event) => {
   } else if (type === 'REQUEST_CONNECTION') {
     console.log('REQUEST_CONNECTION')
     const hostname = window.location.hostname
-    chrome.runtime.sendMessage({ action: "connection", payload: {
+    chrome?.runtime?.sendMessage({ action: "connection", payload: {
       hostname
     }, timeout }, (response) => {
       if (response.error) {
@@ -75,7 +75,7 @@ document.addEventListener('qortalExtensionRequests', async (event) => {
       return
     }
 
-    chrome.runtime.sendMessage({ action: "oauth", payload: {
+    chrome?.runtime?.sendMessage({ action: "oauth", payload: {
       nodeBaseUrl: payload.nodeBaseUrl,
       senderAddress: payload.senderAddress,
       senderPublicKey: payload.senderPublicKey, timestamp: payload.timestamp
@@ -105,7 +105,7 @@ document.addEventListener('qortalExtensionRequests', async (event) => {
       return
     }
 
-    chrome.runtime.sendMessage({ action: "buyOrder", payload: {
+    chrome?.runtime?.sendMessage({ action: "buyOrder", payload: {
       qortalAtAddress: payload.qortalAtAddress,
       hostname
       
@@ -136,7 +136,7 @@ document.addEventListener('qortalExtensionRequests', async (event) => {
       }));
       return
     }
-    chrome.runtime.sendMessage({ action: "ltcBalance", payload: {
+    chrome?.runtime?.sendMessage({ action: "ltcBalance", payload: {
       hostname
     },  timeout }, (response) => {
       
@@ -164,7 +164,7 @@ document.addEventListener('qortalExtensionRequests', async (event) => {
       }));
       return
     }
-    chrome.runtime.sendMessage({ action: "authentication", payload: {
+    chrome?.runtime?.sendMessage({ action: "authentication", payload: {
       hostname
     },  timeout }, (response) => {
       if (response.error) {
@@ -191,7 +191,7 @@ document.addEventListener('qortalExtensionRequests', async (event) => {
       }));
       return
     }
-    chrome.runtime.sendMessage({ action: "sendQort", payload: {
+    chrome?.runtime?.sendMessage({ action: "sendQort", payload: {
       hostname,
       amount: payload.amount,
       description: payload.description,
@@ -221,7 +221,7 @@ document.addEventListener('qortalExtensionRequests', async (event) => {
       }));
       return
     }
-    chrome.runtime.sendMessage({ action: "closePopup" }, (response) => {
+    chrome?.runtime?.sendMessage({ action: "closePopup" }, (response) => {
       if (response.error) {
         
         document.dispatchEvent(new CustomEvent('qortalExtensionResponses', {
@@ -241,7 +241,7 @@ document.addEventListener('qortalExtensionRequests', async (event) => {
 });
 
 
-chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
+chrome.runtime?.onMessage.addListener(function(message, sender, sendResponse) {
   if (message.type === "LOGOUT") {
       // Notify the web page
       window.postMessage({

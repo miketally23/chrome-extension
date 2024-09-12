@@ -74,7 +74,7 @@ export const ListOfJoinRequests = ({ groupId, setInfoSnack, setOpenSnack, show }
       })
       setIsLoadingAccept(true)
       await new Promise((res, rej)=> {
-          chrome.runtime.sendMessage({ action: "inviteToGroup", payload: {
+          chrome?.runtime?.sendMessage({ action: "inviteToGroup", payload: {
             groupId,
             qortalAddress: address,
             inviteTime: 10800,

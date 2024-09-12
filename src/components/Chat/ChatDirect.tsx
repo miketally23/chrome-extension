@@ -40,7 +40,7 @@ export const ChatDirect = ({ myAddress, isNewChat, selectedDirect, setSelectedDi
     const decryptMessages = (encryptedMessages: any[])=> {
       try {
         return new Promise((res, rej)=> {
-          chrome.runtime.sendMessage({ action: "decryptDirect", payload: {
+          chrome?.runtime?.sendMessage({ action: "decryptDirect", payload: {
             data: encryptedMessages,
             involvingAddress: selectedDirect?.address
         }}, (response) => {
@@ -146,7 +146,7 @@ const sendChatDirect = async ({ chatReference = undefined, messageText}: any)=> 
  
     if(!directTo) return
     return new Promise((res, rej)=> {
-      chrome.runtime.sendMessage({ action: "sendChatDirect", payload: {
+      chrome?.runtime?.sendMessage({ action: "sendChatDirect", payload: {
         directTo,  chatReference, messageText
     }}, async (response) => {
     
@@ -167,7 +167,7 @@ const sendChatDirect = async ({ chatReference = undefined, messageText}: any)=> 
               "senderName": myName
           })
           setNewChat(null)
-          chrome.runtime.sendMessage({
+          chrome?.runtime?.sendMessage({
             action: "addTimestampEnterChat",
             payload: {
               timestamp: Date.now(),

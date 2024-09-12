@@ -75,7 +75,7 @@ export const ListOfInvites = ({ groupId, setInfoSnack, setOpenSnack, show }) => 
       })
       setIsLoadingCancelInvite(true)
       await new Promise((res, rej)=> {
-          chrome.runtime.sendMessage({ action: "cancelInvitationToGroup", payload: {
+          chrome?.runtime?.sendMessage({ action: "cancelInvitationToGroup", payload: {
               groupId,
               qortalAddress: address,
         }}, (response) => {

@@ -2341,7 +2341,7 @@ if (res?.[key]) {
   throw new Error("No Chatheads saved");
 }
 }
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
   if (request) {
     switch (request.action) {
       case "version":
@@ -3581,7 +3581,7 @@ const restoreWindowBounds = (callback) => {
   });
 };
 
-chrome.action.onClicked.addListener((tab) => {
+chrome.action?.onClicked?.addListener((tab) => {
   const popupUrl = chrome.runtime.getURL("index.html?main=true");
   chrome.windows.getAll(
     { populate: true, windowTypes: ["popup"] },
@@ -3716,7 +3716,7 @@ const checkActiveChatsForNotifications = async ()=> {
     
   }
 }
-chrome.notifications.onClicked.addListener( (notificationId) => {
+chrome.notifications?.onClicked?.addListener( (notificationId) => {
  
   const popupUrl = chrome.runtime.getURL("index.html?main=true");
   const isDirect = notificationId.includes('_type=direct_');
@@ -3839,14 +3839,14 @@ chrome.notifications.onClicked.addListener( (notificationId) => {
 });
 
 // Reconnect when service worker wakes up
-chrome.runtime.onStartup.addListener(() => {
+chrome.runtime?.onStartup.addListener(() => {
   console.log("Service worker started up, reconnecting WebSocket...");
   // initWebsocketMessageGroup();
   // listenForNewGroupAnnouncements()
   // listenForThreadUpdates()
 });
 
-chrome.runtime.onInstalled.addListener((details) => {
+chrome.runtime?.onInstalled.addListener((details) => {
   if (details.reason === chrome.runtime.OnInstalledReason.INSTALL) {
     console.log('Extension Installed');
     // Perform tasks that should only happen on extension installation
@@ -3866,14 +3866,14 @@ chrome.runtime.onInstalled.addListener((details) => {
 });
 
 // Check if the alarm already exists before creating it
-chrome.alarms.get("checkForNotifications", (existingAlarm) => {
+chrome.alarms?.get("checkForNotifications", (existingAlarm) => {
   if (!existingAlarm) {
     // If the alarm does not exist, create it
     chrome.alarms.create("checkForNotifications", { periodInMinutes: 4 });
   }
 });
 
-chrome.alarms.onAlarm.addListener(async (alarm) => {
+chrome.alarms?.onAlarm.addListener(async (alarm) => {
  try {
 
   if (alarm.name === "checkForNotifications") {

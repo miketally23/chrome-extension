@@ -74,7 +74,7 @@ export const ListOfBans = ({ groupId, setInfoSnack, setOpenSnack, show }) => {
       })
       setIsLoadingUnban(true)
       new Promise((res, rej)=> {
-          chrome.runtime.sendMessage({ action: "cancelBan", payload: {
+          chrome?.runtime?.sendMessage({ action: "cancelBan", payload: {
               groupId,
               qortalAddress: address,
         }}, (response) => {

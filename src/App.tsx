@@ -41,6 +41,8 @@ import Logout from "./assets/svgs/Logout.svg";
 import Return from "./assets/svgs/Return.svg";
 import Success from "./assets/svgs/Success.svg";
 import Info from "./assets/svgs/Info.svg";
+import CloseIcon from '@mui/icons-material/Close';
+
 import {
   createAccount,
   generateRandomSentence,
@@ -67,7 +69,7 @@ import { Spacer } from "./common/Spacer";
 import { Loader } from "./components/Loader";
 import { PasswordField, ErrorText } from "./components";
 import { ChatGroup } from "./components/Chat/ChatGroup";
-import { Group, requestQueueMemberNames } from "./components/Group/Group";
+import { Group,  requestQueueMemberNames } from "./components/Group/Group";
 import { TaskManger } from "./components/TaskManager/TaskManger";
 import { useModal } from "./common/useModal";
 import { LoadingButton } from "@mui/lab";
@@ -83,6 +85,7 @@ import {
 import { executeEvent } from "./utils/events";
 import { requestQueueCommentCount, requestQueuePublishedAccouncements } from "./components/Chat/GroupAnnouncements";
 import { requestQueueGroupJoinRequests } from "./components/Group/GroupJoinRequests";
+import { DrawerComponent } from "./components/Drawer/Drawer";
 
 type extStates =
   | "not-authenticated"
@@ -126,6 +129,28 @@ const defaultValues: MyContextInterface = {
     message: "",
   },
 };
+export let isMobile = false
+
+const isMobileDevice = () => {
+  const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+  
+  if (/android/i.test(userAgent)) {
+    return true; // Android device
+  }
+
+  if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {
+    return true; // iOS device
+  }
+
+  return false;
+};
+
+if (isMobileDevice()) {
+  isMobile = true
+  console.log("Running on a mobile device");
+} else {
+  console.log("Running on a desktop");
+}
 
 export const allQueues = {
   requestQueueCommentCount: requestQueueCommentCount,
@@ -160,7 +185,7 @@ export const clearAllQueues = () => {
 
 export const pauseAllQueues = () => {
   controlAllQueues('pause');
-  chrome.runtime.sendMessage(
+  chrome?.runtime?.sendMessage(
     {
       action: "pauseAllQueues",
       payload: {
@@ -171,7 +196,7 @@ export const pauseAllQueues = () => {
 } 
 export const resumeAllQueues = () => {
   controlAllQueues('resume');
-  chrome.runtime.sendMessage(
+  chrome?.runtime?.sendMessage(
     {
       action: "resumeAllQueues",
       payload: {
@@ -266,11 +291,33 @@ function App() {
   const [openAdvancedSettings, setOpenAdvancedSettings] = useState(false);
   const [useLocalNode, setUseLocalNode] = useState(false);
   const [confirmUseOfLocal, setConfirmUseOfLocal] = useState(false);
-
+  const [isOpenDrawerProfile, setIsOpenDrawerProfile] = useState(false);
   const [apiKey, setApiKey] = useState("");
 
   useEffect(() => {
-    chrome.runtime.sendMessage({ action: "getApiKey" }, (response) => {
+    if(!isMobile) return
+    // Function to set the height of the app to the viewport height
+    const resetHeight = () => {
+      const height = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+      // Set the height to the root element (usually #root)
+      document.getElementById('root').style.height = height + "px";
+    };
+
+    // Set the initial height
+    resetHeight();
+
+    // Add event listeners for resize and visualViewport changes
+    window.addEventListener('resize', resetHeight);
+    window.visualViewport?.addEventListener('resize', resetHeight);
+
+    // Clean up the event listeners when the component unmounts
+    return () => {
+      window.removeEventListener('resize', resetHeight);
+      window.visualViewport?.removeEventListener('resize', resetHeight);
+    };
+  }, []);
+  useEffect(() => {
+    chrome?.runtime?.sendMessage({ action: "getApiKey" }, (response) => {
       if (response) {
        
         globalApiKey = response;
@@ -405,7 +452,7 @@ function App() {
   };
 
   const storeWalletInfo = (wallet: any) => {
-    chrome.runtime.sendMessage(
+    chrome?.runtime?.sendMessage(
       { action: "storeWalletInfo", wallet },
       (response) => {
         if (response) {
@@ -427,7 +474,7 @@ function App() {
 
   const getBalanceFunc = () => {
     setQortBalanceLoading(true);
-    chrome.runtime.sendMessage({ action: "balance" }, (response) => {
+    chrome?.runtime?.sendMessage({ action: "balance" }, (response) => {
       if (!response?.error && !isNaN(+response)) {
         setBalance(response);
       }
@@ -436,7 +483,7 @@ function App() {
   };
   const getLtcBalanceFunc = () => {
     setLtcBalanceLoading(true);
-    chrome.runtime.sendMessage({ action: "ltcBalance" }, (response) => {
+    chrome?.runtime?.sendMessage({ action: "ltcBalance" }, (response) => {
       if (!response?.error && !isNaN(+response)) {
         setLtcBalance(response);
       }
@@ -459,7 +506,7 @@ function App() {
       return;
     }
     setIsLoading(true);
-    chrome.runtime.sendMessage(
+    chrome?.runtime?.sendMessage(
       {
         action: "sendCoin",
         payload: {
@@ -487,7 +534,7 @@ function App() {
 
   useEffect(() => {
     // Listen for messages from the background script
-    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    chrome.runtime?.onMessage.addListener((message, sender, sendResponse) => {
       // Check if the message is to update the state
       if (
         message.action === "UPDATE_STATE_CONFIRM_SEND_QORT" &&
@@ -563,7 +610,7 @@ function App() {
   //param = isDecline
   const confirmPayment = (isDecline: boolean) => {
     if (isDecline) {
-      chrome.runtime.sendMessage(
+      chrome?.runtime?.sendMessage(
         {
           action: "sendQortConfirmation",
           payload: {
@@ -586,7 +633,7 @@ function App() {
     }
 
     setIsLoading(true);
-    chrome.runtime.sendMessage(
+    chrome?.runtime?.sendMessage(
       {
         action: "sendQortConfirmation",
         payload: {
@@ -613,7 +660,7 @@ function App() {
 
   const confirmBuyOrder = (isDecline: boolean) => {
     if (isDecline) {
-      chrome.runtime.sendMessage(
+      chrome?.runtime?.sendMessage(
         {
           action: "buyOrderConfirmation",
           payload: {
@@ -630,7 +677,7 @@ function App() {
     }
 
     setIsLoading(true);
-    chrome.runtime.sendMessage(
+    chrome?.runtime?.sendMessage(
       {
         action: "buyOrderConfirmation",
         payload: {
@@ -657,7 +704,7 @@ function App() {
     hostname: string,
     interactionId: string
   ) => {
-    chrome.runtime.sendMessage(
+    chrome?.runtime?.sendMessage(
       {
         action: "responseToConnectionRequest",
         payload: { isOkay, hostname, interactionId },
@@ -679,7 +726,7 @@ function App() {
   useEffect(() => {
     try {
       setIsLoading(true);
-      chrome.runtime.sendMessage({ action: "getWalletInfo" }, (response) => {
+      chrome?.runtime?.sendMessage({ action: "getWalletInfo" }, (response) => {
         if (response && response?.walletInfo) {
           setRawWallet(response?.walletInfo);
           if (
@@ -708,7 +755,7 @@ function App() {
           }, 10000);
         });
       }
-      chrome.runtime.sendMessage({ action: "userInfo" }, (response) => {
+      chrome?.runtime?.sendMessage({ action: "userInfo" }, (response) => {
         if (response && !response.error) {
           setUserInfo(response);
         }
@@ -799,7 +846,7 @@ function App() {
         crypto.kdfThreads,
         () => {}
       );
-      chrome.runtime.sendMessage(
+      chrome?.runtime?.sendMessage(
         {
           action: "decryptWallet",
           payload: {
@@ -814,7 +861,7 @@ function App() {
               wallet,
               qortAddress: wallet.address0,
             });
-            chrome.runtime.sendMessage({ action: "userInfo" }, (response2) => {
+            chrome?.runtime?.sendMessage({ action: "userInfo" }, (response2) => {
               setIsLoading(false);
               if (response2 && !response2.error) {
                 setUserInfo(response);
@@ -835,7 +882,7 @@ function App() {
 
   const logoutFunc = () => {
     try {
-      chrome.runtime.sendMessage({ action: "logout" }, (response) => {
+      chrome?.runtime?.sendMessage({ action: "logout" }, (response) => {
         if (response) {
           resetAllStates();
           executeEvent("logout-event", {});
@@ -898,7 +945,7 @@ function App() {
           res();
         }, 250);
       });
-      chrome.runtime.sendMessage(
+      chrome?.runtime?.sendMessage(
         {
           action: "decryptWallet",
           payload: {
@@ -911,14 +958,14 @@ function App() {
             setAuthenticatePassword("");
             setExtstate("authenticated");
             setWalletToBeDecryptedError("");
-            chrome.runtime.sendMessage({ action: "userInfo" }, (response) => {
+            chrome?.runtime?.sendMessage({ action: "userInfo" }, (response) => {
               setIsLoading(false);
               if (response && !response.error) {
                 setUserInfo(response);
               }
             });
             getBalanceFunc();
-            chrome.runtime.sendMessage(
+            chrome?.runtime?.sendMessage(
               { action: "getWalletInfo" },
               (response) => {
                 if (response && response?.walletInfo) {
@@ -1023,7 +1070,7 @@ function App() {
       });
       setIsLoadingRegisterName(true);
       new Promise((res, rej) => {
-        chrome.runtime.sendMessage(
+        chrome?.runtime?.sendMessage(
           {
             action: "registerName",
             payload: {
@@ -1076,8 +1123,224 @@ function App() {
     }
   };
 
+  const renderProfile = ()=> {
+    return (
+      <AuthenticatedContainer sx={{ width:"350px", display:  'flex' }}>
+      {isMobile && (
+             <Box sx={{
+              padding: '10px',
+              display: 'flex',
+              justifyContent: 'flex-end'
+          }}><CloseIcon onClick={()=> {
+              setIsOpenDrawerProfile(false)
+          }} sx={{
+              cursor: 'pointer',
+              color: 'white'
+          }} /></Box>
+        )}
+          
+      <AuthenticatedContainerInnerLeft>
+      <Spacer height="48px" />
+
+      {authenticatedMode === "ltc" ? (
+        <>
+          <img src={ltcLogo} />
+          <Spacer height="32px" />
+          <CopyToClipboard text={rawWallet?.ltcAddress}>
+            <AddressBox>
+              {rawWallet?.ltcAddress?.slice(0, 6)}...
+              {rawWallet?.ltcAddress?.slice(-4)} <img src={Copy} />
+            </AddressBox>
+          </CopyToClipboard>
+          <Spacer height="10px" />
+          {ltcBalanceLoading && (
+            <CircularProgress color="success" size={16} />
+          )}
+          {!isNaN(+ltcBalance) && !ltcBalanceLoading && (
+            <Box
+              sx={{
+                gap: "10px",
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
+              <TextP
+                sx={{
+                  textAlign: "center",
+                  lineHeight: "24px",
+                  fontSize: "20px",
+                  fontWeight: 700,
+                }}
+              >
+                {ltcBalance} LTC
+              </TextP>
+              <RefreshIcon
+                onClick={getLtcBalanceFunc}
+                sx={{
+                  fontSize: "16px",
+                  color: "white",
+                  cursor: "pointer",
+                }}
+              />
+            </Box>
+          )}
+        </>
+      ) : (
+        <>
+          <img src={Logo2} />
+          <Spacer height="32px" />
+          <TextP
+            sx={{
+              textAlign: "center",
+              lineHeight: "24px",
+              fontSize: "20px",
+            }}
+          >
+            {userInfo?.name}
+          </TextP>
+          <Spacer height="10px" />
+          <CopyToClipboard text={rawWallet?.address0}>
+            <AddressBox>
+              {rawWallet?.address0?.slice(0, 6)}...
+              {rawWallet?.address0?.slice(-4)} <img src={Copy} />
+            </AddressBox>
+          </CopyToClipboard>
+          <Spacer height="10px" />
+          {qortBalanceLoading && (
+            <CircularProgress color="success" size={16} />
+          )}
+          {!qortBalanceLoading && balance >= 0 && (
+            <Box
+              sx={{
+                gap: "10px",
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
+              <TextP
+                sx={{
+                  textAlign: "center",
+                  lineHeight: "24px",
+                  fontSize: "20px",
+                  fontWeight: 700,
+                }}
+              >
+                {balance?.toFixed(2)} QORT
+              </TextP>
+              <RefreshIcon
+                onClick={getBalanceFunc}
+                sx={{
+                  fontSize: "16px",
+                  color: "white",
+                  cursor: "pointer",
+                }}
+              />
+            </Box>
+          )}
+
+          <Spacer height="35px" />
+          {userInfo && !userInfo?.name && (
+            <TextP
+              ref={registerNamePopoverRef}
+              sx={{
+                textAlign: "center",
+                lineHeight: 1.2,
+                fontSize: "16px",
+                fontWeight: 500,
+                cursor: "pointer",
+                marginTop: "10px",
+                color: "red",
+                textDecoration: "underline",
+              }}
+              onClick={() => {
+                setOpenRegisterName(true);
+              }}
+            >
+              REGISTER NAME
+            </TextP>
+          )}
+          <Spacer height="20px" />
+          <CustomButton
+            onClick={() => {
+              setExtstate("send-qort");
+            }}
+          >
+            Transfer QORT
+          </CustomButton>
+        </>
+      )}
+      <TextP
+        sx={{
+          textAlign: "center",
+          lineHeight: "24px",
+          fontSize: "12px",
+          fontWeight: 500,
+          cursor: "pointer",
+          marginTop: "10px",
+          textDecoration: "underline",
+        }}
+        onClick={() => {
+          chrome.tabs.create({ url: "https://www.qort.trade" });
+        }}
+      >
+        Get QORT at qort.trade
+      </TextP>
+    </AuthenticatedContainerInnerLeft>
+    <AuthenticatedContainerInnerRight>
+      <Spacer height="20px" />
+      <img
+        onClick={() => {
+          setExtstate("download-wallet");
+        }}
+        src={Download}
+        style={{
+          cursor: "pointer",
+        }}
+      />
+      <Spacer height="20px" />
+      <img
+        src={Logout}
+        onClick={logoutFunc}
+        style={{
+          cursor: "pointer",
+        }}
+      />
+      <Spacer height="20px" />
+      {authenticatedMode === "qort" && (
+        <img
+          onClick={() => {
+            setAuthenticatedMode("ltc");
+          }}
+          src={ltcLogo}
+          style={{
+            cursor: "pointer",
+            width: "20px",
+            height: "auto",
+          }}
+        />
+      )}
+      {authenticatedMode === "ltc" && (
+        <img
+          onClick={() => {
+            setAuthenticatedMode("qort");
+          }}
+          src={qortLogo}
+          style={{
+            cursor: "pointer",
+            width: "20px",
+            height: "auto",
+          }}
+        />
+      )}
+    </AuthenticatedContainerInnerRight>
+    </AuthenticatedContainer>
+    )
+  }
+
   return (
-    <AppContainer>
+    <AppContainer sx={{
+      height: isMobile ? '100%' : '100vh'
+    }}>
       {/* {extState === 'group' && (
         <Group myAddress={userInfo?.address} />
       )} */}
@@ -1230,7 +1493,7 @@ function App() {
                           onClick={() => {
                             const valueToSet = !confirmUseOfLocal
                             const payload = valueToSet ? apiKey : null
-                            chrome.runtime.sendMessage(
+                            chrome?.runtime?.sendMessage(
                               { action: "setApiKey", payload },
                               (response) => {
                                 if (response) {
@@ -1266,7 +1529,7 @@ function App() {
       {/* {extState !== "not-authenticated" && (
         <button onClick={logoutFunc}>logout</button>
       )} */}
-      {extState === "authenticated" && isMainWindow && (
+      {extState === "authenticated"  && (
         <MyContext.Provider
           value={{
             txList,
@@ -1283,8 +1546,9 @@ function App() {
           <Box
             sx={{
               width: "100vw",
-              height: "100vh",
+              height: isMobile ? '100%' : "100vh",
               display: "flex",
+              flexDirection: isMobile ? 'column' : 'row'
             }}
           >
             <Group
@@ -1293,203 +1557,11 @@ function App() {
               myAddress={userInfo?.address}
               isFocused={isFocused}
               isMain={isMain}
+              isOpenDrawerProfile={isOpenDrawerProfile}
+               setIsOpenDrawerProfile={setIsOpenDrawerProfile}
             />
-            <AuthenticatedContainer sx={{ width: "350px" }}>
-              <AuthenticatedContainerInnerLeft>
-                <Spacer height="48px" />
-
-                {authenticatedMode === "ltc" ? (
-                  <>
-                    <img src={ltcLogo} />
-                    <Spacer height="32px" />
-                    <CopyToClipboard text={rawWallet?.ltcAddress}>
-                      <AddressBox>
-                        {rawWallet?.ltcAddress?.slice(0, 6)}...
-                        {rawWallet?.ltcAddress?.slice(-4)} <img src={Copy} />
-                      </AddressBox>
-                    </CopyToClipboard>
-                    <Spacer height="10px" />
-                    {ltcBalanceLoading && (
-                      <CircularProgress color="success" size={16} />
-                    )}
-                    {!isNaN(+ltcBalance) && !ltcBalanceLoading && (
-                      <Box
-                        sx={{
-                          gap: "10px",
-                          display: "flex",
-                          alignItems: "center",
-                        }}
-                      >
-                        <TextP
-                          sx={{
-                            textAlign: "center",
-                            lineHeight: "24px",
-                            fontSize: "20px",
-                            fontWeight: 700,
-                          }}
-                        >
-                          {ltcBalance} LTC
-                        </TextP>
-                        <RefreshIcon
-                          onClick={getLtcBalanceFunc}
-                          sx={{
-                            fontSize: "16px",
-                            color: "white",
-                            cursor: "pointer",
-                          }}
-                        />
-                      </Box>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    <img src={Logo2} />
-                    <Spacer height="32px" />
-                    <TextP
-                      sx={{
-                        textAlign: "center",
-                        lineHeight: "24px",
-                        fontSize: "20px",
-                      }}
-                    >
-                      {userInfo?.name}
-                    </TextP>
-                    <Spacer height="10px" />
-                    <CopyToClipboard text={rawWallet?.address0}>
-                      <AddressBox>
-                        {rawWallet?.address0?.slice(0, 6)}...
-                        {rawWallet?.address0?.slice(-4)} <img src={Copy} />
-                      </AddressBox>
-                    </CopyToClipboard>
-                    <Spacer height="10px" />
-                    {qortBalanceLoading && (
-                      <CircularProgress color="success" size={16} />
-                    )}
-                    {!qortBalanceLoading && balance >= 0 && (
-                      <Box
-                        sx={{
-                          gap: "10px",
-                          display: "flex",
-                          alignItems: "center",
-                        }}
-                      >
-                        <TextP
-                          sx={{
-                            textAlign: "center",
-                            lineHeight: "24px",
-                            fontSize: "20px",
-                            fontWeight: 700,
-                          }}
-                        >
-                          {balance?.toFixed(2)} QORT
-                        </TextP>
-                        <RefreshIcon
-                          onClick={getBalanceFunc}
-                          sx={{
-                            fontSize: "16px",
-                            color: "white",
-                            cursor: "pointer",
-                          }}
-                        />
-                      </Box>
-                    )}
-
-                    <Spacer height="35px" />
-                    {userInfo && !userInfo?.name && (
-                      <TextP
-                        ref={registerNamePopoverRef}
-                        sx={{
-                          textAlign: "center",
-                          lineHeight: 1.2,
-                          fontSize: "16px",
-                          fontWeight: 500,
-                          cursor: "pointer",
-                          marginTop: "10px",
-                          color: "red",
-                          textDecoration: "underline",
-                        }}
-                        onClick={() => {
-                          setOpenRegisterName(true);
-                        }}
-                      >
-                        REGISTER NAME
-                      </TextP>
-                    )}
-                    <Spacer height="20px" />
-                    <CustomButton
-                      onClick={() => {
-                        setExtstate("send-qort");
-                      }}
-                    >
-                      Transfer QORT
-                    </CustomButton>
-                  </>
-                )}
-                <TextP
-                  sx={{
-                    textAlign: "center",
-                    lineHeight: "24px",
-                    fontSize: "12px",
-                    fontWeight: 500,
-                    cursor: "pointer",
-                    marginTop: "10px",
-                    textDecoration: "underline",
-                  }}
-                  onClick={() => {
-                    chrome.tabs.create({ url: "https://www.qort.trade" });
-                  }}
-                >
-                  Get QORT at qort.trade
-                </TextP>
-              </AuthenticatedContainerInnerLeft>
-              <AuthenticatedContainerInnerRight>
-                <Spacer height="20px" />
-                <img
-                  onClick={() => {
-                    setExtstate("download-wallet");
-                  }}
-                  src={Download}
-                  style={{
-                    cursor: "pointer",
-                  }}
-                />
-                <Spacer height="20px" />
-                <img
-                  src={Logout}
-                  onClick={logoutFunc}
-                  style={{
-                    cursor: "pointer",
-                  }}
-                />
-                <Spacer height="20px" />
-                {authenticatedMode === "qort" && (
-                  <img
-                    onClick={() => {
-                      setAuthenticatedMode("ltc");
-                    }}
-                    src={ltcLogo}
-                    style={{
-                      cursor: "pointer",
-                      width: "20px",
-                      height: "auto",
-                    }}
-                  />
-                )}
-                {authenticatedMode === "ltc" && (
-                  <img
-                    onClick={() => {
-                      setAuthenticatedMode("qort");
-                    }}
-                    src={qortLogo}
-                    style={{
-                      cursor: "pointer",
-                      width: "20px",
-                      height: "auto",
-                    }}
-                  />
-                )}
-              </AuthenticatedContainerInnerRight>
-            </AuthenticatedContainer>
+            {!isMobile && renderProfile()}
+           
           </Box>
           <Box
             sx={{
@@ -2316,6 +2388,7 @@ function App() {
         info={infoSnack}
         setInfo={setInfoSnack}
       />
+         <DrawerComponent open={isOpenDrawerProfile} setOpen={setIsOpenDrawerProfile} >{renderProfile()}</DrawerComponent>
     </AppContainer>
   );
 }

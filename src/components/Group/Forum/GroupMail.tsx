@@ -123,7 +123,7 @@ export const GroupMail = ({
   const updateThreadActivity = async ({threadId, qortalName, groupId, thread}) => {
     try {
       await new Promise((res, rej) => {
-        chrome.runtime.sendMessage(
+        chrome?.runtime?.sendMessage(
           {
             action: "updateThreadActivity",
             payload: {
@@ -656,6 +656,11 @@ export const GroupMail = ({
               thread?.threadData?.createdAt < hasViewedRecent?.timestamp;
             return (
               <SingleThreadParent
+              sx={{
+                flexWrap: 'wrap',
+                gap: '15px',
+                height: 'auto'
+              }}
                 onClick={() => {
                   setCurrentThread(thread);
                   if(thread?.threadId && thread?.threadData?.name){

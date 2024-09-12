@@ -26,7 +26,7 @@ export const InviteMember = ({ groupId, setInfoSnack, setOpenSnack, show }) => {
       setIsLoadingInvite(true)
       if (!expiryTime || !value) return;
       new Promise((res, rej) => {
-        chrome.runtime.sendMessage(
+        chrome?.runtime?.sendMessage(
           {
             action: "inviteToGroup",
             payload: {

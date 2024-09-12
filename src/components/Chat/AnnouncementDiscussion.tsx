@@ -10,7 +10,7 @@ import { decryptPublishes, getTempPublish, saveTempPublish } from "./GroupAnnoun
 import { AnnouncementList } from "./AnnouncementList";
 import { Spacer } from "../../common/Spacer";
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import { getBaseApiReact, pauseAllQueues, resumeAllQueues } from "../../App";
+import { getBaseApiReact, isMobile, pauseAllQueues, resumeAllQueues } from "../../App";
 
 const tempKey = 'accouncement-comment'
 
@@ -66,7 +66,7 @@ export const AnnouncementDiscussion = ({
       if (!selectedAnnouncement) return;
     
       return new Promise((res, rej) => {
-        chrome.runtime.sendMessage(
+        chrome?.runtime?.sendMessage(
           {
             action: "publishGroupEncryptedResource",
             payload: {
@@ -245,7 +245,7 @@ export const AnnouncementDiscussion = ({
   return (
     <div
       style={{
-        height: "100vh",
+        height: isMobile ? '100%' : "100vh",
         display: "flex",
         flexDirection: "column",
         width: "100%",

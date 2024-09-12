@@ -77,7 +77,7 @@ export const ManageMembers = ({
       })
 
       await new Promise((res, rej) => {
-        chrome.runtime.sendMessage(
+        chrome?.runtime?.sendMessage(
           {
             action: "leaveGroup",
             payload: {

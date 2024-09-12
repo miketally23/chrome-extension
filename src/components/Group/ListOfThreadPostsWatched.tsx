@@ -23,7 +23,7 @@ export const ListOfThreadPostsWatched = () => {
   const getPosts = async ()=> {
     try {
       await new Promise((res, rej) => {
-        chrome.runtime.sendMessage(
+        chrome?.runtime?.sendMessage(
           {
             action: "getThreadActivity",
             payload: {

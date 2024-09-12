@@ -28,7 +28,7 @@ const uid = new ShortUniqueId({ length: 8 });
 import CampaignIcon from '@mui/icons-material/Campaign';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { AnnouncementDiscussion } from "./AnnouncementDiscussion";
-import { MyContext, getBaseApiReact, pauseAllQueues, resumeAllQueues } from "../../App";
+import { MyContext, getBaseApiReact, isMobile, pauseAllQueues, resumeAllQueues } from "../../App";
 import { RequestQueueWithPromise } from "../../utils/queue/queue";
 import { CustomizedSnackbars } from "../Snackbar/Snackbar";
 
@@ -39,7 +39,7 @@ export const saveTempPublish = async ({ data, key }: any) => {
    
       
   return new Promise((res, rej) => {
-    chrome.runtime.sendMessage(
+    chrome?.runtime?.sendMessage(
       {
         action: "saveTempPublish",
         payload: {
@@ -62,7 +62,7 @@ export const getTempPublish = async () => {
    
       
   return new Promise((res, rej) => {
-    chrome.runtime.sendMessage(
+    chrome?.runtime?.sendMessage(
       {
         action: "getTempPublish",
         payload: {
@@ -81,7 +81,7 @@ export const getTempPublish = async () => {
 export const decryptPublishes = async (encryptedMessages: any[], secretKey) => {
   try {
     return await new Promise((res, rej) => {
-      chrome.runtime.sendMessage(
+      chrome?.runtime?.sendMessage(
         {
           action: "decryptSingleForPublishes",
           payload: {
@@ -182,7 +182,7 @@ export const GroupAnnouncements = ({
   const encryptChatMessage = async (data: string, secretKeyObject: any) => {
     try {
       return new Promise((res, rej) => {
-        chrome.runtime.sendMessage(
+        chrome?.runtime?.sendMessage(
           {
             action: "encryptSingle",
             payload: {
@@ -206,7 +206,7 @@ export const GroupAnnouncements = ({
    
       
       return new Promise((res, rej) => {
-        chrome.runtime.sendMessage(
+        chrome?.runtime?.sendMessage(
           {
             action: "publishGroupEncryptedResource",
             payload: {
@@ -460,7 +460,7 @@ export const GroupAnnouncements = ({
     return (
       <div
       style={{
-        height: "100vh",
+        height: isMobile ? '100%' : "100vh",
         display: "flex",
         flexDirection: "column",
         width: "100%",
@@ -479,7 +479,7 @@ export const GroupAnnouncements = ({
   return (
     <div
       style={{
-        height: "100vh",
+        height: isMobile ? '100%' :  "100vh",
         display: "flex",
         flexDirection: "column",
         width: "100%",

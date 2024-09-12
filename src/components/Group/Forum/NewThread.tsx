@@ -94,7 +94,7 @@ export const publishGroupEncryptedResource = async ({
   identifier,
 }) => {
   return new Promise((res, rej) => {
-    chrome.runtime.sendMessage(
+    chrome?.runtime?.sendMessage(
       {
         action: "publishGroupEncryptedResource",
         payload: {
@@ -117,7 +117,7 @@ export const publishGroupEncryptedResource = async ({
 export const encryptSingleFunc = async (data: string, secretKeyObject: any) => {
   try {
     return new Promise((res, rej) => {
-      chrome.runtime.sendMessage(
+      chrome?.runtime?.sendMessage(
         {
           action: "encryptSingle",
           payload: {

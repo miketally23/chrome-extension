@@ -81,3 +81,7 @@ body {
 .group-list::-webkit-scrollbar-thumb:hover {
   background-color: whitesmoke;
 }
+
+html, body {
+  overscroll-behavior:none !important;
+}

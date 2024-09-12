@@ -10,7 +10,7 @@ import Tiptap from './TipTap'
 import { CustomButton } from '../../App-styles'
 import CircularProgress from '@mui/material/CircularProgress';
 import { LoadingSnackbar } from '../Snackbar/LoadingSnackbar'
-import { getBaseApiReactSocket, pauseAllQueues, resumeAllQueues } from '../../App'
+import { getBaseApiReactSocket, isMobile, pauseAllQueues, resumeAllQueues } from '../../App'
 import { CustomizedSnackbars } from '../Snackbar/Snackbar'
 import { PUBLIC_NOTIFICATION_CODE_FIRST_SECRET_KEY } from '../../constants/codes'
 import { useMessageQueue } from '../../MessageQueueContext'
@@ -85,7 +85,7 @@ export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey,
           return
         }
         return new Promise((res, rej)=> {
-          chrome.runtime.sendMessage({ action: "decryptSingle", payload: {
+          chrome?.runtime?.sendMessage({ action: "decryptSingle", payload: {
             data: encryptedMessages,
             secretKeyObject: secretKey
         }}, (response) => {
@@ -233,7 +233,7 @@ export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey,
   const encryptChatMessage = async (data: string, secretKeyObject: any)=> {
     try {
       return new Promise((res, rej)=> {
-        chrome.runtime.sendMessage({ action: "encryptSingle", payload: {
+        chrome?.runtime?.sendMessage({ action: "encryptSingle", payload: {
           data,
           secretKeyObject
       }}, (response) => {
@@ -252,7 +252,7 @@ export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey,
 const sendChatGroup = async ({groupId, typeMessage = undefined, chatReference = undefined, messageText}: any)=> {
   try {
     return new Promise((res, rej)=> {
-      chrome.runtime.sendMessage({ action: "sendChatGroup", payload: {
+      chrome?.runtime?.sendMessage({ action: "sendChatGroup", payload: {
         groupId, typeMessage, chatReference, messageText
     }}, (response) => {
     
@@ -336,7 +336,7 @@ const clearEditorContent = () => {
   
   return (
     <div style={{
-      height: '100vh',
+      height: isMobile ? '100%' : '100vh',
       display: 'flex',
       flexDirection: 'column',
       width: '100%',

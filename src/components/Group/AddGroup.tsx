@@ -103,7 +103,7 @@ export const AddGroup = ({ address, open, setOpen }) => {
       })
 
      await new Promise((res, rej) => {
-        chrome.runtime.sendMessage(
+        chrome?.runtime?.sendMessage(
           {
             action: "createGroup",
             payload: {
