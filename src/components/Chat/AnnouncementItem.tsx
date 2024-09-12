@@ -60,7 +60,8 @@ export const AnnouncementItem = ({ message, messageData, setSelectedAnnouncement
       <Box sx={{
          display: "flex",
          gap: '7px',
-         width: '100%'
+         width: '100%',
+         wordBreak: 'break-word'
       }}>
          <Avatar
       sx={{

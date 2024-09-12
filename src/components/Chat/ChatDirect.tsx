@@ -11,7 +11,7 @@ import { LoadingSnackbar } from '../Snackbar/LoadingSnackbar';
 import { getNameInfo } from '../Group/Group';
 import { Spacer } from '../../common/Spacer';
 import { CustomizedSnackbars } from '../Snackbar/Snackbar';
-import { getBaseApiReactSocket } from '../../App';
+import { getBaseApiReactSocket, isMobile } from '../../App';
 
 
 
@@ -226,7 +226,7 @@ const clearEditorContent = () => {
  
   return (
     <div style={{
-      height: '100vh',
+      height: isMobile ? '100%' : '100vh',
       display: 'flex',
       flexDirection: 'column',
       width: '100%'

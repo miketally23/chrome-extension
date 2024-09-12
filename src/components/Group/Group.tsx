@@ -1818,6 +1818,7 @@ export const Group = ({
                 position: "relative",
                 flexGrow: 1,
                 display: "flex",
+                height: '100%'
               }}
             >
               <ChatDirect

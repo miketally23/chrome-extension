@@ -32,7 +32,28 @@ export const groupApiLocal = "http://127.0.0.1:12391"
 export const groupApiSocketLocal = "ws://127.0.0.1:12391"
 const timeDifferenceForNotificationChatsBackground = 600000
 const requestQueueAnnouncements = new RequestQueueWithPromise(1)
+let isMobile = false
 
+const isMobileDevice = () => {
+  const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+  
+  if (/android/i.test(userAgent)) {
+    return true; // Android device
+  }
+
+  if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {
+    return true; // iOS device
+  }
+
+  return false;
+};
+
+if (isMobileDevice()) {
+  isMobile = true
+  console.log("Running on a mobile device");
+} else {
+  console.log("Running on a desktop");
+}
 const allQueues = {
   requestQueueAnnouncements: requestQueueAnnouncements,
 }
@@ -237,9 +258,12 @@ if (!oldestLatestTimestamp || oldChat?.timestamp > oldestLatestTimestamp?.timest
           //   { title: 'Go to group' }
           // ]
         });
-        setTimeout(() => {
-          chrome.notifications.clear(notificationId);
-        }, 7000);
+        if(!isMobile){
+          setTimeout(() => {
+            chrome.notifications.clear(notificationId);
+          }, 7000);
+        }
+      
         // chrome.runtime.sendMessage(
         //   {
         //     action: "notification",
@@ -282,9 +306,11 @@ if (!oldestLatestTimestamp || oldChat?.timestamp > oldestLatestTimestamp?.timest
         //   { title: 'Go to group' }
         // ]
       });
+      if(!isMobile){
       setTimeout(() => {
         chrome.notifications.clear(notificationId);
       }, 7000);
+    }
       playNotificationSound()
       // audio.play();
     // }
@@ -427,9 +453,11 @@ const handleNotification = async (groups)=> {
           //   { title: 'Go to group' }
           // ]
         });
+        if(!isMobile){
         setTimeout(() => {
           chrome.notifications.clear(notificationId);
         }, 7000);
+      }
         // chrome.runtime.sendMessage(
         //   {
         //     action: "notification",
@@ -472,9 +500,11 @@ const handleNotification = async (groups)=> {
         //   { title: 'Go to group' }
         // ]
       });
+      if(!isMobile){
       setTimeout(() => {
         chrome.notifications.clear(notificationId);
       }, 7000);
+    }
       playNotificationSound()
       // audio.play();
       lastGroupNotification = Date.now()
@@ -614,9 +644,11 @@ const checkThreads = async (bringBack) => {
         //   { title: 'Go to group' }
         // ]
       });
+      if(!isMobile){
       setTimeout(() => {
         chrome.notifications.clear(notificationId);
       }, 7000);
+    }
       playNotificationSound()
    }
    const savedtimestampAfter = await getTimestampGroupAnnouncement()
@@ -685,9 +717,11 @@ const checkNewMessages =
           //   { title: 'Go to group' }
           // ]
         });
+        if(!isMobile){
         setTimeout(() => {
           chrome.notifications.clear(notificationId);
         }, 7000);
+      }
         playNotificationSound()
      }
      const savedtimestampAfter = await getTimestampGroupAnnouncement()
