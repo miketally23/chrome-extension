@@ -237,7 +237,7 @@ const handleNotificationDirect = async (directs)=> {
   const address = wallet.address0;
   const dataDirects = directs.filter((direct)=> direct?.sender !== address)
   try {
-
+    if(!dataDirects || dataDirects?.length === 0) return
     isFocused = await checkWebviewFocus()
    
     if(isFocused){
@@ -264,7 +264,7 @@ if (!oldestLatestTimestamp || oldChat?.timestamp > oldestLatestTimestamp?.timest
 }
 });
 
-
+  console.log('newestLatestTimestamp', newestLatestTimestamp)
   if(checkDifference(newestLatestTimestamp.timestamp) && !oldestLatestTimestamp ||  (newestLatestTimestamp && newestLatestTimestamp?.timestamp > oldestLatestTimestamp?.timestamp)){
         const notificationId = 'chat_notification_' + Date.now() + '_type=direct' + `_from=${newestLatestTimestamp.address}`;
         chrome.notifications.create(notificationId, {
@@ -1062,7 +1062,7 @@ async function getNameOrAddress(receiver) {
   }
 }
 
-async function getPublicKey(receiver) {
+export async function getPublicKey(receiver) {
   try {
     const validApi = await getBaseApi()
 
@@ -1326,8 +1326,8 @@ async function sendChatGroup({
     privateKey: uint8PrivateKey,
     publicKey: uint8PublicKey,
   };
-  const balance = await getBalanceInfo();
-  const hasEnoughBalance = +balance < 4 ? false : true;
+  // const balance = await getBalanceInfo();
+  // const hasEnoughBalance = +balance < 4 ? false : true;
   const difficulty = 8;
  
   const tx = await createTransaction(181, keyPair, {
@@ -1343,9 +1343,9 @@ async function sendChatGroup({
     isText: 1,
   });
  
-  if (!hasEnoughBalance) {
-    throw new Error("Must have at least 4 QORT to send a chat message");
-  }
+  // if (!hasEnoughBalance) {
+  //   throw new Error("Must have at least 4 QORT to send a chat message");
+  // }
   const path = chrome.runtime.getURL("memory-pow.wasm.full");
 
   const { nonce, chatBytesArray } = await computePow({
@@ -1366,15 +1366,27 @@ async function sendChatGroup({
 }
 
 async function sendChatDirect({
+  address,
   directTo,
   typeMessage,
   chatReference,
   messageText,
+  publicKeyOfRecipient
 }) {
  
+  let recipientPublicKey
+  let recipientAddress = address
+  if(publicKeyOfRecipient){
+    recipientPublicKey = publicKeyOfRecipient
+  } else {
+     recipientAddress = await getNameOrAddress(directTo)
+     recipientPublicKey = await getPublicKey(recipientAddress)
+  }
+  if(!recipientAddress){
+    recipientAddress = await getNameOrAddress(directTo)
+  }
   
-  const recipientAddress = await getNameOrAddress(directTo)
-  const recipientPublicKey = await getPublicKey(recipientAddress)
+
   
   if(!recipientPublicKey) throw new Error('Cannot retrieve publickey')
   
@@ -1390,8 +1402,8 @@ async function sendChatDirect({
     privateKey: uint8PrivateKey,
     publicKey: uint8PublicKey,
   };
-  const balance = await getBalanceInfo();
-  const hasEnoughBalance = +balance < 4 ? false : true;
+  // const balance = await getBalanceInfo();
+  // const hasEnoughBalance = +balance < 4 ? false : true;
   
   const difficulty = 8;
   
@@ -1412,9 +1424,9 @@ async function sendChatDirect({
     isText: 1,
   });
   
-  if (!hasEnoughBalance) {
-    throw new Error("Must have at least 4 QORT to send a chat message");
-  }
+  // if (!hasEnoughBalance) {
+  //   throw new Error("Must have at least 4 QORT to send a chat message");
+  // }
   const path = chrome.runtime.getURL("memory-pow.wasm.full");
   
   
@@ -1490,6 +1502,7 @@ async function decryptDirectFunc({ messages, involvingAddress }) {
     publicKey: uint8PublicKey,
   };
   for (const message of messages) {
+    console.log('messagedep', message)
     try {
       const decodedMessage = decryptChatMessage(
         message.data,
@@ -3607,9 +3620,11 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
           typeMessage = undefined,
           chatReference = undefined,
           messageText,
+          publicKeyOfRecipient,
+          address
         } = request.payload;
 
-        sendChatDirect({ directTo, chatReference, messageText, typeMessage })
+        sendChatDirect({ directTo, chatReference, messageText, typeMessage, publicKeyOfRecipient, address })
           .then((res) => {
           
             sendResponse(res);
@@ -3669,8 +3684,9 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
           const wallet = await getSaveWallet();
           const address = wallet.address0;
           const key1 = `tempPublish-${address}`
-          
-          chrome.storage.local.remove(["keyPair", "walletInfo", "apiKey", "active-groups-directs", key1], () => {
+          const key2 = `group-data-${address}`
+
+          chrome.storage.local.remove(["keyPair", "walletInfo", "apiKey", "active-groups-directs", key1, key2], () => {
             if (chrome.runtime.lastError) {
               // Handle error
               console.error(chrome.runtime.lastError.message);
@@ -4009,7 +4025,7 @@ chrome.runtime?.onInstalled.addListener((details) => {
 chrome.alarms?.get("checkForNotifications", (existingAlarm) => {
   if (!existingAlarm) {
     // If the alarm does not exist, create it
-    chrome.alarms.create("checkForNotifications", { periodInMinutes: 4 });
+    chrome.alarms.create("checkForNotifications", { periodInMinutes: 10 });
   }
 });
 

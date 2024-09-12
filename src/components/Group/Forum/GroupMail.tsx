@@ -63,7 +63,8 @@ export const GroupMail = ({
   getSecretKey,
   secretKey,
   defaultThread, 
-  setDefaultThread
+  setDefaultThread,
+  hide
 }) => {
   const [viewedThreads, setViewedThreads] = React.useState<any>({});
   const [filterMode, setFilterMode] = useState<string>("Recently active");
@@ -353,6 +354,7 @@ export const GroupMail = ({
   const filterModeRef = useRef("");
 
   useEffect(() => {
+    if(hide) return
     if (filterModeRef.current !== filterMode) {
       firstMount.current = false;
     }
@@ -368,7 +370,7 @@ export const GroupMail = ({
       setTempData()
       firstMount.current = true;
     }
-  }, [groupId, members, filterMode]);
+  }, [groupId, members, filterMode, hide]);
 
   const closeThread = useCallback(() => {
     setCurrentThread(null);

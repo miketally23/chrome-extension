@@ -1263,6 +1263,7 @@ function App() {
           <CustomButton
             onClick={() => {
               setExtstate("send-qort");
+              setIsOpenDrawerProfile(false)
             }}
           >
             Transfer QORT
@@ -1291,6 +1292,7 @@ function App() {
       <img
         onClick={() => {
           setExtstate("download-wallet");
+          setIsOpenDrawerProfile(false)
         }}
         src={Download}
         style={{
@@ -1300,7 +1302,10 @@ function App() {
       <Spacer height="20px" />
       <img
         src={Logout}
-        onClick={logoutFunc}
+        onClick={()=> {
+          logoutFunc()
+          setIsOpenDrawerProfile(false)
+        }}
         style={{
           cursor: "pointer",
         }}
@@ -1554,7 +1559,7 @@ function App() {
             <Group
               balance={balance}
               userInfo={userInfo}
-              myAddress={userInfo?.address}
+              myAddress={address}
               isFocused={isFocused}
               isMain={isMain}
               isOpenDrawerProfile={isOpenDrawerProfile}

@@ -11,13 +11,18 @@ import { LoadingSnackbar } from '../Snackbar/LoadingSnackbar';
 import { getNameInfo } from '../Group/Group';
 import { Spacer } from '../../common/Spacer';
 import { CustomizedSnackbars } from '../Snackbar/Snackbar';
-import { getBaseApiReactSocket, isMobile } from '../../App';
+import { getBaseApiReactSocket, isMobile, pauseAllQueues, resumeAllQueues } from '../../App';
+import { getPublicKey } from '../../background';
+import { useMessageQueue } from '../../MessageQueueContext';
+import { executeEvent } from '../../utils/events';
 
 
 
 
 
-export const ChatDirect = ({ myAddress, isNewChat, selectedDirect, setSelectedDirect, setNewChat, getTimestampEnterChat, myName}) => {
+export const ChatDirect = ({ myAddress, isNewChat, selectedDirect, setSelectedDirect, setNewChat, getTimestampEnterChat, myName, balance}) => {
+  const { queueChats, addToQueue, } = useMessageQueue();
+
   const [messages, setMessages] = useState([])
   const [isSending, setIsSending] = useState(false)
   const [directToValue, setDirectToValue] = useState('')
@@ -25,14 +30,41 @@ export const ChatDirect = ({ myAddress, isNewChat, selectedDirect, setSelectedDi
   const [isLoading, setIsLoading] = useState(false)
   const [openSnack, setOpenSnack] = React.useState(false);
   const [infoSnack, setInfoSnack] = React.useState(null);
+  const [publicKeyOfRecipient, setPublicKeyOfRecipient] = React.useState("")
   const hasInitializedWebsocket = useRef(false)
   const editorRef = useRef(null);
+  const socketRef = useRef(null);
+  const timeoutIdRef = useRef(null);
+  const groupSocketTimeoutRef = useRef(null);
+
   const setEditorRef = (editorInstance) => {
     editorRef.current = editorInstance;
   };
-
+  const publicKeyOfRecipientRef = useRef(null)
    
+  const getPublicKeyFunc = async (address)=> {
+    try {
+      const publicKey = await getPublicKey(address)
+      if(publicKeyOfRecipientRef.current !== selectedDirect?.address) return
+      setPublicKeyOfRecipient(publicKey)
+    } catch (error) {
+      
+    }
+  }
 
+  const tempMessages = useMemo(()=> {
+    if(!selectedDirect?.address) return []
+    if(queueChats[selectedDirect?.address]){
+      return queueChats[selectedDirect?.address]
+    }
+    return []
+  }, [selectedDirect?.address, queueChats])
+  useEffect(()=> {
+    if(selectedDirect?.address){
+      publicKeyOfRecipientRef.current = selectedDirect?.address
+      getPublicKeyFunc(publicKeyOfRecipientRef.current)
+    }
+  }, [selectedDirect?.address])
  
 
   
@@ -54,7 +86,7 @@ export const ChatDirect = ({ myAddress, isNewChat, selectedDirect, setSelectedDi
                     ...item,
                     id: item.signature,
                     text: item.message,
-                    unread:  true
+                    unread: item?.sender === myAddress ? false :  true
                   }
                 } )
                 setMessages((prev)=> [...prev, ...formatted])
@@ -80,78 +112,106 @@ export const ChatDirect = ({ myAddress, isNewChat, selectedDirect, setSelectedDi
       }
     }
 
+    const forceCloseWebSocket = () => {
+      if (socketRef.current) {
+        console.log('Force closing the WebSocket');
+        clearTimeout(timeoutIdRef.current);
+        clearTimeout(groupSocketTimeoutRef.current);
+        socketRef.current.close(1000, 'forced');
+        socketRef.current = null;
+      }
+    };
+  
+    const pingWebSocket = () => {
+      try {
+        if (socketRef.current?.readyState === WebSocket.OPEN) {
+          socketRef.current.send('ping');
+          timeoutIdRef.current = setTimeout(() => {
+            if (socketRef.current) {
+              socketRef.current.close();
+              clearTimeout(groupSocketTimeoutRef.current);
+            }
+          }, 5000); // Close if no pong in 5 seconds
+        }
+      } catch (error) {
+        console.error('Error during ping:', error);
+      }
+    };
+  
+
     const initWebsocketMessageGroup = () => {
-      let timeoutId
-      let groupSocketTimeout
-
-      let socketTimeout: any
-      let socketLink = `${getBaseApiReactSocket()}/websockets/chat/messages?involving=${selectedDirect?.address}&involving=${myAddress}&encoding=BASE64&limit=100`
-      const socket = new WebSocket(socketLink)
-
-      const pingGroupSocket = () => {
-        socket.send('ping')
-        timeoutId = setTimeout(() => {
-          socket.close()
-          clearTimeout(groupSocketTimeout)
-        }, 5000) // Close the WebSocket connection if no pong message is received within 5 seconds.
-      }
-      socket.onopen = () => {
-     
-        setTimeout(pingGroupSocket, 50)
-      }
-      socket.onmessage = (e) => {
+      forceCloseWebSocket(); // Close any existing connection
+  
+      if (!selectedDirect?.address || !myAddress) return;
+  
+      const socketLink = `${getBaseApiReactSocket()}/websockets/chat/messages?involving=${selectedDirect?.address}&involving=${myAddress}&encoding=BASE64&limit=100`;
+      socketRef.current = new WebSocket(socketLink);
+  
+      socketRef.current.onopen = () => {
+        console.log('WebSocket connection opened');
+        setTimeout(pingWebSocket, 50); // Initial ping
+      };
+  
+      socketRef.current.onmessage = (e) => {
         try {
           if (e.data === 'pong') {
-          
-            clearTimeout(timeoutId)
-            groupSocketTimeout = setTimeout(pingGroupSocket, 45000)
-            return
+            clearTimeout(timeoutIdRef.current);
+            groupSocketTimeoutRef.current = setTimeout(pingWebSocket, 45000); // Ping every 45 seconds
           } else {
-          decryptMessages(JSON.parse(e.data))
-          setIsLoading(false)
+            decryptMessages(JSON.parse(e.data));
+            setIsLoading(false);
           }
-          
         } catch (error) {
-          
+          console.error('Error handling WebSocket message:', error);
         }
-      
-      }
-      socket.onclose = () => {
-        console.log('closed')
-        clearTimeout(socketTimeout)
-				setTimeout(() => initWebsocketMessageGroup(), 50)
-      
-      }
-      socket.onerror = (e) => {
-        clearTimeout(groupSocketTimeout)
-				socket.close()
-      }
-    }
+      };
+  
+      socketRef.current.onclose = (event) => {
+        clearTimeout(groupSocketTimeoutRef.current);
+        clearTimeout(timeoutIdRef.current);
+        console.warn(`WebSocket closed: ${event.reason || 'unknown reason'}`);
+        if (event.reason !== 'forced' && event.code !== 1000) {
+          setTimeout(() => initWebsocketMessageGroup(), 10000); // Retry after 10 seconds
+        }
+      };
+  
+      socketRef.current.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        clearTimeout(groupSocketTimeoutRef.current);
+        clearTimeout(timeoutIdRef.current);
+        if (socketRef.current) {
+          socketRef.current.close();
+        }
+      };
+    };
 
 
   
-    useEffect(()=> {
-      if(hasInitializedWebsocket.current) return
-      setIsLoading(true)
-        initWebsocketMessageGroup()
-        hasInitializedWebsocket.current = true
-    }, [])
+    useEffect(() => {
+      if (hasInitializedWebsocket.current || isNewChat) return;
+      setIsLoading(true);
+      initWebsocketMessageGroup();
+      hasInitializedWebsocket.current = true;
   
+      return () => {
+        forceCloseWebSocket(); // Clean up WebSocket on component unmount
+      };
+    }, [selectedDirect?.address, myAddress, isNewChat]);
 
 
 
-const sendChatDirect = async ({ chatReference = undefined, messageText}: any)=> {
+const sendChatDirect = async ({ chatReference = undefined, messageText}: any, address, publicKeyOfRecipient, isNewChatVar)=> {
   try {
-    const directTo = isNewChat ? directToValue : selectedDirect.address
+    const directTo = isNewChatVar ? directToValue : address
  
     if(!directTo) return
     return new Promise((res, rej)=> {
       chrome?.runtime?.sendMessage({ action: "sendChatDirect", payload: {
-        directTo,  chatReference, messageText
+        directTo,  chatReference, messageText, publicKeyOfRecipient, address: directTo
     }}, async (response) => {
     
         if (!response?.error) {
-          if(isNewChat){
+          if(isNewChatVar){
             
             let getRecipientName = null
             try {
@@ -186,6 +246,7 @@ const sendChatDirect = async ({ chatReference = undefined, messageText}: any)=> 
     })  
   } catch (error) {
       throw new Error(error)
+  } finally {
   }
 }
 const clearEditorContent = () => {
@@ -197,33 +258,60 @@ const clearEditorContent = () => {
 
     const sendMessage = async ()=> {
       try {
+        if(+balance < 4) throw new Error('You need at least 4 QORT to send a message')
         if(isSending) return
         if (editorRef.current) {
           const htmlContent = editorRef.current.getHTML();
      
           if(!htmlContent?.trim() || htmlContent?.trim() === '<p></p>') return
           setIsSending(true)
+          pauseAllQueues()
         const message = JSON.stringify(htmlContent)
        
-        const res = await sendChatDirect({ messageText: htmlContent})
+      
+        if(isNewChat){
+          await sendChatDirect({ messageText: htmlContent}, null, null, true)
+          return
+        }
+        const sendMessageFunc = async () => {
+          await sendChatDirect({ messageText: htmlContent}, selectedDirect?.address, publicKeyOfRecipient, false)
+        };
+  
+        // Add the function to the queue
+        const messageObj = {
+          message: {
+            text: htmlContent,
+            timestamp: Date.now(),
+          senderName: myName,
+          sender: myAddress
+          },
+         
+        }
+        addToQueue(sendMessageFunc, messageObj, 'chat-direct',
+        selectedDirect?.address );
+        setTimeout(() => {
+          executeEvent("sent-new-message-group", {})
+        }, 150);
+        clearEditorContent()
         clearEditorContent()
         }
         // send chat message
       } catch (error) {
+        const errorMsg = error?.message || error
         setInfoSnack({
           type: "error",
-          message: error,
+          message: errorMsg === 'invalid signature' ? 'You need at least 4 QORT to send a message' :  errorMsg,
         });
         setOpenSnack(true);
         console.error(error)
       } finally {
         setIsSending(false)
+        resumeAllQueues()
       }
     }
 
 
     
- 
   return (
     <div style={{
       height: isMobile ? '100%' : '100vh',
@@ -241,7 +329,7 @@ const clearEditorContent = () => {
         </>
       )}
       
-              <ChatList initialMessages={messages} myAddress={myAddress} tempMessages={[]}/>
+              <ChatList initialMessages={messages} myAddress={myAddress} tempMessages={tempMessages}/>
 
    
       <div style={{

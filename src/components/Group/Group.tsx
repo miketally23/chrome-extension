@@ -332,7 +332,6 @@ export const Group = ({
   const [directs, setDirects] = useState([]);
   const [admins, setAdmins] = useState([]);
   const [adminsWithNames, setAdminsWithNames] = useState([]);
-console.log('adminsWithNames', {adminsWithNames}, {admins})
   const [members, setMembers] = useState([]);
   const [groupOwner, setGroupOwner] = useState(null);
   const [triedToFetchSecretKey, setTriedToFetchSecretKey] = useState(false);
@@ -574,7 +573,6 @@ console.log('adminsWithNames', {adminsWithNames}, {admins})
       let publishFromStorage
       let adminsFromStorage
       const groupData = await getGroupDataSingle(selectedGroup?.groupId)
-      console.log('groupData', groupData)
       if(groupData?.secretKeyData && Date.now() - groupData?.timestampLastSet < 3600000 ){
 
         dataFromStorage = groupData.secretKeyData
@@ -1518,27 +1516,42 @@ console.log('adminsWithNames', {adminsWithNames}, {admins})
                 setMemberCountFromSecretKeyData(null);
                 setTriedToFetchSecretKey(false);
                 setFirstSecretKeyInCreation(false);
-                setGroupSection("announcement");
+                // setGroupSection("announcement");
+                setGroupSection("chat");
                 setIsOpenDrawer(false)
                 setTimeout(() => {
                   setSelectedGroup(group);
 
-                  getTimestampEnterChat();
+                  // getTimestampEnterChat();
                 }, 200);
 
-                if (groupSectionRef.current === "announcement") {
+              
                   chrome?.runtime?.sendMessage({
-                    action: "addGroupNotificationTimestamp",
+                    action: "addTimestampEnterChat",
                     payload: {
                       timestamp: Date.now(),
                       groupId: group.groupId,
                     },
                   });
-                }
+            
+                  setTimeout(() => {
+                    getTimestampEnterChat();
+                  }, 200);
+                
 
-                setTimeout(() => {
-                  getGroupAnnouncements();
-                }, 600);
+                // if (groupSectionRef.current === "announcement") {
+                //   chrome?.runtime?.sendMessage({
+                //     action: "addGroupNotificationTimestamp",
+                //     payload: {
+                //       timestamp: Date.now(),
+                //       groupId: group.groupId,
+                //     },
+                //   });
+                // }
+
+                // setTimeout(() => {
+                //   getGroupAnnouncements();
+                // }, 600);
               }}
               sx={{
                 display: "flex",
@@ -1700,6 +1713,7 @@ console.log('adminsWithNames', {adminsWithNames}, {admins})
               setSelectedDirect={setSelectedDirect}
               setNewChat={setNewChat}
               getTimestampEnterChat={getTimestampEnterChat}
+              balance={balance}
             />
           </>
         )}
@@ -1727,6 +1741,7 @@ console.log('adminsWithNames', {adminsWithNames}, {admins})
                   }
                   triedToFetchSecretKey={triedToFetchSecretKey}
                   myName={userInfo?.name}
+                  balance={balance}
                 />
               )}
               {firstSecretKeyInCreation &&
@@ -1892,6 +1907,7 @@ console.log('adminsWithNames', {adminsWithNames}, {admins})
                 setSelectedDirect={setSelectedDirect}
                 setNewChat={setNewChat}
                 getTimestampEnterChat={getTimestampEnterChat}
+                myName={userInfo?.name}
               />
             </Box>
           </>

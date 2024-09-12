@@ -6,7 +6,10 @@ import { Avatar, Box, Typography } from "@mui/material";
 import { formatTimestamp } from "../../utils/time";
 import { getBaseApi } from "../../background";
 import { getBaseApiReact } from "../../App";
-
+import { generateHTML } from "@tiptap/react";
+import Highlight from '@tiptap/extension-highlight'
+import StarterKit from '@tiptap/starter-kit'
+import Underline from '@tiptap/extension-underline'
 export const MessageItem = ({ message, onSeen, isLast, isTemp }) => {
 
   const { ref, inView } = useInView({
@@ -60,6 +63,9 @@ export const MessageItem = ({ message, onSeen, isLast, isTemp }) => {
         >
           {message?.senderName || message?.sender}
         </Typography>
+        {message?.messageText && (
+          <MessageDisplay htmlContent={generateHTML(message?.messageText, [StarterKit, Underline, Highlight])} />
+        )}
         {message?.text?.type === "notification" ? (
           <MessageDisplay htmlContent={message.text?.data?.message} />
         ) : (

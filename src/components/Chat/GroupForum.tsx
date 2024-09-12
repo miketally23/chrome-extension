@@ -46,7 +46,7 @@ export const GroupForum = ({
     left: hide && '-1000px'
     }}
   >
-   <GroupMail getSecretKey={getSecretKey} selectedGroup={selectedGroup} userInfo={userInfo} secretKey={secretKey} defaultThread={defaultThread} setDefaultThread={setDefaultThread} />
+   <GroupMail hide={hide} getSecretKey={getSecretKey} selectedGroup={selectedGroup} userInfo={userInfo} secretKey={secretKey} defaultThread={defaultThread} setDefaultThread={setDefaultThread} />
 
    </div>
   );

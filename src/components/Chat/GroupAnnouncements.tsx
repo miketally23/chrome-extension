@@ -335,11 +335,11 @@ export const GroupAnnouncements = ({
   );
  
   React.useEffect(() => {
-    if (selectedGroup && secretKey && !hasInitialized.current) {
+    if (selectedGroup && secretKey && !hasInitialized.current && !hide) {
       getAnnouncements(selectedGroup);
       hasInitialized.current = true
     }
-  }, [selectedGroup, secretKey]);
+  }, [selectedGroup, secretKey, hide]);
 
 
   const loadMore = async()=> {
@@ -428,14 +428,14 @@ export const GroupAnnouncements = ({
   }, [checkNewMessages])
 
   useEffect(() => {
-    if(!secretKey) return
+    if(!secretKey || hide) return
     checkNewMessagesFunc()
     return () => {
       if (interval?.current) {
         clearInterval(interval.current)
       }
     }
-  }, [checkNewMessagesFunc])
+  }, [checkNewMessagesFunc, hide])
 
 
 

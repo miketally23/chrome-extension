@@ -20,7 +20,7 @@ import { executeEvent } from '../../utils/events'
 
 
 
-export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey, myAddress, handleNewEncryptionNotification, hide, handleSecretKeyCreationInProgress, triedToFetchSecretKey, myName}) => {
+export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey, myAddress, handleNewEncryptionNotification, hide, handleSecretKeyCreationInProgress, triedToFetchSecretKey, myName, balance}) => {
   const [messages, setMessages] = useState([])
   const [isSending, setIsSending] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -277,6 +277,7 @@ const clearEditorContent = () => {
     const sendMessage = async ()=> {
       try {
         if(isSending) return
+        if(+balance < 4) throw new Error('You need at least 4 QORT to send a message')
         pauseAllQueues()
         if (editorRef.current) {
           const htmlContent = editorRef.current.getHTML();
@@ -313,9 +314,10 @@ const clearEditorContent = () => {
         }
         // send chat message
       } catch (error) {
+        const errorMsg = error?.message || error
         setInfoSnack({
           type: "error",
-          message: error,
+          message: errorMsg,
         });
         setOpenSnack(true);
         console.error(error)
