@@ -16,7 +16,7 @@ import { Spacer } from "../../common/Spacer";
 import { CustomLoader } from "../../common/CustomLoader";
 import { getBaseApi } from "../../background";
 import { getBaseApiReact } from "../../App";
-export const requestQueueGroupJoinRequests = new RequestQueueWithPromise(3)
+export const requestQueueGroupJoinRequests = new RequestQueueWithPromise(2)
 
 export const GroupJoinRequests = ({ myAddress, groups, setOpenManageMembers, getTimestampEnterChat, setSelectedGroup, setGroupSection }) => {
   const [groupsWithJoinRequests, setGroupsWithJoinRequests] = React.useState([])

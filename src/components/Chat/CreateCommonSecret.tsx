@@ -51,11 +51,11 @@ export const CreateCommonSecret = ({groupId, secretKey, isOwner,  myAddress, sec
       
      
      
-      const groupAdmins = await getGroupAdimns(groupId);
-      if(!groupAdmins.length){
+      const {names} = await getGroupAdimns(groupId);
+      if(!names.length){
         throw new Error('Network error')
       }
-      const publish = await getPublishesFromAdmins(groupAdmins);
+      const publish = await getPublishesFromAdmins(names);
    
      
       if (publish === false) {

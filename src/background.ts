@@ -187,6 +187,25 @@ export async function findUsableApi() {
   throw new Error("No usable API found");
 }
 
+export function isExtMsg(data){
+  let isMsgFromExtensionGroup = true
+  try {
+    const decode1 = atob(data)
+    const decode2 = atob(decode1)
+    const keyStr = decode2.slice(0, 10);
+	
+    // Convert the key string back to a number
+    const highestKey = parseInt(keyStr, 10);
+    if(isNaN(highestKey)){
+      isMsgFromExtensionGroup = false
+    }
+  } catch (error) {
+    isMsgFromExtensionGroup = false
+  }
+console.log('isMsgFromExtensionGroup', isMsgFromExtensionGroup)
+  return isMsgFromExtensionGroup
+}
+
 
 async function checkWebviewFocus() {
   return new Promise((resolve) => {
@@ -440,7 +459,8 @@ const handleNotification = async (groups)=> {
     
     if(checkDifference(newestLatestTimestamp.timestamp) && !oldestLatestTimestamp ||  (newestLatestTimestamp && newestLatestTimestamp?.timestamp > oldestLatestTimestamp?.timestamp)){
       if (!lastGroupNotification || ((Date.now() - lastGroupNotification) >= 120000)) {
-        
+        if(!newestLatestTimestamp?.data || !isExtMsg(newestLatestTimestamp?.data)) return
+        console.log('newestLatestTimestamp', newestLatestTimestamp)
         const notificationId = 'chat_notification_' + Date.now() + '_type=group' + `_from=${newestLatestTimestamp.groupId}`;
    
         chrome.notifications.create(notificationId, {
@@ -2318,6 +2338,57 @@ async function addTimestampGroupAnnouncement({groupId, timestamp, seenTimestamp}
   });
 }
 
+async function getGroupData(){
+  const wallet = await getSaveWallet();
+  const address = wallet.address0;
+  const key = `group-data-${address}`
+  const res = await chrome.storage.local.get([key]);
+if (res?.[key]) {
+  const parsedData = JSON.parse(res[key])
+  return parsedData;
+} else {
+  return {}
+}
+}
+async function getGroupDataSingle(groupId){
+  const wallet = await getSaveWallet();
+  const address = wallet.address0;
+  const key = `group-data-${address}`
+  const res = await chrome.storage.local.get([key]);
+if (res?.[key]) {
+  const parsedData = JSON.parse(res[key])
+  return parsedData[groupId] || null;
+} else {
+  return null
+}
+}
+
+async function setGroupData({groupId,
+  secretKeyData,
+  secretKeyResource,
+  admins}){
+  const wallet = await getSaveWallet();
+  const address = wallet.address0;
+  const data = await getGroupData() || {}
+  data[groupId] = {
+    timestampLastSet: Date.now(),
+    admins,
+    secretKeyData,
+    secretKeyResource,
+  }
+  const dataString = JSON.stringify(data);
+ return await new Promise((resolve, reject) => {
+    chrome.storage.local.set({ [`group-data-${address}`]: dataString }, () => {
+      if (chrome.runtime.lastError) {
+        reject(new Error(chrome.runtime.lastError.message));
+      } else {
+        resolve(true);
+      }
+    });
+  });
+}
+
+
 
 async function addTimestampEnterChat({groupId, timestamp}){
   const wallet = await getSaveWallet();
@@ -2819,6 +2890,41 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
             sendResponse({ error: error.message });
             console.error(error.message);
           });
+        break;
+      }
+      case "setGroupData": {
+
+        const { groupId,
+          secretKeyData,
+          secretKeyResource,
+          admins} =
+          request.payload;
+          setGroupData({
+            groupId,
+            secretKeyData,
+            secretKeyResource,
+            admins
+          })
+          .then((res) => {
+            sendResponse(res);
+          })
+          .catch((error) => {
+            sendResponse({ error: error.message });
+            console.error(error.message);
+          });
+        break;
+      }
+      case "getGroupDataSingle": {
+        const {groupId} = request.payload
+        getGroupDataSingle(groupId)
+        .then((res) => {
+          sendResponse(res);
+        })
+        .catch((error) => {
+          sendResponse({ error: error.message });
+          console.error(error.message);
+        });
+        return true
         break;
       }
       case "getTimestampEnterChat": {

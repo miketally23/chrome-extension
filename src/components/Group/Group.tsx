@@ -73,6 +73,7 @@ import { WebSocketActive } from "./WebsocketActive";
 import { flushSync } from "react-dom";
 import { useMessageQueue } from "../../MessageQueueContext";
 import { DrawerComponent } from "../Drawer/Drawer";
+import { isExtMsg } from "../../background";
 
 // let touchStartY = 0;
 // let disablePullToRefresh = false;
@@ -222,6 +223,8 @@ export const getGroupAdimns = async (groupNumber: number) => {
   );
   const groupData = await response.json();
   let members: any = [];
+  let membersAddresses = []
+  let both = []
   // if (groupData && Array.isArray(groupData?.members)) {
   //   for (const member of groupData.members) {
   //     if (member.member) {
@@ -240,14 +243,16 @@ export const getGroupAdimns = async (groupNumber: number) => {
       });
       if (name) {
         members.push(name);
+        both.push({name, address: member.member})
       }
+      membersAddresses.push(member.member)
     }
 
     return true;
   });
   await Promise.all(getMemNames);
 
-  return members;
+  return {names: members, addresses: membersAddresses, both};
 };
 
 export const getNames = async (listOfMembers) => {
@@ -327,7 +332,7 @@ export const Group = ({
   const [directs, setDirects] = useState([]);
   const [admins, setAdmins] = useState([]);
   const [adminsWithNames, setAdminsWithNames] = useState([]);
-
+console.log('adminsWithNames', {adminsWithNames}, {admins})
   const [members, setMembers] = useState([]);
   const [groupOwner, setGroupOwner] = useState(null);
   const [triedToFetchSecretKey, setTriedToFetchSecretKey] = useState(false);
@@ -342,7 +347,7 @@ export const Group = ({
   const [openSnack, setOpenSnack] = React.useState(false);
   const [infoSnack, setInfoSnack] = React.useState(null);
   const [isLoadingNotifyAdmin, setIsLoadingNotifyAdmin] = React.useState(false);
-  const [isLoadingGroups, setIsLoadingGroups] = React.useState(false);
+  const [isLoadingGroups, setIsLoadingGroups] = React.useState(true);
   const [isLoadingGroup, setIsLoadingGroup] = React.useState(false);
   const [firstSecretKeyInCreation, setFirstSecretKeyInCreation] =
     React.useState(false);
@@ -361,7 +366,7 @@ export const Group = ({
   const setupGroupWebsocketInterval = useRef(null);
   const settimeoutForRefetchSecretKey = useRef(null);
   const { clearStatesMessageQueueProvider } = useMessageQueue();
-
+  const initiatedGetMembers = useRef(false);
   // useEffect(()=> {
   //   setFullHeight()
   // }, [])
@@ -398,6 +403,30 @@ export const Group = ({
         );
       });
     } catch (error) {}
+  };
+  const getGroupDataSingle = async (groupId) => {
+    try {
+      return new Promise((res, rej) => {
+        chrome?.runtime?.sendMessage(
+          {
+            action: "getGroupDataSingle",
+            payload: {
+              groupId
+            }
+          },
+          (response) => {
+            if (!response?.error) {
+             
+              res(response);
+              return
+            }
+            rej(response.error);
+          }
+        );
+      });
+    } catch (error) {
+      return {}
+    }
   };
   const refreshHomeDataFunc = () => {
     setGroupSection("default");
@@ -539,7 +568,20 @@ export const Group = ({
     secretKeyToPublish?: boolean
   ) => {
     try {
+      // setGroupDataLastSet(null)
       pauseAllQueues();
+      let dataFromStorage
+      let publishFromStorage
+      let adminsFromStorage
+      const groupData = await getGroupDataSingle(selectedGroup?.groupId)
+      console.log('groupData', groupData)
+      if(groupData?.secretKeyData && Date.now() - groupData?.timestampLastSet < 3600000 ){
+
+        dataFromStorage = groupData.secretKeyData
+        publishFromStorage = groupData.secretKeyResource
+        adminsFromStorage = groupData.admins
+        // setGroupDataLastSet(groupData.timestampLastSet)
+      }
 
       if (
         secretKeyToPublish &&
@@ -559,12 +601,13 @@ export const Group = ({
       }
       const prevGroupId = selectedGroupRef.current.groupId;
       // const validApi = await findUsableApi();
-      const groupAdmins = await getGroupAdimns(selectedGroup?.groupId);
-      setAdmins(groupAdmins);
-      if (!groupAdmins.length) {
+      const {names, addresses, both} = adminsFromStorage || await getGroupAdimns(selectedGroup?.groupId);
+      setAdmins(addresses);
+      setAdminsWithNames(both)
+      if (!names.length) {
         throw new Error("Network error");
       }
-      const publish = await getPublishesFromAdmins(groupAdmins);
+      const publish = publishFromStorage || await getPublishesFromAdmins(names);
 
       if (prevGroupId !== selectedGroupRef.current.groupId) {
         if (settimeoutForRefetchSecretKey.current) {
@@ -580,13 +623,18 @@ export const Group = ({
         return false;
       }
       setSecretKeyPublishDate(publish?.updated || publish?.created);
-
-      const res = await fetch(
-        `${getBaseApiReact()}/arbitrary/DOCUMENT_PRIVATE/${publish.name}/${
-          publish.identifier
-        }?encoding=base64`
-      );
-      const data = await res.text();
+      let data 
+      if(dataFromStorage){
+        data = dataFromStorage
+      } else {
+        const res = await fetch(
+          `${getBaseApiReact()}/arbitrary/DOCUMENT_PRIVATE/${publish.name}/${
+            publish.identifier
+          }?encoding=base64`
+        );
+         data = await res.text();
+      }
+     
 
       const decryptedKey: any = await decryptResource(data);
 
@@ -599,6 +647,17 @@ export const Group = ({
       setSecretKey(decryptedKeyToObject);
       lastFetchedSecretKey.current = Date.now();
       setMemberCountFromSecretKeyData(decryptedKey.count);
+      chrome?.runtime?.sendMessage(
+        {
+          action: "setGroupData",
+          payload: {
+            groupId: selectedGroup?.groupId,
+            secretKeyData: data,
+            secretKeyResource: publish,
+            admins: {names, addresses, both}
+          },
+        }
+      );
       if (decryptedKeyToObject) {
         setTriedToFetchSecretKey(true);
         setFirstSecretKeyInCreation(false);
@@ -616,7 +675,7 @@ export const Group = ({
     } finally {
       setIsLoadingGroup(false);
       if (!secretKeyToPublish) {
-        await getAdmins(selectedGroup?.groupId);
+        // await getAdmins(selectedGroup?.groupId);
       }
       resumeAllQueues();
     }
@@ -828,11 +887,14 @@ export const Group = ({
     } catch (error) {}
   };
   useEffect(() => {
-    if (selectedGroup?.groupId) {
+    if (!initiatedGetMembers.current && selectedGroup?.groupId && secretKey && admins.includes(myAddress)) {
+
+      console.log('goung through', admins)
       // getAdmins(selectedGroup?.groupId);
       getMembers(selectedGroup?.groupId);
+      initiatedGetMembers.current = true
     }
-  }, [selectedGroup?.groupId]);
+  }, [selectedGroup?.groupId, secretKey, myAddress, admins]);
 
   const shouldReEncrypt = useMemo(() => {
     if (triedToFetchSecretKey && !secretKeyPublishDate) return true;
@@ -908,6 +970,7 @@ export const Group = ({
       .filter((group) => group?.sender !== myAddress)
       .find((gr) => gr?.groupId === selectedGroup?.groupId);
     if (!findGroup) return false;
+    if(!findGroup?.data || !isExtMsg(findGroup?.data)) return false
     return (
       findGroup?.timestamp &&
       ((!timestampEnterData[selectedGroup?.groupId] &&
@@ -1015,6 +1078,7 @@ export const Group = ({
     isLoadingOpenSectionFromNotification.current = false;
     setupGroupWebsocketInterval.current = null;
     settimeoutForRefetchSecretKey.current = null;
+    initiatedGetMembers.current = false
   };
 
   const logoutEventFunc = () => {
@@ -1537,7 +1601,7 @@ export const Group = ({
                       }}
                     />
                   )}
-                {group?.sender !== myAddress &&
+                {group?.data && isExtMsg(group?.data) && group?.sender !== myAddress &&
                   group?.timestamp &&
                   ((!timestampEnterData[group?.groupId] &&
                     Date.now() - group?.timestamp <
@@ -1864,36 +1928,38 @@ export const Group = ({
                   Refresh home data
                 </Button>
               </Box>
-
-              <Box
-                sx={{
-                  display: "flex",
-                  gap: "40px",
-                  flexWrap: "wrap",
-                  justifyContent: 'center'
-                }}
-              >
-                <ThingsToDoInitial
-                  balance={balance}
-                  myAddress={myAddress}
-                  name={userInfo?.name}
-                  hasGroups={groups?.length !== 0}
-                />
-                <GroupJoinRequests
-                  setGroupSection={setGroupSection}
-                  setSelectedGroup={setSelectedGroup}
-                  getTimestampEnterChat={getTimestampEnterChat}
-                  setOpenManageMembers={setOpenManageMembers}
-                  myAddress={myAddress}
-                  groups={groups}
-                />
-                <GroupInvites
-                  setOpenAddGroup={setOpenAddGroup}
-                  myAddress={myAddress}
-                  groups={groups}
-                />
-                <ListOfThreadPostsWatched />
-              </Box>
+                {!isLoadingGroups && (
+                     <Box
+                     sx={{
+                       display: "flex",
+                       gap: "40px",
+                       flexWrap: "wrap",
+                       justifyContent: 'center'
+                     }}
+                   >
+                     <ThingsToDoInitial
+                       balance={balance}
+                       myAddress={myAddress}
+                       name={userInfo?.name}
+                       hasGroups={groups?.length !== 0}
+                     />
+                     <GroupJoinRequests
+                       setGroupSection={setGroupSection}
+                       setSelectedGroup={setSelectedGroup}
+                       getTimestampEnterChat={getTimestampEnterChat}
+                       setOpenManageMembers={setOpenManageMembers}
+                       myAddress={myAddress}
+                       groups={groups}
+                     />
+                     <GroupInvites
+                       setOpenAddGroup={setOpenAddGroup}
+                       myAddress={myAddress}
+                       groups={groups}
+                     />
+                     <ListOfThreadPostsWatched />
+                   </Box>
+                )}
+           
             </Box>
           )}
         <AuthenticatedContainerInnerRight
