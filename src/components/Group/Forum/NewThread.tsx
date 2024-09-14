@@ -147,7 +147,8 @@ export const NewThread = ({
   getSecretKey,
   closeCallback,
   postReply,
-  myName
+  myName,
+  setPostReply
 }: NewMessageProps) => {
   const { show } = React.useContext(MyContext);
 
@@ -171,6 +172,7 @@ export const NewThread = ({
   const closeModal = () => {
     setIsOpen(false);
     setValue("");
+    setPostReply(null)
   };
 
   async function publishQDNResource() {
@@ -399,7 +401,8 @@ export const NewThread = ({
     >
       <ComposeContainer
         sx={{
-          padding: "15px",
+          padding: isMobile ? '5px' : "15px",
+          justifyContent: isMobile ? 'flex-start' : 'revert'
         }}
         onClick={() => setIsOpen(true)}
       >
