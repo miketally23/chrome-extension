@@ -54,6 +54,7 @@ import { LoadingSnackbar } from "../../Snackbar/LoadingSnackbar";
 import { executeEvent, subscribeToEvent, unsubscribeFromEvent } from "../../../utils/events";
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { getBaseApiReact } from "../../../App";
+import { WrapperUserAction } from "../../WrapperUserAction";
 const filterOptions = ["Recently active", "Newest", "Oldest"];
 
 export const threadIdentifier = "DOCUMENT";
@@ -672,6 +673,7 @@ export const GroupMail = ({
                   }
                 }}
               >
+                 
                 <Avatar
                   sx={{
                     height: "50px",
@@ -682,11 +684,14 @@ export const GroupMail = ({
                 >
                   {thread?.threadData?.name?.charAt(0)}
                 </Avatar>
+               
                 <ThreadInfoColumn>
+               
                   <ThreadInfoColumnNameP>
                     <ThreadInfoColumnbyP>by </ThreadInfoColumnbyP>
                     {thread?.threadData?.name}
                   </ThreadInfoColumnNameP>
+             
                   <ThreadInfoColumnTime>
                     {formatTimestamp(thread?.threadData?.createdAt)}
                   </ThreadInfoColumnTime>

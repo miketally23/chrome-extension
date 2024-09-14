@@ -395,6 +395,28 @@ const clearEditorContent = () => {
         flexShrink: 0,
         position: 'relative',
       }}>
+         {isFocusedParent && (
+               <CustomButton
+               onClick={()=> {
+                 if(isSending) return
+                 setIsFocusedParent(false)
+                 clearEditorContent()
+                 // Unfocus the editor
+               }}
+               style={{
+                 marginTop: 'auto',
+                 alignSelf: 'center',
+                 cursor: isSending ? 'default' : 'pointer',
+                 background: 'red',
+                 flexShrink: 0,
+                 padding: isMobile && '5px'
+               }}
+             >
+               
+               {` Close`}
+             </CustomButton>
+           
+            )}
       <CustomButton
               onClick={()=> {
                 if(isSending) return
@@ -425,28 +447,7 @@ const clearEditorContent = () => {
               )}
               {` Send`}
             </CustomButton>
-            {isFocusedParent && (
-               <CustomButton
-               onClick={()=> {
-                 if(isSending) return
-                 setIsFocusedParent(false)
-                 clearEditorContent()
-                 // Unfocus the editor
-               }}
-               style={{
-                 marginTop: 'auto',
-                 alignSelf: 'center',
-                 cursor: isSending ? 'default' : 'pointer',
-                 background: isSending && 'rgba(0, 0, 0, 0.8)',
-                 flexShrink: 0,
-                 padding: isMobile && '5px'
-               }}
-             >
-               
-               {` Close`}
-             </CustomButton>
            
-            )}
               </Box>
       {/* <button onClick={sendMessage}>send</button> */}
       </div>

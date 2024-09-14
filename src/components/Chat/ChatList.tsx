@@ -126,6 +126,7 @@ export const ChatList = ({ initialMessages, myAddress, tempMessages }) => {
                 message={message}
                 onSeen={handleMessageSeen}
                 isTemp={!!message?.isTemp}
+                myAddress={myAddress}
               />
             </div>
           </div>

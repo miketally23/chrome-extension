@@ -6,7 +6,7 @@ import "@chatscope/chat-ui-kit-styles/dist/default/styles.min.css";
 import Tiptap from './TipTap'
 import { CustomButton } from '../../App-styles'
 import CircularProgress from '@mui/material/CircularProgress';
-import { Box, Input } from '@mui/material';
+import { Box, Input, Typography } from '@mui/material';
 import { LoadingSnackbar } from '../Snackbar/LoadingSnackbar';
 import { getNameInfo } from '../Group/Group';
 import { Spacer } from '../../common/Spacer';
@@ -14,14 +14,13 @@ import { CustomizedSnackbars } from '../Snackbar/Snackbar';
 import { getBaseApiReactSocket, isMobile, pauseAllQueues, resumeAllQueues } from '../../App';
 import { getPublicKey } from '../../background';
 import { useMessageQueue } from '../../MessageQueueContext';
-import { executeEvent } from '../../utils/events';
-import zIndex from '@mui/material/styles/zIndex';
+import { executeEvent, subscribeToEvent, unsubscribeFromEvent } from '../../utils/events';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
 
 
 
-
-export const ChatDirect = ({ myAddress, isNewChat, selectedDirect, setSelectedDirect, setNewChat, getTimestampEnterChat, myName, balance}) => {
+export const ChatDirect = ({ myAddress, isNewChat, selectedDirect, setSelectedDirect, setNewChat, getTimestampEnterChat, myName, balance, close}) => {
   const { queueChats, addToQueue, } = useMessageQueue();
     const [isFocusedParent, setIsFocusedParent] = useState(false);
 
@@ -187,7 +186,16 @@ export const ChatDirect = ({ myAddress, isNewChat, selectedDirect, setSelectedDi
       };
     };
 
-
+    const setDirectChatValueFunc = async (e)=> {
+      setDirectToValue(e.detail.directToValue)
+    }
+    useEffect(() => {
+      subscribeToEvent("setDirectToValueNewChat", setDirectChatValueFunc);
+  
+      return () => {
+        unsubscribeFromEvent("setDirectToValueNewChat", setDirectChatValueFunc);
+      };
+    }, []);
   
     useEffect(() => {
       if (hasInitializedWebsocket.current || isNewChat) return;
@@ -327,6 +335,27 @@ console.log('isFocusedParent', isFocusedParent)
       flexDirection: 'column',
       width: '100%'
     }}>
+        <Box onClick={close} sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
+              cursor: 'pointer',
+              padding: '4px 6px',
+              width: 'fit-content',
+              borderRadius: '3px',
+              background: 'rgb(35, 36, 40)',
+              margin: '10px 0px',
+              alignSelf: 'center'
+            }}>
+              <ArrowBackIcon sx={{
+                color: 'white',
+                fontSize: isMobile ? '20px' : '20px'
+              }}/>
+              <Typography sx={{
+                color: 'white',
+                fontSize: isMobile ? '14px' : '14px'
+              }}>Close Direct Chat</Typography>
+            </Box>
       {isNewChat && (
         <>
         <Spacer height="30px" />
@@ -375,6 +404,28 @@ console.log('isFocusedParent', isFocusedParent)
         flexShrink: 0,
         position: 'relative',
       }}>
+         {isFocusedParent && (
+               <CustomButton
+               onClick={()=> {
+                 if(isSending) return
+                 setIsFocusedParent(false)
+                 clearEditorContent()
+                 // Unfocus the editor
+               }}
+               style={{
+                 marginTop: 'auto',
+                 alignSelf: 'center',
+                 cursor: isSending ? 'default' : 'pointer',
+                 background: 'red',
+                 flexShrink: 0,
+                 padding: isMobile && '5px'
+               }}
+             >
+               
+               {` Close`}
+             </CustomButton>
+           
+            )}
       <CustomButton
               onClick={()=> {
                 if(isSending) return
@@ -404,28 +455,7 @@ console.log('isFocusedParent', isFocusedParent)
               )}
               {` Send`}
             </CustomButton>
-            {isFocusedParent && (
-               <CustomButton
-               onClick={()=> {
-                 if(isSending) return
-                 setIsFocusedParent(false)
-                 clearEditorContent()
-                 // Unfocus the editor
-               }}
-               style={{
-                 marginTop: 'auto',
-                 alignSelf: 'center',
-                 cursor: isSending ? 'default' : 'pointer',
-                 background: isSending && 'rgba(0, 0, 0, 0.8)',
-                 flexShrink: 0,
-                 padding: isMobile && '5px'
-               }}
-             >
-               
-               {` Close`}
-             </CustomButton>
            
-            )}
               </Box>
       </div>
       <LoadingSnackbar open={isLoading} info={{

@@ -202,7 +202,7 @@ export function isExtMsg(data){
   } catch (error) {
     isMsgFromExtensionGroup = false
   }
-console.log('isMsgFromExtensionGroup', isMsgFromExtensionGroup)
+
   return isMsgFromExtensionGroup
 }
 
@@ -264,7 +264,7 @@ if (!oldestLatestTimestamp || oldChat?.timestamp > oldestLatestTimestamp?.timest
 }
 });
 
-  console.log('newestLatestTimestamp', newestLatestTimestamp)
+  
   if(checkDifference(newestLatestTimestamp.timestamp) && !oldestLatestTimestamp ||  (newestLatestTimestamp && newestLatestTimestamp?.timestamp > oldestLatestTimestamp?.timestamp)){
         const notificationId = 'chat_notification_' + Date.now() + '_type=direct' + `_from=${newestLatestTimestamp.address}`;
         chrome.notifications.create(notificationId, {
@@ -460,7 +460,7 @@ const handleNotification = async (groups)=> {
     if(checkDifference(newestLatestTimestamp.timestamp) && !oldestLatestTimestamp ||  (newestLatestTimestamp && newestLatestTimestamp?.timestamp > oldestLatestTimestamp?.timestamp)){
       if (!lastGroupNotification || ((Date.now() - lastGroupNotification) >= 120000)) {
         if(!newestLatestTimestamp?.data || !isExtMsg(newestLatestTimestamp?.data)) return
-        console.log('newestLatestTimestamp', newestLatestTimestamp)
+       
         const notificationId = 'chat_notification_' + Date.now() + '_type=group' + `_from=${newestLatestTimestamp.groupId}`;
    
         chrome.notifications.create(notificationId, {
@@ -856,6 +856,13 @@ async function getSaveWallet() {
     return res.walletInfo;
   } else {
     throw new Error("No wallet saved");
+  }
+}
+
+async function clearAllNotifications(){
+  const notifications = await chrome.notifications.getAll();
+  for (const notificationId of Object.keys(notifications)) {
+    await chrome.notifications.clear(notificationId);
   }
 }
 
@@ -1502,7 +1509,7 @@ async function decryptDirectFunc({ messages, involvingAddress }) {
     publicKey: uint8PublicKey,
   };
   for (const message of messages) {
-    console.log('messagedep', message)
+ 
     try {
       const decodedMessage = decryptChatMessage(
         message.data,
@@ -2902,6 +2909,18 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
           .catch((error) => {
             sendResponse({ error: error.message });
             console.error(error.message);
+          });
+        break;
+      }
+      case "clearAllNotifications": {
+
+      ;
+      clearAllNotifications()
+          .then((res) => {
+            
+          })
+          .catch((error) => {
+            
           });
         break;
       }

@@ -531,6 +531,7 @@ export const Thread = ({
                   key={message?.identifier}
                   message={fullMessage}
                   openNewPostWithQuote={openNewPostWithQuote}
+                  myName={userInfo?.name}
                 />
               );
             } else if(message?.tempData){
@@ -539,6 +540,7 @@ export const Thread = ({
                   key={message?.identifier}
                   message={message?.tempData}
                   openNewPostWithQuote={openNewPostWithQuote}
+                  myName={userInfo?.name}
                 />
               );
             }

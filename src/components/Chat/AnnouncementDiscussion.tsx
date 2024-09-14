@@ -283,6 +283,7 @@ export const AnnouncementDiscussion = ({
         disableComment
         showLoadMore={comments.length > 0 && comments.length % 20 === 0}
         loadMore={loadMore}
+        myName={myName}
         
       />
       <div
@@ -331,6 +332,29 @@ export const AnnouncementDiscussion = ({
         flexShrink: 0,
         position: 'relative',
       }}>
+          {isFocusedParent && (
+               <CustomButton
+               onClick={()=> {
+                 if(isSending) return
+                 setIsFocusedParent(false)
+                 clearEditorContent()
+                 // Unfocus the editor
+               }}
+               style={{
+                 marginTop: 'auto',
+                 alignSelf: 'center',
+                 cursor: isSending ? 'default' : 'pointer',
+                 flexShrink: 0,
+                 padding: isMobile && '5px',
+                 fontSize: isMobile && '14px',
+                 background: 'red',
+               }}
+             >
+               
+               {` Close`}
+             </CustomButton>
+           
+            )}
         <CustomButton
           onClick={() => {
             if (isSending) return;
@@ -361,29 +385,7 @@ export const AnnouncementDiscussion = ({
           )}
           {` Publish Comment`}
         </CustomButton>
-        {isFocusedParent && (
-               <CustomButton
-               onClick={()=> {
-                 if(isSending) return
-                 setIsFocusedParent(false)
-                 clearEditorContent()
-                 // Unfocus the editor
-               }}
-               style={{
-                 marginTop: 'auto',
-                 alignSelf: 'center',
-                 cursor: isSending ? 'default' : 'pointer',
-                 background: isSending && 'rgba(0, 0, 0, 0.8)',
-                 flexShrink: 0,
-                 padding: isMobile && '5px',
-                 fontSize: isMobile && '14px',
-               }}
-             >
-               
-               {` Close`}
-             </CustomButton>
-           
-            )}
+      
               </Box>
       </div>
    

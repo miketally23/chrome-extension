@@ -10,7 +10,9 @@ import { generateHTML } from "@tiptap/react";
 import Highlight from '@tiptap/extension-highlight'
 import StarterKit from '@tiptap/starter-kit'
 import Underline from '@tiptap/extension-underline'
-export const MessageItem = ({ message, onSeen, isLast, isTemp }) => {
+import { executeEvent } from "../../utils/events";
+import { WrapperUserAction } from "../WrapperUserAction";
+export const MessageItem = ({ message, onSeen, isLast, isTemp, myAddress }) => {
 
   const { ref, inView } = useInView({
     threshold: 0.7, // Fully visible
@@ -36,6 +38,7 @@ export const MessageItem = ({ message, onSeen, isLast, isTemp }) => {
         opacity: isTemp ? 0.5 : 1
       }}
     >
+      <WrapperUserAction disabled={myAddress === message?.sender} address={message?.sender} name={message?.senderName}>
       <Avatar
       sx={{
         backgroundColor: '#27282c',
@@ -46,6 +49,7 @@ export const MessageItem = ({ message, onSeen, isLast, isTemp }) => {
       >
         {message?.senderName?.charAt(0)}
       </Avatar>
+      </WrapperUserAction>
       <Box
         sx={{
           display: "flex",
@@ -54,15 +58,18 @@ export const MessageItem = ({ message, onSeen, isLast, isTemp }) => {
           width: '100%'
         }}
       >
+        <WrapperUserAction disabled={myAddress === message?.sender} address={message?.sender} name={message?.senderName}>
         <Typography
           sx={{
             fontWight: 600,
             fontFamily: "Inter",
             color: "cadetBlue",
           }}
+          
         >
           {message?.senderName || message?.sender}
         </Typography>
+        </WrapperUserAction>
         {message?.messageText && (
           <MessageDisplay htmlContent={generateHTML(message?.messageText, [StarterKit, Underline, Highlight])} />
         )}

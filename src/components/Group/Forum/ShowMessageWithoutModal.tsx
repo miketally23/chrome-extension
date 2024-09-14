@@ -19,8 +19,9 @@ import ReadOnlySlate from "./ReadOnlySlate";
 import { MessageDisplay } from "../../Chat/MessageDisplay";
 import { getBaseApi } from "../../../background";
 import { getBaseApiReact } from "../../../App";
+import { WrapperUserAction } from "../../WrapperUserAction";
 
-export const ShowMessage = ({ message, openNewPostWithQuote }: any) => {
+export const ShowMessage = ({ message, openNewPostWithQuote, myName }: any) => {
   const [expandAttachments, setExpandAttachments] = useState<boolean>(false);
 
   let cleanHTML = "";
@@ -53,13 +54,17 @@ export const ShowMessage = ({ message, openNewPostWithQuote }: any) => {
 
           }}
         >
-          
+         <WrapperUserAction disabled={myName === message?.name} address={undefined} name={message?.name}>
            <Avatar  sx={{
                   height: '50px',
                   width: '50px'
                  }} src={`${getBaseApiReact()}/arbitrary/THUMBNAIL/${message?.name}/qortal_avatar?async=true`} alt={message?.name}>{message?.name?.charAt(0)}</Avatar>
+                  </WrapperUserAction>
           <ThreadInfoColumn>
+          
+         <WrapperUserAction disabled={myName === message?.name} address={undefined} name={message?.name}>
             <ThreadInfoColumnNameP>{message?.name}</ThreadInfoColumnNameP>
+            </WrapperUserAction>
             <ThreadInfoColumnTime>
               {formatTimestampForum(message?.created)}
             </ThreadInfoColumnTime>

@@ -82,7 +82,7 @@ import {
   groupApiSocket,
   groupApiSocketLocal,
 } from "./background";
-import { executeEvent } from "./utils/events";
+import { executeEvent, subscribeToEvent, unsubscribeFromEvent } from "./utils/events";
 import { requestQueueCommentCount, requestQueuePublishedAccouncements } from "./components/Chat/GroupAnnouncements";
 import { requestQueueGroupJoinRequests } from "./components/Group/GroupJoinRequests";
 import { DrawerComponent } from "./components/Drawer/Drawer";
@@ -293,7 +293,8 @@ function App() {
   const [confirmUseOfLocal, setConfirmUseOfLocal] = useState(false);
   const [isOpenDrawerProfile, setIsOpenDrawerProfile] = useState(false);
   const [apiKey, setApiKey] = useState("");
-
+  const [isOpenSendQort, setIsOpenSendQort] = useState(false)
+  const [isOpenSendQortSuccess, setIsOpenSendQortSuccess] = useState(false)
   useEffect(() => {
     if(!isMobile) return
     // Function to set the height of the app to the viewport height
@@ -519,7 +520,9 @@ function App() {
         if (response?.error) {
           setSendPaymentError(response.error);
         } else {
-          setExtstate("transfer-success-regular");
+          setIsOpenSendQort(false)
+          setIsOpenSendQortSuccess(true)
+          // setExtstate("transfer-success-regular");
           // setSendPaymentSuccess("Payment successfully sent");
         }
         setIsLoading(false);
@@ -901,6 +904,8 @@ function App() {
     setWalletToBeDownloaded(null);
     setWalletToBeDownloadedPassword("");
     setExtstate("authenticated");
+    setIsOpenSendQort(false)
+    setIsOpenSendQortSuccess(false)
   };
 
   const resetAllStates = () => {
@@ -1026,6 +1031,17 @@ function App() {
     // Handler for when the window gains focus
     const handleFocus = () => {
       setIsFocused(true);
+      if(isMobile){
+        chrome?.runtime?.sendMessage(
+          {
+            action: "clearAllNotifications",
+            payload: {
+            
+            },
+          }
+        );
+      }
+      
       console.log("Webview is focused");
     };
 
@@ -1043,6 +1059,16 @@ function App() {
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
         setIsFocused(true);
+        if(isMobile){
+          chrome?.runtime?.sendMessage(
+            {
+              action: "clearAllNotifications",
+              payload: {
+              
+              },
+            }
+          );
+        }
         console.log("Webview is visible");
       } else {
         setIsFocused(false);
@@ -1057,6 +1083,22 @@ function App() {
       window.removeEventListener("focus", handleFocus);
       window.removeEventListener("blur", handleBlur);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
+
+
+  const openPaymentInternal = (e) => {
+    const directAddress = e.detail?.address;
+    const name = e.detail?.name
+    setIsOpenSendQort(true)
+    setPaymentTo(name || directAddress)
+  };
+
+  useEffect(() => {
+    subscribeToEvent("openPaymentInternal", openPaymentInternal);
+
+    return () => {
+      unsubscribeFromEvent("openPaymentInternal", openPaymentInternal);
     };
   }, []);
 
@@ -1262,7 +1304,8 @@ function App() {
           <Spacer height="20px" />
           <CustomButton
             onClick={() => {
-              setExtstate("send-qort");
+              setIsOpenSendQort(true)
+              // setExtstate("send-qort");
               setIsOpenDrawerProfile(false)
             }}
           >
@@ -1584,8 +1627,17 @@ function App() {
          
         </MyContext.Provider>
       )}
-      {extState === "send-qort" && isMainWindow && (
-        <>
+      {isOpenSendQort && isMainWindow && (
+         <Box sx={{
+          width: '100%',
+          height: '100%',
+          position: 'fixed',
+          background: '#27282c',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          zIndex: 6
+        }}>
           <Spacer height="22px" />
           <Box
             sx={{
@@ -1691,7 +1743,7 @@ function App() {
           >
             Send
           </CustomButton>
-        </>
+        </Box>
       )}
       {extState === "web-app-request-buy-order" && !isMainWindow && (
         <>
@@ -2225,8 +2277,17 @@ function App() {
           )}
         </>
       )}
-      {extState === "transfer-success-regular" && (
-        <>
+      {isOpenSendQortSuccess && (
+        <Box sx={{
+          width: '100%',
+          height: '100%',
+          position: 'fixed',
+          background: '#27282c',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          zIndex: 6
+        }}>
           <Spacer height="48px" />
           <img src={Success} />
           <Spacer height="45px" />
@@ -2246,7 +2307,7 @@ function App() {
           >
             Continue
           </CustomButton>
-        </>
+        </Box>
       )}
       {extState === "transfer-success-request" && (
         <>

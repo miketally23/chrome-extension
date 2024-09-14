@@ -301,6 +301,7 @@ export const GroupAnnouncements = ({
       }
       // send chat message
     } catch (error) {
+      if(!error) return 
       setInfoSnack({
         type: "error",
         message: error,
@@ -542,6 +543,7 @@ export const GroupAnnouncements = ({
         disableComment={false}
         showLoadMore={announcements.length > 0 && announcements.length % 20 === 0}
         loadMore={loadMore}
+        myName={myName}
       />
       
     
@@ -591,6 +593,29 @@ export const GroupAnnouncements = ({
         flexShrink: 0,
         position: 'relative',
       }}>
+         {isFocusedParent && (
+               <CustomButton
+               onClick={()=> {
+                 if(isSending) return
+                 setIsFocusedParent(false)
+                 clearEditorContent()
+                 // Unfocus the editor
+               }}
+               style={{
+                 marginTop: 'auto',
+                 alignSelf: 'center',
+                 cursor: isSending ? 'default' : 'pointer',
+                 background: 'red',
+                 flexShrink: 0,
+                 padding: isMobile && '5px',
+                 fontSize: isMobile && '14px',
+               }}
+             >
+               
+               {` Close`}
+             </CustomButton>
+           
+            )}
    <CustomButton
      onClick={() => {
        if (isSending) return;
@@ -622,29 +647,7 @@ export const GroupAnnouncements = ({
      )}
      {` Publish Announcement`}
    </CustomButton>
-   {isFocusedParent && (
-               <CustomButton
-               onClick={()=> {
-                 if(isSending) return
-                 setIsFocusedParent(false)
-                 clearEditorContent()
-                 // Unfocus the editor
-               }}
-               style={{
-                 marginTop: 'auto',
-                 alignSelf: 'center',
-                 cursor: isSending ? 'default' : 'pointer',
-                 background: isSending && 'rgba(0, 0, 0, 0.8)',
-                 flexShrink: 0,
-                 padding: isMobile && '5px',
-                 fontSize: isMobile && '14px',
-               }}
-             >
-               
-               {` Close`}
-             </CustomButton>
-           
-            )}
+  
               </Box>
  </div>
 )}

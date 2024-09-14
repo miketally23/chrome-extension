@@ -30,9 +30,9 @@ import MarkUnreadChatAltIcon from "@mui/icons-material/MarkUnreadChatAlt";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import CreateIcon from "@mui/icons-material/Create";
 import RefreshIcon from "@mui/icons-material/Refresh";
-import AnnouncementsIcon from '@mui/icons-material/Notifications';
-import GroupIcon from '@mui/icons-material/Group';
-import PersonIcon from '@mui/icons-material/Person';
+import AnnouncementsIcon from "@mui/icons-material/Notifications";
+import GroupIcon from "@mui/icons-material/Group";
+import PersonIcon from "@mui/icons-material/Person";
 import {
   AuthenticatedContainerInnerRight,
   CustomButton,
@@ -56,7 +56,7 @@ import { LoadingButton } from "@mui/lab";
 import { LoadingSnackbar } from "../Snackbar/LoadingSnackbar";
 import { GroupAnnouncements } from "../Chat/GroupAnnouncements";
 import HomeIcon from "@mui/icons-material/Home";
-import CloseIcon from '@mui/icons-material/Close';
+import CloseIcon from "@mui/icons-material/Close";
 
 import { ThingsToDoInitial } from "./ThingsToDoInitial";
 import { GroupJoinRequests } from "./GroupJoinRequests";
@@ -95,7 +95,6 @@ import { isExtMsg } from "../../background";
 //         event.preventDefault();
 //     }
 // });
-
 
 interface GroupProps {
   myAddress: string;
@@ -223,8 +222,8 @@ export const getGroupAdimns = async (groupNumber: number) => {
   );
   const groupData = await response.json();
   let members: any = [];
-  let membersAddresses = []
-  let both = []
+  let membersAddresses = [];
+  let both = [];
   // if (groupData && Array.isArray(groupData?.members)) {
   //   for (const member of groupData.members) {
   //     if (member.member) {
@@ -243,16 +242,16 @@ export const getGroupAdimns = async (groupNumber: number) => {
       });
       if (name) {
         members.push(name);
-        both.push({name, address: member.member})
+        both.push({ name, address: member.member });
       }
-      membersAddresses.push(member.member)
+      membersAddresses.push(member.member);
     }
 
     return true;
   });
   await Promise.all(getMemNames);
 
-  return {names: members, addresses: membersAddresses, both};
+  return { names: members, addresses: membersAddresses, both };
 };
 
 export const getNames = async (listOfMembers) => {
@@ -314,7 +313,8 @@ export const Group = ({
   isMain,
   userInfo,
   balance,
-  isOpenDrawerProfile, setIsOpenDrawerProfile
+  isOpenDrawerProfile,
+  setIsOpenDrawerProfile,
 }: GroupProps) => {
   const [secretKey, setSecretKey] = useState(null);
   const [secretKeyPublishDate, setSecretKeyPublishDate] = useState(null);
@@ -355,7 +355,7 @@ export const Group = ({
   const [defaultThread, setDefaultThread] = React.useState(null);
   const [isOpenDrawer, setIsOpenDrawer] = React.useState(false);
 
-  const [drawerMode, setDrawerMode] = React.useState('groups');
+  const [drawerMode, setDrawerMode] = React.useState("groups");
   const isFocusedRef = useRef(true);
   const selectedGroupRef = useRef(null);
   const selectedDirectRef = useRef(null);
@@ -410,21 +410,20 @@ export const Group = ({
           {
             action: "getGroupDataSingle",
             payload: {
-              groupId
-            }
+              groupId,
+            },
           },
           (response) => {
             if (!response?.error) {
-             
               res(response);
-              return
+              return;
             }
             rej(response.error);
           }
         );
       });
     } catch (error) {
-      return {}
+      return {};
     }
   };
   const refreshHomeDataFunc = () => {
@@ -526,11 +525,12 @@ export const Group = ({
     let hasUnread = false;
     groups.forEach((group) => {
       if (
-        group?.data && isExtMsg(group?.data) &&  group?.sender !== myAddress &&
+        group?.data &&
+        isExtMsg(group?.data) &&
+        group?.sender !== myAddress &&
         group?.timestamp &&
         ((!timestampEnterData[group?.groupId] &&
-          Date.now() - group?.timestamp <
-            timeDifferenceForNotificationChats) ||
+          Date.now() - group?.timestamp < timeDifferenceForNotificationChats) ||
           timestampEnterData[group?.groupId] < group?.timestamp)
       ) {
         hasUnread = true;
@@ -544,7 +544,7 @@ export const Group = ({
     groups.forEach((group) => {
       if (
         groupAnnouncements[group?.groupId] &&
-                  !groupAnnouncements[group?.groupId]?.seentimestamp
+        !groupAnnouncements[group?.groupId]?.seentimestamp
       ) {
         hasUnread = true;
       }
@@ -599,15 +599,17 @@ export const Group = ({
     try {
       // setGroupDataLastSet(null)
       pauseAllQueues();
-      let dataFromStorage
-      let publishFromStorage
-      let adminsFromStorage
-      const groupData = await getGroupDataSingle(selectedGroup?.groupId)
-      if(groupData?.secretKeyData && Date.now() - groupData?.timestampLastSet < 3600000 ){
-
-        dataFromStorage = groupData.secretKeyData
-        publishFromStorage = groupData.secretKeyResource
-        adminsFromStorage = groupData.admins
+      let dataFromStorage;
+      let publishFromStorage;
+      let adminsFromStorage;
+      const groupData = await getGroupDataSingle(selectedGroup?.groupId);
+      if (
+        groupData?.secretKeyData &&
+        Date.now() - groupData?.timestampLastSet < 3600000
+      ) {
+        dataFromStorage = groupData.secretKeyData;
+        publishFromStorage = groupData.secretKeyResource;
+        adminsFromStorage = groupData.admins;
         // setGroupDataLastSet(groupData.timestampLastSet)
       }
 
@@ -629,13 +631,15 @@ export const Group = ({
       }
       const prevGroupId = selectedGroupRef.current.groupId;
       // const validApi = await findUsableApi();
-      const {names, addresses, both} = adminsFromStorage || await getGroupAdimns(selectedGroup?.groupId);
+      const { names, addresses, both } =
+        adminsFromStorage || (await getGroupAdimns(selectedGroup?.groupId));
       setAdmins(addresses);
-      setAdminsWithNames(both)
+      setAdminsWithNames(both);
       if (!names.length) {
         throw new Error("Network error");
       }
-      const publish = publishFromStorage || await getPublishesFromAdmins(names);
+      const publish =
+        publishFromStorage || (await getPublishesFromAdmins(names));
 
       if (prevGroupId !== selectedGroupRef.current.groupId) {
         if (settimeoutForRefetchSecretKey.current) {
@@ -651,18 +655,17 @@ export const Group = ({
         return false;
       }
       setSecretKeyPublishDate(publish?.updated || publish?.created);
-      let data 
-      if(dataFromStorage){
-        data = dataFromStorage
+      let data;
+      if (dataFromStorage) {
+        data = dataFromStorage;
       } else {
         const res = await fetch(
           `${getBaseApiReact()}/arbitrary/DOCUMENT_PRIVATE/${publish.name}/${
             publish.identifier
           }?encoding=base64`
         );
-         data = await res.text();
+        data = await res.text();
       }
-     
 
       const decryptedKey: any = await decryptResource(data);
 
@@ -675,17 +678,15 @@ export const Group = ({
       setSecretKey(decryptedKeyToObject);
       lastFetchedSecretKey.current = Date.now();
       setMemberCountFromSecretKeyData(decryptedKey.count);
-      chrome?.runtime?.sendMessage(
-        {
-          action: "setGroupData",
-          payload: {
-            groupId: selectedGroup?.groupId,
-            secretKeyData: data,
-            secretKeyResource: publish,
-            admins: {names, addresses, both}
-          },
-        }
-      );
+      chrome?.runtime?.sendMessage({
+        action: "setGroupData",
+        payload: {
+          groupId: selectedGroup?.groupId,
+          secretKeyData: data,
+          secretKeyResource: publish,
+          admins: { names, addresses, both },
+        },
+      });
       if (decryptedKeyToObject) {
         setTriedToFetchSecretKey(true);
         setFirstSecretKeyInCreation(false);
@@ -915,12 +916,16 @@ export const Group = ({
     } catch (error) {}
   };
   useEffect(() => {
-    if (!initiatedGetMembers.current && selectedGroup?.groupId && secretKey && admins.includes(myAddress)) {
-
-      console.log('goung through', admins)
+    if (
+      !initiatedGetMembers.current &&
+      selectedGroup?.groupId &&
+      secretKey &&
+      admins.includes(myAddress)
+    ) {
+      console.log("goung through", admins);
       // getAdmins(selectedGroup?.groupId);
       getMembers(selectedGroup?.groupId);
-      initiatedGetMembers.current = true
+      initiatedGetMembers.current = true;
     }
   }, [selectedGroup?.groupId, secretKey, myAddress, admins]);
 
@@ -998,7 +1003,7 @@ export const Group = ({
       .filter((group) => group?.sender !== myAddress)
       .find((gr) => gr?.groupId === selectedGroup?.groupId);
     if (!findGroup) return false;
-    if(!findGroup?.data || !isExtMsg(findGroup?.data)) return false
+    if (!findGroup?.data || !isExtMsg(findGroup?.data)) return false;
     return (
       findGroup?.timestamp &&
       ((!timestampEnterData[selectedGroup?.groupId] &&
@@ -1030,7 +1035,7 @@ export const Group = ({
     if (findDirect) {
       setChatMode("directs");
       setSelectedDirect(null);
-      setSelectedGroup(null);
+      // setSelectedGroup(null);
 
       setNewChat(false);
 
@@ -1051,6 +1056,52 @@ export const Group = ({
       isLoadingOpenSectionFromNotification.current = false;
     }
   };
+
+  const openDirectChatFromInternal = (e) => {
+    const directAddress = e.detail?.address;
+    const name = e.detail?.name
+    const findDirect = directs?.find(
+      (direct) => direct?.address === directAddress || direct?.name === name
+    );
+    
+    if (findDirect) {
+      setChatMode("directs");
+      setSelectedDirect(null);
+      // setSelectedGroup(null);
+
+      setNewChat(false);
+
+      chrome?.runtime?.sendMessage({
+        action: "addTimestampEnterChat",
+        payload: {
+          timestamp: Date.now(),
+          groupId: findDirect.address,
+        },
+      });
+
+      setTimeout(() => {
+        setSelectedDirect(findDirect);
+        getTimestampEnterChat();
+      }, 200);
+
+    } else {
+      setChatMode('directs')
+      setNewChat(true);
+      setTimeout(() => {
+      executeEvent("setDirectToValueNewChat", {
+        directToValue: name || directAddress
+      });
+    }, 500);
+    }
+  };
+
+  useEffect(() => {
+    subscribeToEvent("openDirectMessageInternal", openDirectChatFromInternal);
+
+    return () => {
+      unsubscribeFromEvent("openDirectMessageInternal", openDirectChatFromInternal);
+    };
+  }, [directs, selectedDirect]);
 
   useEffect(() => {
     subscribeToEvent("openDirectMessage", openDirectChatFromNotification);
@@ -1106,7 +1157,7 @@ export const Group = ({
     isLoadingOpenSectionFromNotification.current = false;
     setupGroupWebsocketInterval.current = null;
     settimeoutForRefetchSecretKey.current = null;
-    initiatedGetMembers.current = false
+    initiatedGetMembers.current = false;
   };
 
   const logoutEventFunc = () => {
@@ -1275,51 +1326,51 @@ export const Group = ({
     setFirstSecretKeyInCreation(true);
   };
 
-  const goToHome = async ()=> {
+  const goToHome = async () => {
     setGroupSection("default");
-              clearAllQueues();
-              await new Promise((res) => {
-                setTimeout(() => {
-                  res(null);
-                }, 200);
-              });
-              setGroupSection("home");
-              setSelectedGroup(null);
-              setNewChat(false);
-              setSelectedDirect(null);
-              setSecretKey(null);
-              lastFetchedSecretKey.current = null;
-              setSecretKeyPublishDate(null);
-              setAdmins([]);
-              setSecretKeyDetails(null);
-              setAdminsWithNames([]);
-              setMembers([]);
-              setMemberCountFromSecretKeyData(null);
-              setTriedToFetchSecretKey(false);
-              setFirstSecretKeyInCreation(false);
-  }
+    clearAllQueues();
+    await new Promise((res) => {
+      setTimeout(() => {
+        res(null);
+      }, 200);
+    });
+    setGroupSection("home");
+    setSelectedGroup(null);
+    setNewChat(false);
+    setSelectedDirect(null);
+    setSecretKey(null);
+    lastFetchedSecretKey.current = null;
+    setSecretKeyPublishDate(null);
+    setAdmins([]);
+    setSecretKeyDetails(null);
+    setAdminsWithNames([]);
+    setMembers([]);
+    setMemberCountFromSecretKeyData(null);
+    setTriedToFetchSecretKey(false);
+    setFirstSecretKeyInCreation(false);
+  };
 
-  const goToAnnouncements = async ()=> {
+  const goToAnnouncements = async () => {
     setGroupSection("default");
-                  await new Promise((res) => {
-                    setTimeout(() => {
-                      res(null);
-                    }, 200);
-                  });
-                  setGroupSection("announcement");
-                  chrome?.runtime?.sendMessage({
-                    action: "addGroupNotificationTimestamp",
-                    payload: {
-                      timestamp: Date.now(),
-                      groupId: selectedGroupRef.current.groupId,
-                    },
-                  });
-                  setTimeout(() => {
-                    getGroupAnnouncements();
-                  }, 200);
-  }
+    await new Promise((res) => {
+      setTimeout(() => {
+        res(null);
+      }, 200);
+    });
+    setGroupSection("announcement");
+    chrome?.runtime?.sendMessage({
+      action: "addGroupNotificationTimestamp",
+      payload: {
+        timestamp: Date.now(),
+        groupId: selectedGroupRef.current.groupId,
+      },
+    });
+    setTimeout(() => {
+      getGroupAnnouncements();
+    }, 200);
+  };
 
-  const goToChat = async ()=> {
+  const goToChat = async () => {
     setGroupSection("default");
     await new Promise((res) => {
       setTimeout(() => {
@@ -1340,222 +1391,228 @@ export const Group = ({
         getTimestampEnterChat();
       }, 200);
     }
-  }
+  };
 
-  const renderGroups = ()=> {
+  const renderGroups = () => {
     return (
-      <div
-      style={{
-        display:  "flex",
-        width:  "300px",
-        flexDirection: "column",
-        alignItems: "flex-start",
-        height: "100%",
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          width: "100%",
-          justifyContent: "center",
-          gap: "20px",
-          padding: "10px",
-          flexDirection: 'column'
-        }}
-      >
-        {isMobile && (
-             <Box sx={{
-              width: '100%',
-              display: 'flex',
-              justifyContent: 'flex-end'
-          }}><CloseIcon onClick={()=> {
-              setIsOpenDrawer(false)
-          }} sx={{
-              cursor: 'pointer',
-              color: 'white'
-          }} /></Box>
-        )}
-        <CustomButton
-          onClick={() => {
-            setChatMode((prev) =>
-              prev === "directs" ? "groups" : "directs"
-            );
-            setNewChat(false);
-            setSelectedDirect(null);
-            setSelectedGroup(null);
-            setGroupSection("default");
-          }}
-        >
-          {chatMode === "groups" && (
-            <>
-              <MarkUnreadChatAltIcon
-                sx={{
-                  color: directChatHasUnread ? "red" : "white",
-                }}
-              />
-            </>
-          )}
-          {chatMode === "directs" ? "Switch to groups" : "Direct msgs"}
-        </CustomButton>
-      </div>
       <div
         style={{
           display: "flex",
           width: "300px",
           flexDirection: "column",
           alignItems: "flex-start",
-          flexGrow: 1,
-          overflowY: "auto",
-          visibility: chatMode === "groups" && "hidden",
-          position: chatMode === "groups" && "fixed",
-          left: chatMode === "groups" && "-1000px",
+          height: "100%",
         }}
       >
-        {directs.map((direct: any) => (
-          <List className="group-list" dense={true}>
-            <ListItem
-              //   secondaryAction={
-              //     <IconButton edge="end" aria-label="delete">
-              //       <SettingsIcon />
-              //     </IconButton>
-              //   }
-              onClick={() => {
-                setSelectedDirect(null);
-                setNewChat(false);
-                setSelectedGroup(null);
-                setIsOpenDrawer(false)
-                chrome?.runtime?.sendMessage({
-                  action: "addTimestampEnterChat",
-                  payload: {
-                    timestamp: Date.now(),
-                    groupId: direct.address,
-                  },
-                });
-                setTimeout(() => {
-                  setSelectedDirect(direct);
-
-                  getTimestampEnterChat();
-                }, 200);
-              }}
+        <div
+          style={{
+            display: "flex",
+            width: "100%",
+            justifyContent: "center",
+            gap: "20px",
+            padding: "10px",
+            flexDirection: "column",
+          }}
+        >
+          {isMobile && (
+            <Box
               sx={{
-                display: "flex",
                 width: "100%",
-                flexDirection: "column",
-                cursor: "pointer",
-                border: "1px #232428 solid",
-                padding: "2px",
-                borderRadius: "2px",
-                background:
-                  direct?.address === selectedDirect?.address && "white",
+                display: "flex",
+                justifyContent: "flex-end",
               }}
             >
-              <Box
+              <CloseIcon
+                onClick={() => {
+                  setIsOpenDrawer(false);
+                }}
+                sx={{
+                  cursor: "pointer",
+                  color: "white",
+                }}
+              />
+            </Box>
+          )}
+          <CustomButton
+            onClick={() => {
+              setChatMode((prev) =>
+                prev === "directs" ? "groups" : "directs"
+              );
+              // setNewChat(false);
+              // setSelectedDirect(null);
+              // setSelectedGroup(null);
+              // setGroupSection("default");
+            }}
+          >
+            {chatMode === "groups" && (
+              <>
+                <MarkUnreadChatAltIcon
+                  sx={{
+                    color: directChatHasUnread ? "red" : "white",
+                  }}
+                />
+              </>
+            )}
+            {chatMode === "directs" ? "Switch to groups" : "Direct msgs"}
+          </CustomButton>
+        </div>
+        <div
+          style={{
+            display: "flex",
+            width: "300px",
+            flexDirection: "column",
+            alignItems: "flex-start",
+            flexGrow: 1,
+            overflowY: "auto",
+            visibility: chatMode === "groups" && "hidden",
+            position: chatMode === "groups" && "fixed",
+            left: chatMode === "groups" && "-1000px",
+          }}
+        >
+          {directs.map((direct: any) => (
+            <List className="group-list" dense={true}>
+              <ListItem
+                //   secondaryAction={
+                //     <IconButton edge="end" aria-label="delete">
+                //       <SettingsIcon />
+                //     </IconButton>
+                //   }
+                onClick={() => {
+                  setSelectedDirect(null);
+                  setNewChat(false);
+                  // setSelectedGroup(null);
+                  setIsOpenDrawer(false);
+                  chrome?.runtime?.sendMessage({
+                    action: "addTimestampEnterChat",
+                    payload: {
+                      timestamp: Date.now(),
+                      groupId: direct.address,
+                    },
+                  });
+                  setTimeout(() => {
+                    setSelectedDirect(direct);
+
+                    getTimestampEnterChat();
+                  }, 200);
+                }}
                 sx={{
                   display: "flex",
                   width: "100%",
+                  flexDirection: "column",
+                  cursor: "pointer",
+                  border: "1px #232428 solid",
+                  padding: "2px",
+                  borderRadius: "2px",
+                  background:
+                    direct?.address === selectedDirect?.address && "white",
                 }}
               >
-                <ListItemAvatar>
-                  <Avatar
-                    sx={{
-                      background: "#232428",
-                      color: "white",
-                    }}
-                    alt={direct?.name || direct?.address}
-                    //  src={`${getBaseApiReact()}/arbitrary/THUMBNAIL/${groupOwner?.name}/qortal_group_avatar_${group.groupId}?async=true`}
-                  >
-                    {(direct?.name || direct?.address)?.charAt(0)}
-                  </Avatar>
-                </ListItemAvatar>
-                <ListItemText
-                  primary={direct?.name || direct?.address}
-                  primaryTypographyProps={{
-                    style: {
-                      color:
-                        direct?.address === selectedDirect?.address &&
-                        "black",
-                      textWrap: "wrap",
-                      overflow: "hidden",
-                    },
-                  }} // Change the color of the primary text
-                  secondaryTypographyProps={{
-                    style: {
-                      color:
-                        direct?.address === selectedDirect?.address &&
-                        "black",
-                    },
-                  }}
+                <Box
                   sx={{
-                    width: "150px",
-                    fontFamily: "Inter",
-                    fontSize: "16px",
+                    display: "flex",
+                    width: "100%",
                   }}
-                />
-                {direct?.sender !== myAddress &&
-                  direct?.timestamp &&
-                  ((!timestampEnterData[direct?.address] &&
-                    Date.now() - direct?.timestamp <
-                      timeDifferenceForNotificationChats) ||
-                    timestampEnterData[direct?.address] <
-                      direct?.timestamp) && (
-                    <MarkChatUnreadIcon
+                >
+                  <ListItemAvatar>
+                    <Avatar
                       sx={{
-                        color: "red",
+                        background: "#232428",
+                        color: "white",
                       }}
-                    />
-                  )}
-              </Box>
-            </ListItem>
-          </List>
-        ))}
-      </div>
-      <div
-        style={{
-          display: "flex",
-          width: "300px",
-          flexDirection: "column",
-          alignItems: "flex-start",
-          flexGrow: 1,
-          overflowY: "auto",
-          visibility: chatMode === "directs" && "hidden",
-          position: chatMode === "directs" && "fixed",
-          left: chatMode === "directs" && "-1000px",
-        }}
-      >
-        {groups.map((group: any) => (
-          <List className="group-list" dense={true}>
-            <ListItem
-              //   secondaryAction={
-              //     <IconButton edge="end" aria-label="delete">
-              //       <SettingsIcon />
-              //     </IconButton>
-              //   }
-              onClick={() => {
-                clearAllQueues();
-                setSelectedDirect(null);
+                      alt={direct?.name || direct?.address}
+                      //  src={`${getBaseApiReact()}/arbitrary/THUMBNAIL/${groupOwner?.name}/qortal_group_avatar_${group.groupId}?async=true`}
+                    >
+                      {(direct?.name || direct?.address)?.charAt(0)}
+                    </Avatar>
+                  </ListItemAvatar>
+                  <ListItemText
+                    primary={direct?.name || direct?.address}
+                    primaryTypographyProps={{
+                      style: {
+                        color:
+                          direct?.address === selectedDirect?.address &&
+                          "black",
+                        textWrap: "wrap",
+                        overflow: "hidden",
+                      },
+                    }} // Change the color of the primary text
+                    secondaryTypographyProps={{
+                      style: {
+                        color:
+                          direct?.address === selectedDirect?.address &&
+                          "black",
+                      },
+                    }}
+                    sx={{
+                      width: "150px",
+                      fontFamily: "Inter",
+                      fontSize: "16px",
+                    }}
+                  />
+                  {direct?.sender !== myAddress &&
+                    direct?.timestamp &&
+                    ((!timestampEnterData[direct?.address] &&
+                      Date.now() - direct?.timestamp <
+                        timeDifferenceForNotificationChats) ||
+                      timestampEnterData[direct?.address] <
+                        direct?.timestamp) && (
+                      <MarkChatUnreadIcon
+                        sx={{
+                          color: "red",
+                        }}
+                      />
+                    )}
+                </Box>
+              </ListItem>
+            </List>
+          ))}
+        </div>
+        <div
+          style={{
+            display: "flex",
+            width: "300px",
+            flexDirection: "column",
+            alignItems: "flex-start",
+            flexGrow: 1,
+            overflowY: "auto",
+            visibility: chatMode === "directs" && "hidden",
+            position: chatMode === "directs" && "fixed",
+            left: chatMode === "directs" && "-1000px",
+          }}
+        >
+          {groups.map((group: any) => (
+            <List className="group-list" dense={true}>
+              <ListItem
+                //   secondaryAction={
+                //     <IconButton edge="end" aria-label="delete">
+                //       <SettingsIcon />
+                //     </IconButton>
+                //   }
+                onClick={() => {
+                  clearAllQueues();
+                  setSelectedDirect(null);
 
-                setNewChat(false);
-                setSelectedGroup(null);
-                setSecretKey(null);
-                lastFetchedSecretKey.current = null;
-                setSecretKeyPublishDate(null);
-                setAdmins([]);
-                setSecretKeyDetails(null);
-                setAdminsWithNames([]);
-                setMembers([]);
-                setMemberCountFromSecretKeyData(null);
-                setTriedToFetchSecretKey(false);
-                setFirstSecretKeyInCreation(false);
-                // setGroupSection("announcement");
-                setGroupSection("chat");
-                setIsOpenDrawer(false)
-                setTimeout(() => {
-                  setSelectedGroup(group);
+                  setNewChat(false);
+                  setSelectedGroup(null);
+                  setSecretKey(null);
+                  lastFetchedSecretKey.current = null;
+                  setSecretKeyPublishDate(null);
+                  setAdmins([]);
+                  setSecretKeyDetails(null);
+                  setAdminsWithNames([]);
+                  setMembers([]);
+                  setMemberCountFromSecretKeyData(null);
+                  setTriedToFetchSecretKey(false);
+                  setFirstSecretKeyInCreation(false);
+                  // setGroupSection("announcement");
+                  setGroupSection("chat");
+                  setIsOpenDrawer(false);
+                  setTimeout(() => {
+                    setSelectedGroup(group);
 
-                  // getTimestampEnterChat();
-                }, 200);
+                    // getTimestampEnterChat();
+                  }, 200);
 
-              
                   chrome?.runtime?.sendMessage({
                     action: "addTimestampEnterChat",
                     payload: {
@@ -1563,148 +1620,147 @@ export const Group = ({
                       groupId: group.groupId,
                     },
                   });
-            
+
                   setTimeout(() => {
                     getTimestampEnterChat();
                   }, 200);
-                
 
-                // if (groupSectionRef.current === "announcement") {
-                //   chrome?.runtime?.sendMessage({
-                //     action: "addGroupNotificationTimestamp",
-                //     payload: {
-                //       timestamp: Date.now(),
-                //       groupId: group.groupId,
-                //     },
-                //   });
-                // }
+                  // if (groupSectionRef.current === "announcement") {
+                  //   chrome?.runtime?.sendMessage({
+                  //     action: "addGroupNotificationTimestamp",
+                  //     payload: {
+                  //       timestamp: Date.now(),
+                  //       groupId: group.groupId,
+                  //     },
+                  //   });
+                  // }
 
-                // setTimeout(() => {
-                //   getGroupAnnouncements();
-                // }, 600);
-              }}
-              sx={{
-                display: "flex",
-                width: "100%",
-                flexDirection: "column",
-                cursor: "pointer",
-                border: "1px #232428 solid",
-                padding: "2px",
-                borderRadius: "2px",
-                background:
-                  group?.groupId === selectedGroup?.groupId && "white",
-              }}
-            >
-              <Box
+                  // setTimeout(() => {
+                  //   getGroupAnnouncements();
+                  // }, 600);
+                }}
                 sx={{
                   display: "flex",
                   width: "100%",
+                  flexDirection: "column",
+                  cursor: "pointer",
+                  border: "1px #232428 solid",
+                  padding: "2px",
+                  borderRadius: "2px",
+                  background:
+                    group?.groupId === selectedGroup?.groupId && "white",
                 }}
               >
-                <ListItemAvatar>
-                  <Avatar
-                    sx={{
-                      background: "#232428",
-                      color: "white",
-                    }}
-                    alt={group?.groupName}
-                    //  src={`${getBaseApiReact()}/arbitrary/THUMBNAIL/${groupOwner?.name}/qortal_group_avatar_${group.groupId}?async=true`}
-                  >
-                    {group.groupName?.charAt(0)}
-                  </Avatar>
-                </ListItemAvatar>
-                <ListItemText
-                  primary={group.groupName}
-                  primaryTypographyProps={{
-                    style: {
-                      color:
-                        group?.groupId === selectedGroup?.groupId &&
-                        "black",
-                    },
-                  }} // Change the color of the primary text
-                  secondaryTypographyProps={{
-                    style: {
-                      color:
-                        group?.groupId === selectedGroup?.groupId &&
-                        "black",
-                    },
-                  }}
+                <Box
                   sx={{
-                    width: "150px",
-                    fontFamily: "Inter",
-                    fontSize: "16px",
+                    display: "flex",
+                    width: "100%",
                   }}
-                />
-                {groupAnnouncements[group?.groupId] &&
-                  !groupAnnouncements[group?.groupId]?.seentimestamp && (
-                    <CampaignIcon
+                >
+                  <ListItemAvatar>
+                    <Avatar
                       sx={{
-                        color: "red",
-                        marginRight: "5px",
+                        background: "#232428",
+                        color: "white",
                       }}
-                    />
-                  )}
-                {group?.data && isExtMsg(group?.data) && group?.sender !== myAddress &&
-                  group?.timestamp &&
-                  ((!timestampEnterData[group?.groupId] &&
-                    Date.now() - group?.timestamp <
-                      timeDifferenceForNotificationChats) ||
-                    timestampEnterData[group?.groupId] <
-                      group?.timestamp) && (
-                    <MarkChatUnreadIcon
-                      sx={{
-                        color: "red",
-                      }}
-                    />
-                  )}
-              </Box>
-            </ListItem>
-          </List>
-        ))}
-      </div>
-      <div
-        style={{
-          display: "flex",
-          width: "100%",
-          justifyContent: "center",
-          padding: "10px",
-        }}
-      >
-        {chatMode === "groups" && (
-          <CustomButton
-            onClick={() => {
-              setOpenAddGroup(true);
-            }}
-          >
-            <AddCircleOutlineIcon
-              sx={{
-                color: "white",
+                      alt={group?.groupName}
+                      //  src={`${getBaseApiReact()}/arbitrary/THUMBNAIL/${groupOwner?.name}/qortal_group_avatar_${group.groupId}?async=true`}
+                    >
+                      {group.groupName?.charAt(0)}
+                    </Avatar>
+                  </ListItemAvatar>
+                  <ListItemText
+                    primary={group.groupName}
+                    primaryTypographyProps={{
+                      style: {
+                        color:
+                          group?.groupId === selectedGroup?.groupId && "black",
+                      },
+                    }} // Change the color of the primary text
+                    secondaryTypographyProps={{
+                      style: {
+                        color:
+                          group?.groupId === selectedGroup?.groupId && "black",
+                      },
+                    }}
+                    sx={{
+                      width: "150px",
+                      fontFamily: "Inter",
+                      fontSize: "16px",
+                    }}
+                  />
+                  {groupAnnouncements[group?.groupId] &&
+                    !groupAnnouncements[group?.groupId]?.seentimestamp && (
+                      <CampaignIcon
+                        sx={{
+                          color: "red",
+                          marginRight: "5px",
+                        }}
+                      />
+                    )}
+                  {group?.data &&
+                    isExtMsg(group?.data) &&
+                    group?.sender !== myAddress &&
+                    group?.timestamp &&
+                    ((!timestampEnterData[group?.groupId] &&
+                      Date.now() - group?.timestamp <
+                        timeDifferenceForNotificationChats) ||
+                      timestampEnterData[group?.groupId] <
+                        group?.timestamp) && (
+                      <MarkChatUnreadIcon
+                        sx={{
+                          color: "red",
+                        }}
+                      />
+                    )}
+                </Box>
+              </ListItem>
+            </List>
+          ))}
+        </div>
+        <div
+          style={{
+            display: "flex",
+            width: "100%",
+            justifyContent: "center",
+            padding: "10px",
+          }}
+        >
+          {chatMode === "groups" && (
+            <CustomButton
+              onClick={() => {
+                setOpenAddGroup(true);
               }}
-            />
-            Add Group
-          </CustomButton>
-        )}
-        {chatMode === "directs" && (
-          <CustomButton
-            onClick={() => {
-              setNewChat(true);
-              setSelectedDirect(null);
-              setSelectedGroup(null);
-              setIsOpenDrawer(false)
-            }}
-          >
-            <CreateIcon
-              sx={{
-                color: "white",
+            >
+              <AddCircleOutlineIcon
+                sx={{
+                  color: "white",
+                }}
+              />
+              Add Group
+            </CustomButton>
+          )}
+          {chatMode === "directs" && (
+            <CustomButton
+              onClick={() => {
+                setNewChat(true);
+                setSelectedDirect(null);
+                // setSelectedGroup(null);
+                setIsOpenDrawer(false);
               }}
-            />
-            New Chat
-          </CustomButton>
-        )}
+            >
+              <CreateIcon
+                sx={{
+                  color: "white",
+                }}
+              />
+              New Chat
+            </CustomButton>
+          )}
+        </div>
       </div>
-    </div>
-    )
-  }
+    );
+  };
 
   return (
     <>
@@ -1723,12 +1779,17 @@ export const Group = ({
         style={{
           display: "flex",
           width: "100%",
-          height: isMobile ? "calc(100% - 75px)" :  "100%",
+          height: isMobile ? "calc(100% - 75px)" : "100%",
           flexDirection: "row",
           alignItems: "flex-start",
         }}
       >
-       {!isMobile && renderGroups()}
+        {!isMobile && renderGroups()}
+        <Box sx={{
+          width: '100%',
+          height: '100%',
+          position: 'relative'
+        }}>
         <AddGroup
           address={myAddress}
           open={openAddGroup}
@@ -1736,6 +1797,17 @@ export const Group = ({
         />
         {newChat && (
           <>
+           <Box
+              sx={{
+                position: "absolute",
+                left: '0px',
+                right: '0px',
+                bottom: '0px',
+                top: '0px',
+                background: '#27282c',
+                zIndex: 5
+              }}
+            >
             <ChatDirect
               myAddress={myAddress}
               myName={userInfo?.name}
@@ -1745,10 +1817,16 @@ export const Group = ({
               setNewChat={setNewChat}
               getTimestampEnterChat={getTimestampEnterChat}
               balance={balance}
+              close={()=> {
+                setSelectedDirect(null);
+
+                setNewChat(false);
+              }}
             />
+            </Box>
           </>
         )}
-        {selectedGroup && !newChat && (
+        {selectedGroup  && (
           <>
             <Box
               sx={{
@@ -1923,14 +2001,30 @@ export const Group = ({
 
         {selectedDirect && !newChat && (
           <>
+          <Box
+              sx={{
+                position: "absolute",
+                left: '0px',
+                right: '0px',
+                bottom: '0px',
+                top: '0px',
+                background: '#27282c',
+                zIndex: 5
+              }}
+            >
+
+           
+         
             <Box
               sx={{
                 position: "relative",
                 flexGrow: 1,
                 display: "flex",
-                height: '100%'
+                height: "100%",
+                
               }}
             >
+             
               <ChatDirect
                 myAddress={myAddress}
                 isNewChat={newChat}
@@ -1939,13 +2033,18 @@ export const Group = ({
                 setNewChat={setNewChat}
                 getTimestampEnterChat={getTimestampEnterChat}
                 myName={userInfo?.name}
+                close={()=> {
+                  setSelectedDirect(null);
+
+                  setNewChat(false);
+                }}
               />
+            </Box>
             </Box>
           </>
         )}
-        {!selectedDirect &&
+        {
           !selectedGroup &&
-          !newChat &&
           groupSection === "home" && (
             <Box
               sx={{
@@ -1953,8 +2052,8 @@ export const Group = ({
                 width: "100%",
                 flexDirection: "column",
                 gap: "20px",
-                height: '100%',
-                overflow: 'auto'
+                height: "100%",
+                overflow: "auto",
               }}
             >
               <Box
@@ -1975,47 +2074,48 @@ export const Group = ({
                   Refresh home data
                 </Button>
               </Box>
-                {!isLoadingGroups && (
-                     <Box
-                     sx={{
-                       display: "flex",
-                       gap: "40px",
-                       flexWrap: "wrap",
-                       justifyContent: 'center'
-                     }}
-                   >
-                     <ThingsToDoInitial
-                       balance={balance}
-                       myAddress={myAddress}
-                       name={userInfo?.name}
-                       hasGroups={groups?.length !== 0}
-                     />
-                     <GroupJoinRequests
-                       setGroupSection={setGroupSection}
-                       setSelectedGroup={setSelectedGroup}
-                       getTimestampEnterChat={getTimestampEnterChat}
-                       setOpenManageMembers={setOpenManageMembers}
-                       myAddress={myAddress}
-                       groups={groups}
-                     />
-                     <GroupInvites
-                       setOpenAddGroup={setOpenAddGroup}
-                       myAddress={myAddress}
-                       groups={groups}
-                     />
-                     <ListOfThreadPostsWatched />
-                   </Box>
-                )}
-           
+              {!isLoadingGroups && (
+                <Box
+                  sx={{
+                    display: "flex",
+                    gap: "40px",
+                    flexWrap: "wrap",
+                    justifyContent: "center",
+                  }}
+                >
+                                    <ListOfThreadPostsWatched />
+
+                  <ThingsToDoInitial
+                    balance={balance}
+                    myAddress={myAddress}
+                    name={userInfo?.name}
+                    hasGroups={groups?.length !== 0}
+                  />
+                  <GroupJoinRequests
+                    setGroupSection={setGroupSection}
+                    setSelectedGroup={setSelectedGroup}
+                    getTimestampEnterChat={getTimestampEnterChat}
+                    setOpenManageMembers={setOpenManageMembers}
+                    myAddress={myAddress}
+                    groups={groups}
+                  />
+                  <GroupInvites
+                    setOpenAddGroup={setOpenAddGroup}
+                    myAddress={myAddress}
+                    groups={groups}
+                  />
+                </Box>
+              )}
             </Box>
           )}
+           </Box>
         <AuthenticatedContainerInnerRight
           sx={{
             marginLeft: "auto",
             width: "135px",
             minWidth: "135px",
             padding: "5px",
-            display: isMobile ? 'none' : 'flex'
+            display: isMobile ? "none" : "flex",
           }}
         >
           <Spacer height="20px" />
@@ -2209,124 +2309,225 @@ export const Group = ({
             message: "Setting up groups... please wait.",
           }}
         />
+       
       </div>
-      <DrawerComponent open={isOpenDrawer} setOpen={setIsOpenDrawer} >{renderGroups()}</DrawerComponent>
-   
-   
-     
-      {isMobile && (
- <Box
- sx={{
-   display: "flex",
-   alignItems: "center",
-   justifyContent: "center",
-   flexDirection: "column",
-   width: "100%",
-   height: "75px", // Keep the height at 75px
-   background: "rgba(0, 0, 0, 0.1)",
-   padding: "0px", // Remove unnecessary padding
- }}
->
- <Grid container spacing={0.5} sx={{ width: "100%", justifyContent: "space-around" }}>
-   {selectedGroup && (
-     <>
-       <Grid item xs={4}>
-         <Button
-           fullWidth
-           size="small"
-           variant="contained"
-           startIcon={<AnnouncementsIcon />}
-           sx={{ padding: '4px 6px', 
-           color: groupSection === 'announcement'  ? 'black' : 'white',
-           backgroundColor: isUnread
-           ? "red" : groupSection === 'announcement'  ? 'white' : 'black',
-           }} 
-           onClick={goToAnnouncements}
-         >
-           ANN
-         </Button>
-       </Grid>
-       <Grid item xs={4}>
-         <Button
-           fullWidth
-           size="small"
-           variant="contained"
-           startIcon={<ChatIcon />}
-           sx={{ padding: '4px 6px',  color: groupSection === 'chat'  ? 'black' : 'white',
-           backgroundColor: isUnreadChat
-           ? "red"
-           : groupSection === 'chat'  ? 'white' : 'black', }}
-           onClick={goToChat}
-         >
-           Chat
-         </Button>
-       </Grid>
-       <Grid item xs={4}>
-         <Button
-           fullWidth
-           size="small"
-           variant="contained"
-           startIcon={<ForumIcon />}
-           sx={{ padding: '4px 6px',  color: groupSection === 'forum'  ? 'black' : 'white',
-           backgroundColor: groupSection === 'forum'  ? 'white' : 'black', }}
-           onClick={() => setGroupSection("forum")}
-         >
-           Forum
-         </Button>
-       </Grid>
-       <Grid item xs={4}>
-         <Button
-           fullWidth
-           size="small"
-           variant="contained"
-           startIcon={<GroupIcon />}
-           sx={{ padding: '4px 6px', backgroundColor: 'black' }}
-           onClick={() => setOpenManageMembers(true)}
-         >
-           Members
-         </Button>
-       </Grid>
-     </>
-   )}
+      <DrawerComponent open={isOpenDrawer} setOpen={setIsOpenDrawer}>
+        {renderGroups()}
+      </DrawerComponent>
 
-   {/* Second row: Groups, Home, Profile */}
-   <Grid item xs={4}>
-   <Button
-          fullWidth
-          size="small"
-          variant="contained"
-          startIcon={<GroupIcon />}
-          sx={{ padding: '2px 4px', backgroundColor: groupChatHasUnread || groupsAnnHasUnread || directChatHasUnread ? "red" : 'black'  }}
-          onClick={() => {
-            setIsOpenDrawer(true);
-            setDrawerMode("groups");
+      {isMobile && (
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexDirection: "column",
+            width: "100%",
+            height: "75px", // Keep the height at 75px
+            background: "rgba(0, 0, 0, 0.1)",
+            padding: "0px", // Remove unnecessary padding
           }}
         >
-          {chatMode === "groups" ? "Groups" : "Direct"}
-        </Button>
-   </Grid>
-   <Grid item xs={2}>
-     <IconButton
-       sx={{ padding: '0', color: 'white' }} // Reduce padding for icons
-       onClick={goToHome}
-     >
-       <HomeIcon />
-     </IconButton>
-   </Grid>
-   <Grid item xs={2}>
-     <IconButton
-       sx={{ padding: '0', color: 'white' }} // Reduce padding for icons
-       onClick={() => setIsOpenDrawerProfile(true)}
-     >
-       <PersonIcon />
-     </IconButton>
-   </Grid>
- </Grid>
-</Box>
+          <Grid
+            container
+            spacing={0.5}
+            sx={{ width: "100%", justifyContent: "space-around" }}
+          >
+            {selectedGroup && (
+              <>
+                <Grid item xs={4}>
+                  <Button
+                    fullWidth
+                    size="small"
+                    variant="contained"
+                    startIcon={<AnnouncementsIcon />}
+                    sx={{
+                      padding: "4px 6px",
+                      color:
+                        groupSection === "announcement" ? "black" : "white",
+                      backgroundColor: isUnread
+                        ? "red"
+                        : groupSection === "announcement"
+                        ? "white"
+                        : "black",
+                      "&:hover": {
+                        backgroundColor: isUnread
+                          ? "red"
+                          : groupSection === "announcement"
+                          ? "white"
+                          : "black",
+                      },
+                      "&:active": {
+                        backgroundColor: isUnread
+                          ? "red"
+                          : groupSection === "announcement"
+                          ? "white"
+                          : "black",
+                      },
+                      "&:focus": {
+                        backgroundColor: isUnread
+                          ? "red"
+                          : groupSection === "announcement"
+                          ? "white"
+                          : "black",
+                      },
+                    }}
+                    onClick={goToAnnouncements}
+                  >
+                    ANN
+                  </Button>
+                </Grid>
+                <Grid item xs={4}>
+                  <Button
+                    fullWidth
+                    size="small"
+                    variant="contained"
+                    startIcon={<ChatIcon />}
+                    sx={{
+                      padding: "4px 6px",
+                      color: groupSection === "chat" ? "black" : "white",
+                      backgroundColor: isUnreadChat
+                        ? "red"
+                        : groupSection === "chat"
+                        ? "white"
+                        : "black",
+                      "&:hover": {
+                        backgroundColor: isUnreadChat
+                          ? "red"
+                          : groupSection === "chat"
+                          ? "white"
+                          : "black", // Same logic for hover
+                      },
+                      "&:active": {
+                        backgroundColor: isUnreadChat
+                          ? "red"
+                          : groupSection === "chat"
+                          ? "white"
+                          : "black", // Same logic for active
+                      },
+                      "&:focus": {
+                        backgroundColor: isUnreadChat
+                          ? "red"
+                          : groupSection === "chat"
+                          ? "white"
+                          : "black", // Same logic for focus
+                      },
+                    }}
+                    onClick={goToChat}
+                  >
+                    Chat
+                  </Button>
+                </Grid>
+                <Grid item xs={4}>
+                  <Button
+                    fullWidth
+                    size="small"
+                    variant="contained"
+                    startIcon={<ForumIcon />}
+                    sx={{
+                      padding: "4px 6px",
+                      color: groupSection === "forum" ? "black" : "white",
+                      backgroundColor:
+                        groupSection === "forum" ? "white" : "black",
+                        "&:hover": {
+                          backgroundColor: groupSection === "forum" ? "white" : "black", // Hover state
+                        },
+                        "&:active": {
+                          backgroundColor: groupSection === "forum" ? "white" : "black", // Active state
+                        },
+                        "&:focus": {
+                          backgroundColor: groupSection === "forum" ? "white" : "black", // Focus state
+                        },
+                    }}
+                    onClick={() => setGroupSection("forum")}
+                  >
+                    Forum
+                  </Button>
+                </Grid>
+                <Grid item xs={4}>
+                  <Button
+                    fullWidth
+                    size="small"
+                    variant="contained"
+                    startIcon={<GroupIcon />}
+                    sx={{ padding: "4px 6px", backgroundColor: "black",  "&:hover": {
+                      backgroundColor:  "black", // Hover state
+                    },
+                    "&:active": {
+                      backgroundColor:  "black", // Active state
+                    },
+                    "&:focus": {
+                      backgroundColor:  "black", // Focus state
+                    }, }}
+                    onClick={() => setOpenManageMembers(true)}
+                  >
+                    Members
+                  </Button>
+                </Grid>
+              </>
+            )}
 
-)}
-
-
+            {/* Second row: Groups, Home, Profile */}
+            <Grid item xs={4}>
+              <Button
+                fullWidth
+                size="small"
+                variant="contained"
+                startIcon={<GroupIcon />}
+                sx={{
+                  padding: "2px 4px",
+                  backgroundColor:
+                    groupChatHasUnread ||
+                    groupsAnnHasUnread ||
+                    directChatHasUnread
+                      ? "red"
+                      : "black",
+                      "&:hover": {
+                        backgroundColor:
+                          groupChatHasUnread || groupsAnnHasUnread || directChatHasUnread
+                            ? "red"
+                            : "black", // Hover state follows the same logic
+                      },
+                      "&:active": {
+                        backgroundColor:
+                          groupChatHasUnread || groupsAnnHasUnread || directChatHasUnread
+                            ? "red"
+                            : "black", // Active state follows the same logic
+                      },
+                      "&:focus": {
+                        backgroundColor:
+                          groupChatHasUnread || groupsAnnHasUnread || directChatHasUnread
+                            ? "red"
+                            : "black", // Focus state follows the same logic
+                      },
+                }}
+                onClick={() => {
+                  setIsOpenDrawer(true);
+                  setDrawerMode("groups");
+                }}
+              >
+                {chatMode === "groups" ? "Groups" : "Direct"}
+              </Button>
+            </Grid>
+            <Grid item xs={2}>
+              <IconButton
+                sx={{ padding: "0", color: "white" }} // Reduce padding for icons
+                onClick={goToHome}
+              >
+                <HomeIcon />
+              </IconButton>
+            </Grid>
+            <Grid item xs={2}>
+              <IconButton
+                sx={{ padding: "0", color: "white" }} // Reduce padding for icons
+                onClick={() => setIsOpenDrawerProfile(true)}
+              >
+                <PersonIcon />
+              </IconButton>
+            </Grid>
+          </Grid>
+        </Box>
+      )}
     </>
   );
 };
