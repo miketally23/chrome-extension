@@ -1438,10 +1438,10 @@ export const Group = ({
               setChatMode((prev) =>
                 prev === "directs" ? "groups" : "directs"
               );
-              // setNewChat(false);
-              // setSelectedDirect(null);
-              // setSelectedGroup(null);
-              // setGroupSection("default");
+              
+            }}
+            sx={{
+              backgroundColor: chatMode === 'directs' && ( groupChatHasUnread || groupsAnnHasUnread) ? 'red' : 'revert'
             }}
           >
             {chatMode === "groups" && (
@@ -1453,6 +1453,7 @@ export const Group = ({
                 />
               </>
             )}
+           
             {chatMode === "directs" ? "Switch to groups" : "Direct msgs"}
           </CustomButton>
         </div>

@@ -56,6 +56,7 @@ export const AnnouncementList = ({
         return (
         
             <div
+              key={message?.identifier}
               style={{
                 marginBottom: "10px",
                 width: "100%",
