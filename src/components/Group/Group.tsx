@@ -522,6 +522,36 @@ export const Group = ({
     return hasUnread;
   }, [timestampEnterData, directs, myAddress]);
 
+  const groupChatHasUnread = useMemo(() => {
+    let hasUnread = false;
+    groups.forEach((group) => {
+      if (
+        group?.data && isExtMsg(group?.data) &&  group?.sender !== myAddress &&
+        group?.timestamp &&
+        ((!timestampEnterData[group?.groupId] &&
+          Date.now() - group?.timestamp <
+            timeDifferenceForNotificationChats) ||
+          timestampEnterData[group?.groupId] < group?.timestamp)
+      ) {
+        hasUnread = true;
+      }
+    });
+    return hasUnread;
+  }, [timestampEnterData, groups, myAddress]);
+
+  const groupsAnnHasUnread = useMemo(() => {
+    let hasUnread = false;
+    groups.forEach((group) => {
+      if (
+        groupAnnouncements[group?.groupId] &&
+                  !groupAnnouncements[group?.groupId]?.seentimestamp
+      ) {
+        hasUnread = true;
+      }
+    });
+    return hasUnread;
+  }, [groupAnnouncements, groups]);
+
   // useEffect(() => {
   //   if (!myAddress) return;
   //   checkGroupListFunc(myAddress);
@@ -1660,6 +1690,7 @@ export const Group = ({
               setNewChat(true);
               setSelectedDirect(null);
               setSelectedGroup(null);
+              setIsOpenDrawer(false)
             }}
           >
             <CreateIcon
@@ -2205,7 +2236,11 @@ export const Group = ({
            size="small"
            variant="contained"
            startIcon={<AnnouncementsIcon />}
-           sx={{ padding: '4px 6px' }} // Make padding smaller
+           sx={{ padding: '4px 6px', 
+           color: groupSection === 'announcement'  ? 'black' : 'white',
+           backgroundColor: isUnread
+           ? "red" : groupSection === 'announcement'  ? 'white' : 'black',
+           }} 
            onClick={goToAnnouncements}
          >
            ANN
@@ -2217,7 +2252,10 @@ export const Group = ({
            size="small"
            variant="contained"
            startIcon={<ChatIcon />}
-           sx={{ padding: '4px 6px' }}
+           sx={{ padding: '4px 6px',  color: groupSection === 'chat'  ? 'black' : 'white',
+           backgroundColor: isUnreadChat
+           ? "red"
+           : groupSection === 'chat'  ? 'white' : 'black', }}
            onClick={goToChat}
          >
            Chat
@@ -2229,7 +2267,8 @@ export const Group = ({
            size="small"
            variant="contained"
            startIcon={<ForumIcon />}
-           sx={{ padding: '4px 6px' }}
+           sx={{ padding: '4px 6px',  color: groupSection === 'forum'  ? 'black' : 'white',
+           backgroundColor: groupSection === 'forum'  ? 'white' : 'black', }}
            onClick={() => setGroupSection("forum")}
          >
            Forum
@@ -2241,7 +2280,7 @@ export const Group = ({
            size="small"
            variant="contained"
            startIcon={<GroupIcon />}
-           sx={{ padding: '4px 6px' }}
+           sx={{ padding: '4px 6px', backgroundColor: 'black' }}
            onClick={() => setOpenManageMembers(true)}
          >
            Members
@@ -2257,7 +2296,7 @@ export const Group = ({
           size="small"
           variant="contained"
           startIcon={<GroupIcon />}
-          sx={{ padding: '2px 4px' }}
+          sx={{ padding: '2px 4px', backgroundColor: groupChatHasUnread || groupsAnnHasUnread || directChatHasUnread ? "red" : 'black'  }}
           onClick={() => {
             setIsOpenDrawer(true);
             setDrawerMode("groups");

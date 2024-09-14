@@ -351,25 +351,25 @@ function App() {
     }
   };
  
-  const checkIfUserHasLocalNode = useCallback(async () => {
-    try {
-      const url = `http://127.0.0.1:12391/admin/status`;
-      const response = await fetch(url, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-      const data = await response.json();
-      if (data?.isSynchronizing === false && data?.syncPercent === 100) {
-        setHasLocalNode(true);
-      }
-    } catch (error) {}
-  }, []);
+  // const checkIfUserHasLocalNode = useCallback(async () => {
+  //   try {
+  //     const url = `http://127.0.0.1:12391/admin/status`;
+  //     const response = await fetch(url, {
+  //       method: "GET",
+  //       headers: {
+  //         "Content-Type": "application/json",
+  //       },
+  //     });
+  //     const data = await response.json();
+  //     if (data?.isSynchronizing === false && data?.syncPercent === 100) {
+  //       setHasLocalNode(true);
+  //     }
+  //   } catch (error) {}
+  // }, []);
 
-  useEffect(() => {
-    checkIfUserHasLocalNode();
-  }, [extState]);
+  // useEffect(() => {
+  //   checkIfUserHasLocalNode();
+  // }, [extState]);
 
   const address = useMemo(() => {
     if (!rawWallet?.address0) return "";
@@ -1418,7 +1418,7 @@ function App() {
               }}
             />
           </Box>
-          {hasLocalNode && (
+          {!isMobile && (
             <>
               <Spacer height="15px" />
               <Box
@@ -1568,17 +1568,20 @@ function App() {
             {!isMobile && renderProfile()}
            
           </Box>
-          <Box
-            sx={{
-              position: "fixed",
-              right: "25px",
-              bottom: "25px",
-              width: "350px",
-              zIndex: 100000,
-            }}
-          >
-            <TaskManger getUserInfo={getUserInfo} />
-          </Box>
+          {!isMobile && (
+             <Box
+             sx={{
+               position: "fixed",
+               right: "25px",
+               bottom: "25px",
+               width: "350px",
+               zIndex: 100000,
+             }}
+           >
+             <TaskManger getUserInfo={getUserInfo} />
+           </Box>
+          )}
+         
         </MyContext.Provider>
       )}
       {extState === "send-qort" && isMainWindow && (

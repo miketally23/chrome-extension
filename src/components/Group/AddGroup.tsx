@@ -29,7 +29,7 @@ import { AddGroupList } from "./AddGroupList";
 import { UserListOfInvites } from "./UserListOfInvites";
 import { CustomizedSnackbars } from "../Snackbar/Snackbar";
 import { getFee } from "../../background";
-import { MyContext } from "../../App";
+import { MyContext, isMobile } from "../../App";
 import { subscribeToEvent, unsubscribeFromEvent } from "../../utils/events";
 
 export const Label = styled("label")(
@@ -220,44 +220,50 @@ export const AddGroup = ({ address, open, setOpen }) => {
           }}
         >
           <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
-            <Tabs
-              sx={{
-                "& .MuiTabs-indicator": {
-                  backgroundColor: "white",
-                },
-              }}
-              value={value}
-              onChange={handleChange}
-              aria-label="basic tabs example"
-            >
-              <Tab
-                sx={{
-                  "&.Mui-selected": {
-                    color: `white`,
-                  },
-                }}
-                label="Create Group"
-                {...a11yProps(0)}
-              />
-              <Tab
-                sx={{
-                  "&.Mui-selected": {
-                    color: `white`,
-                  },
-                }}
-                label="Find Group"
-                {...a11yProps(1)}
-              />
-              <Tab
-                sx={{
-                  "&.Mui-selected": {
-                    color: `white`,
-                  },
-                }}
-                label="Group Invites"
-                {...a11yProps(2)}
-              />
-            </Tabs>
+          <Tabs
+      value={value}
+      onChange={handleChange}
+      aria-label="basic tabs example"
+      variant={isMobile ? 'scrollable' : 'fullWidth'} // Scrollable on mobile, full width on desktop
+      scrollButtons="auto"
+      allowScrollButtonsMobile
+      sx={{
+        "& .MuiTabs-indicator": {
+          backgroundColor: "white",
+        },
+      }}
+    >
+      <Tab
+        label="Create Group"
+        {...a11yProps(0)}
+        sx={{
+          "&.Mui-selected": {
+            color: "white",
+          },
+          fontSize: isMobile ? '0.75rem' : '1rem', // Adjust font size for mobile
+        }}
+      />
+      <Tab
+        label="Find Group"
+        {...a11yProps(1)}
+        sx={{
+          "&.Mui-selected": {
+            color: "white",
+          },
+          fontSize: isMobile ? '0.75rem' : '1rem', // Adjust font size for mobile
+        }}
+      />
+      <Tab
+        label="Group Invites"
+        {...a11yProps(2)}
+        sx={{
+          "&.Mui-selected": {
+            color: "white",
+          },
+          fontSize: isMobile ? '0.75rem' : '1rem', // Adjust font size for mobile
+        }}
+      />
+    </Tabs>
           </Box>
           
           {value === 0 && (

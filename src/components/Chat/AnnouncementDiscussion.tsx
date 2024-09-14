@@ -26,6 +26,8 @@ export const AnnouncementDiscussion = ({
 }) => {
   const [isSending, setIsSending] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isFocusedParent, setIsFocusedParent] = useState(false);
+
   const [comments, setComments] = useState([])
   const [tempPublishedList, setTempPublishedList] = useState([])
   const firstMountRef = useRef(false)
@@ -38,6 +40,12 @@ export const AnnouncementDiscussion = ({
   const clearEditorContent = () => {
     if (editorRef.current) {
       editorRef.current.chain().focus().clearContent().run();
+      if(isMobile){
+        setTimeout(() => {
+          editorRef.current?.chain().blur().run(); 
+          setIsFocusedParent(false)
+        }, 200);
+      }
     }
   };
 
@@ -78,6 +86,7 @@ export const AnnouncementDiscussion = ({
          
             if (!response?.error) {
               res(response);
+              return
             }
             rej(response.error);
           }
@@ -281,14 +290,18 @@ export const AnnouncementDiscussion = ({
           // position: 'fixed',
           // bottom: '0px',
           backgroundColor: "#232428",
-          minHeight: "150px",
-          maxHeight: "400px",
+          minHeight: isMobile ? "0px" : "150px",
+          maxHeight: isMobile ? "auto" : "400px",
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
           width: "100%",
           boxSizing: "border-box",
-          padding: "20px",
+          padding: isMobile ? "10px":  "20px",
+          position: isFocusedParent ? 'fixed' : 'relative',
+          bottom: isFocusedParent ? '0px' : 'unset',
+          top: isFocusedParent ? '0px' : 'unset',
+          zIndex: isFocusedParent ? 5 : 'unset',
           flexShrink:0,
         }}
       >
@@ -297,6 +310,7 @@ export const AnnouncementDiscussion = ({
             display: "flex",
             flexDirection: "column",
             // height: '100%',
+            flexGrow: isMobile && 1,
             overflow: "auto",
           }}
         >
@@ -304,8 +318,19 @@ export const AnnouncementDiscussion = ({
             setEditorRef={setEditorRef}
             onEnter={publishComment}
             disableEnter
+            maxHeightOffset="60px"
+            isFocusedParent={isFocusedParent} setIsFocusedParent={setIsFocusedParent}
+            
           />
         </div>
+        <Box sx={{
+        display: 'flex',
+        width: '100&',
+        gap: '10px',
+        justifyContent: 'center',
+        flexShrink: 0,
+        position: 'relative',
+      }}>
         <CustomButton
           onClick={() => {
             if (isSending) return;
@@ -317,6 +342,8 @@ export const AnnouncementDiscussion = ({
             cursor: isSending ? "default" : "pointer",
             background: isSending && "rgba(0, 0, 0, 0.8)",
             flexShrink: 0,
+            padding: isMobile && '5px',
+            fontSize: isMobile && '14px'
           }}
         >
           {isSending && (
@@ -334,6 +361,30 @@ export const AnnouncementDiscussion = ({
           )}
           {` Publish Comment`}
         </CustomButton>
+        {isFocusedParent && (
+               <CustomButton
+               onClick={()=> {
+                 if(isSending) return
+                 setIsFocusedParent(false)
+                 clearEditorContent()
+                 // Unfocus the editor
+               }}
+               style={{
+                 marginTop: 'auto',
+                 alignSelf: 'center',
+                 cursor: isSending ? 'default' : 'pointer',
+                 background: isSending && 'rgba(0, 0, 0, 0.8)',
+                 flexShrink: 0,
+                 padding: isMobile && '5px',
+                 fontSize: isMobile && '14px',
+               }}
+             >
+               
+               {` Close`}
+             </CustomButton>
+           
+            )}
+              </Box>
       </div>
    
       <LoadingSnackbar

@@ -15,6 +15,7 @@ import { CustomizedSnackbars } from '../Snackbar/Snackbar'
 import { PUBLIC_NOTIFICATION_CODE_FIRST_SECRET_KEY } from '../../constants/codes'
 import { useMessageQueue } from '../../MessageQueueContext'
 import { executeEvent } from '../../utils/events'
+import { Box } from '@mui/material'
 
 
 
@@ -28,6 +29,8 @@ export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey,
   const [openSnack, setOpenSnack] = React.useState(false);
   const [infoSnack, setInfoSnack] = React.useState(null);
   const hasInitialized = useRef(false)
+  const [isFocusedParent, setIsFocusedParent] = useState(false);
+
   const hasInitializedWebsocket = useRef(false)
   const socketRef = useRef(null); // WebSocket reference
   const timeoutIdRef = useRef(null); // Timeout ID reference
@@ -270,6 +273,13 @@ const sendChatGroup = async ({groupId, typeMessage = undefined, chatReference = 
 const clearEditorContent = () => {
   if (editorRef.current) {
     editorRef.current.chain().focus().clearContent().run();
+    if(isMobile){
+      setTimeout(() => {
+        editorRef.current?.chain().blur().run(); 
+        setIsFocusedParent(false)
+        executeEvent("sent-new-message-group", {})
+      }, 200);
+    }
   }
 };
 
@@ -354,25 +364,37 @@ const clearEditorContent = () => {
         // position: 'fixed',
         // bottom: '0px',
         backgroundColor: "#232428",
-        minHeight: '150px',
-        maxHeight: '400px',
+        minHeight: isMobile ? '0px' : '150px',
+        maxHeight: isMobile ? 'auto' : '400px',
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
         width: '100%',
         boxSizing: 'border-box',
-        padding: '20px'
+        padding: isMobile ? '10px' : '20px',
+        position: isFocusedParent ? 'fixed' : 'relative',
+        bottom: isFocusedParent ? '0px' : 'unset',
+        top: isFocusedParent ? '0px' : 'unset',
+        zIndex: isFocusedParent ? 5 : 'unset'
       }}>
       <div style={{
             display: 'flex',
             flexDirection: 'column',
-            // height: '100%',
-            overflow: 'auto'
+            flexGrow: isMobile && 1,
+            overflow: !isMobile &&  "auto",
       }}>
 
      
-      <Tiptap setEditorRef={setEditorRef} onEnter={sendMessage} isChat />
+      <Tiptap setEditorRef={setEditorRef} onEnter={sendMessage} isChat disableEnter={isMobile ? true : false} isFocusedParent={isFocusedParent} setIsFocusedParent={setIsFocusedParent} />
       </div>
+      <Box sx={{
+        display: 'flex',
+        width: '100&',
+        gap: '10px',
+        justifyContent: 'center',
+        flexShrink: 0,
+        position: 'relative',
+      }}>
       <CustomButton
               onClick={()=> {
                 if(isSending) return
@@ -383,7 +405,9 @@ const clearEditorContent = () => {
                 alignSelf: 'center',
                 cursor: isSending ? 'default' : 'pointer',
                 background: isSending && 'rgba(0, 0, 0, 0.8)',
-                flexShrink: 0
+                flexShrink: 0,
+                padding: isMobile && '5px',
+                
               }}
             >
               {isSending && (
@@ -401,6 +425,29 @@ const clearEditorContent = () => {
               )}
               {` Send`}
             </CustomButton>
+            {isFocusedParent && (
+               <CustomButton
+               onClick={()=> {
+                 if(isSending) return
+                 setIsFocusedParent(false)
+                 clearEditorContent()
+                 // Unfocus the editor
+               }}
+               style={{
+                 marginTop: 'auto',
+                 alignSelf: 'center',
+                 cursor: isSending ? 'default' : 'pointer',
+                 background: isSending && 'rgba(0, 0, 0, 0.8)',
+                 flexShrink: 0,
+                 padding: isMobile && '5px'
+               }}
+             >
+               
+               {` Close`}
+             </CustomButton>
+           
+            )}
+              </Box>
       {/* <button onClick={sendMessage}>send</button> */}
       </div>
       {/* <ChatContainerComp messages={formatMessages} /> */}

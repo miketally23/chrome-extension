@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { EditorProvider, useCurrentEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { Color } from '@tiptap/extension-color';
@@ -25,6 +25,7 @@ import CustomImage from './CustomImage';
 import Compressor from 'compressorjs'
 
 import ImageResize from 'tiptap-extension-resize-image'; // Import the ResizeImage extension
+import { isMobile } from '../../App';
 const MenuBar = ({ setEditorRef, isChat }) => {
   const { editor } = useCurrentEditor();
   const fileInputRef = useRef(null); 
@@ -88,10 +89,11 @@ const MenuBar = ({ setEditorRef, isChat }) => {
           }
           // color={editor.isActive('bold') ? 'white' : 'gray'}
           sx={{
-            color: editor.isActive('bold') ? 'white' : 'gray'
+            color: editor.isActive('bold') ? 'white' : 'gray',
+            padding: isMobile ? '5px' : 'revert'
           }}
         >
-          <FormatBoldIcon />
+          <FormatBoldIcon  />
         </IconButton>
         <IconButton
           onClick={() => editor.chain().focus().toggleItalic().run()}
@@ -104,7 +106,8 @@ const MenuBar = ({ setEditorRef, isChat }) => {
           }
           // color={editor.isActive('italic') ? 'white' : 'gray'}
           sx={{
-            color: editor.isActive('italic') ? 'white' : 'gray'
+            color: editor.isActive('italic') ? 'white' : 'gray',
+            padding: isMobile ? '5px' : 'revert'
           }}
         >
           <FormatItalicIcon />
@@ -120,7 +123,8 @@ const MenuBar = ({ setEditorRef, isChat }) => {
           }
           // color={editor.isActive('strike') ? 'white' : 'gray'}
           sx={{
-            color: editor.isActive('strike') ? 'white' : 'gray'
+            color: editor.isActive('strike') ? 'white' : 'gray',
+            padding: isMobile ? '5px' : 'revert'
           }}
         >
           <StrikethroughSIcon />
@@ -136,19 +140,23 @@ const MenuBar = ({ setEditorRef, isChat }) => {
           }
           // color={editor.isActive('code') ? 'white' : 'gray'}
           sx={{
-            color: editor.isActive('code') ? 'white' : 'gray'
+            color: editor.isActive('code') ? 'white' : 'gray',
+            padding: isMobile ? '5px' : 'revert'
           }}
         >
           <CodeIcon />
         </IconButton>
-        <IconButton onClick={() => editor.chain().focus().unsetAllMarks().run()}>
+        <IconButton sx={{
+          padding: isMobile ? '5px' : 'revert'
+        }} onClick={() => editor.chain().focus().unsetAllMarks().run()}>
           <FormatClearIcon />
         </IconButton>
         <IconButton
           onClick={() => editor.chain().focus().toggleBulletList().run()}
           // color={editor.isActive('bulletList') ? 'white' : 'gray'}
           sx={{
-            color: editor.isActive('bulletList') ? 'white' : 'gray'
+            color: editor.isActive('bulletList') ? 'white' : 'gray',
+            padding: isMobile ? '5px' : 'revert'
           }}
         >
           <FormatListBulletedIcon />
@@ -157,7 +165,8 @@ const MenuBar = ({ setEditorRef, isChat }) => {
           onClick={() => editor.chain().focus().toggleOrderedList().run()}
           // color={editor.isActive('orderedList') ? 'white' : 'gray'}
           sx={{
-            color: editor.isActive('orderedList') ? 'white' : 'gray'
+            color: editor.isActive('orderedList') ? 'white' : 'gray',
+            padding: isMobile ? '5px' : 'revert'
           }}
         >
           <FormatListNumberedIcon />
@@ -166,7 +175,8 @@ const MenuBar = ({ setEditorRef, isChat }) => {
           onClick={() => editor.chain().focus().toggleCodeBlock().run()}
           // color={editor.isActive('codeBlock') ? 'white' : 'gray'}
           sx={{
-            color: editor.isActive('codeBlock') ? 'white' : 'gray'
+            color: editor.isActive('codeBlock') ? 'white' : 'gray',
+            padding: isMobile ? '5px' : 'revert'
           }}
         >
           <DeveloperModeIcon />
@@ -175,7 +185,8 @@ const MenuBar = ({ setEditorRef, isChat }) => {
           onClick={() => editor.chain().focus().toggleBlockquote().run()}
           // color={editor.isActive('blockquote') ? 'white' : 'gray'}
           sx={{
-            color: editor.isActive('blockquote') ? 'white' : 'gray'
+            color: editor.isActive('blockquote') ? 'white' : 'gray',
+            padding: isMobile ? '5px' : 'revert'
           }}
         >
           <FormatQuoteIcon />
@@ -187,7 +198,8 @@ const MenuBar = ({ setEditorRef, isChat }) => {
           onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
           // color={editor.isActive('heading', { level: 1 }) ? 'white' : 'gray'}
           sx={{
-            color: editor.isActive('heading', { level: 1 }) ? 'white' : 'gray'
+            color: editor.isActive('heading', { level: 1 }) ? 'white' : 'gray',
+            padding: isMobile ? '5px' : 'revert'
           }}
         >
           <FormatHeadingIcon fontSize="small" />
@@ -202,7 +214,8 @@ const MenuBar = ({ setEditorRef, isChat }) => {
               .run()
           }
           sx={{
-            color: 'gray'
+            color: 'gray',
+            padding: isMobile ? '5px' : 'revert'
           }}
         >
           <UndoIcon />
@@ -227,7 +240,8 @@ const MenuBar = ({ setEditorRef, isChat }) => {
            <IconButton
           onClick={triggerImageUpload}
           sx={{
-            color: 'gray'
+            color: 'gray',
+            padding: isMobile ? '5px' : 'revert'
           }}
         >
           <ImageIcon />
@@ -268,32 +282,66 @@ const extensions = [
 
 const content = ``;
 
-export default ({ setEditorRef, onEnter, disableEnter, isChat }) => {
-  
+export default ({ setEditorRef, onEnter, disableEnter, isChat, maxHeightOffset,  setIsFocusedParent, isFocusedParent, overrideMobile, customEditorHeight }) => {
+  const [isFocused, setIsFocused] = useState(false);
   const extensionsFiltered = isChat ? extensions.filter((item)=> item?.name !== 'image') :  extensions
+  const editorRef = useRef(null);
+  const setEditorRefFunc = (editorInstance) => {
+    editorRef.current = editorInstance;
+    setEditorRef(editorInstance)
+  };
+  const handleFocus = () => {
+    if(!isMobile) return
+    // setIsFocused(true);
+    setIsFocusedParent(true)
+  };
+
+  const handleBlur = () => {
+    const htmlContent = editorRef.current.getHTML();
+      
+        if (!htmlContent?.trim() || htmlContent?.trim() === "<p></p>"){
+          // setIsFocused(false);
+          // setIsFocusedParent(false)
+        };
+    
+  };
+  // useEffect(()=> {
+  //   setIsFocused(isFocusedParent)
+  // },[isFocusedParent])
+
   return (
     <EditorProvider
-      slotBefore={<MenuBar setEditorRef={setEditorRef} isChat={isChat} />}
-      extensions={extensionsFiltered}
-      content={content}
-      editorProps={{
-        handleKeyDown(view, event) {
-          if (!disableEnter && event.key === 'Enter') {
-            if (event.shiftKey) {
-              // Shift+Enter: Insert a hard break
-              view.dispatch(view.state.tr.replaceSelectionWith(view.state.schema.nodes.hardBreak.create()));
-              return true;
-            } else {
-              // Enter: Call the callback function
-              if (typeof onEnter === 'function') {
-                onEnter();
-              }
-              return true; // Prevent the default action of adding a new line
+    slotBefore={(isFocusedParent || !isMobile || overrideMobile) && <MenuBar setEditorRef={setEditorRefFunc} isChat={isChat} />}
+    extensions={extensionsFiltered}
+    content={content}
+    onCreate={({ editor }) => {
+      editor.on('focus', handleFocus);   // Listen for focus event
+      editor.on('blur', handleBlur);     // Listen for blur event
+    }}
+    onUpdate={({ editor }) => {
+      editor.on('focus', handleFocus);   // Ensure focus is updated
+      editor.on('blur', handleBlur);     // Ensure blur is updated
+    }}
+    editorProps={{
+      attributes: {
+        class: 'tiptap-prosemirror',
+        style: isMobile && `overflow: auto; min-height: ${customEditorHeight ? '200px' : '0px'}; 200px; max-height:calc(100svh - ${ customEditorHeight ? customEditorHeight : '140px'})`,
+      },
+      handleKeyDown(view, event) {
+        if (!disableEnter && event.key === 'Enter') {
+          if (event.shiftKey) {
+            view.dispatch(view.state.tr.replaceSelectionWith(view.state.schema.nodes.hardBreak.create()));
+            return true;
+          } else {
+            if (typeof onEnter === 'function') {
+              onEnter();
             }
+            return true;
           }
-          return false; // Allow default handling for other keys
-        },
-      }}
-    />
-  );
+        }
+        return false;
+      },
+    }}
+  />
+  )
 };

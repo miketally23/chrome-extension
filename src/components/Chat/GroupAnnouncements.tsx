@@ -51,6 +51,7 @@ export const saveTempPublish = async ({ data, key }: any) => {
       
         if (!response?.error) {
           res(response);
+          return
         }
         rej(response.error);
       }
@@ -71,6 +72,7 @@ export const getTempPublish = async () => {
       (response) => {
         if (!response?.error) {
           res(response);
+          return
         }
         rej(response.error);
       }
@@ -135,6 +137,8 @@ export const GroupAnnouncements = ({
   const [tempPublishedList, setTempPublishedList] = useState([])
   const [announcementData, setAnnouncementData] = useState({});
   const [selectedAnnouncement, setSelectedAnnouncement] = useState(null);
+  const [isFocusedParent, setIsFocusedParent] = useState(false);
+
   const { show } = React.useContext(MyContext);
   const [openSnack, setOpenSnack] = React.useState(false);
   const [infoSnack, setInfoSnack] = React.useState(null);
@@ -226,6 +230,12 @@ export const GroupAnnouncements = ({
   const clearEditorContent = () => {
     if (editorRef.current) {
       editorRef.current.chain().focus().clearContent().run();
+      if(isMobile){
+        setTimeout(() => {
+          editorRef.current?.chain().blur().run(); 
+          setIsFocusedParent(false)
+        }, 200);
+      }
     }
   };
 
@@ -500,18 +510,18 @@ export const GroupAnnouncements = ({
           width: "100%",
           display: "flex",
           justifyContent: "center",
-          padding: "25px",
-          fontSize: "20px",
+          padding: isMobile ? '8px' : "25px",
+          fontSize: isMobile ? '16px' : "20px",
           gap: '20px',
           alignItems: 'center'
         }}
       >
         <CampaignIcon sx={{
-          fontSize: '30px'
+          fontSize: isMobile ? '16px' : '30px'
         }} />
         Group Announcements
       </Box>
-      <Spacer height="25px" />
+      <Spacer height={isMobile ? "10px" : "25px"} />
 
       </div>
       {!isLoading && combinedListTempAndReal?.length === 0 && (
@@ -541,31 +551,46 @@ export const GroupAnnouncements = ({
      // position: 'fixed',
      // bottom: '0px',
      backgroundColor: "#232428",
-     minHeight: "150px",
-     maxHeight: "400px",
+     minHeight: isMobile ? "0px" : "150px",
+     maxHeight: isMobile ? "auto" : "400px",
      display: "flex",
      flexDirection: "column",
      overflow: "hidden",
      width: "100%",
      boxSizing: "border-box",
-     padding: "20px",
-     flexShrink: 0
+     padding: isMobile ? "10px":  "20px",
+     position: isFocusedParent ? 'fixed' : 'relative',
+        bottom: isFocusedParent ? '0px' : 'unset',
+        top: isFocusedParent ? '0px' : 'unset',
+        zIndex: isFocusedParent ? 5 : 'unset',
+        flexShrink: 0
    }}
  >
    <div
      style={{
        display: "flex",
        flexDirection: "column",
+       flexGrow: isMobile && 1,
+       overflow:  "auto",
        // height: '100%',
-       overflow: "auto",
-     }}
+      }}
    >
      <Tiptap
        setEditorRef={setEditorRef}
        onEnter={publishAnnouncement}
        disableEnter
+       maxHeightOffset="40px"
+       isFocusedParent={isFocusedParent} setIsFocusedParent={setIsFocusedParent}
      />
    </div>
+   <Box sx={{
+        display: 'flex',
+        width: '100&',
+        gap: '10px',
+        justifyContent: 'center',
+        flexShrink: 0,
+        position: 'relative',
+      }}>
    <CustomButton
      onClick={() => {
        if (isSending) return;
@@ -577,6 +602,9 @@ export const GroupAnnouncements = ({
        cursor: isSending ? "default" : "pointer",
        background: isSending && "rgba(0, 0, 0, 0.8)",
        flexShrink: 0,
+      padding: isMobile && '5px',
+      fontSize: isMobile && '14px',
+
      }}
    >
      {isSending && (
@@ -594,6 +622,30 @@ export const GroupAnnouncements = ({
      )}
      {` Publish Announcement`}
    </CustomButton>
+   {isFocusedParent && (
+               <CustomButton
+               onClick={()=> {
+                 if(isSending) return
+                 setIsFocusedParent(false)
+                 clearEditorContent()
+                 // Unfocus the editor
+               }}
+               style={{
+                 marginTop: 'auto',
+                 alignSelf: 'center',
+                 cursor: isSending ? 'default' : 'pointer',
+                 background: isSending && 'rgba(0, 0, 0, 0.8)',
+                 flexShrink: 0,
+                 padding: isMobile && '5px',
+                 fontSize: isMobile && '14px',
+               }}
+             >
+               
+               {` Close`}
+             </CustomButton>
+           
+            )}
+              </Box>
  </div>
 )}
 

@@ -30,7 +30,7 @@ import { formatBytes } from "../../../utils/Size";
 import { CreateThreadIcon } from "../../../assets/svgs/CreateThreadIcon";
 import { SendNewMessage } from "../../../assets/svgs/SendNewMessage";
 import { TextEditor } from "./TextEditor";
-import { MyContext, pauseAllQueues, resumeAllQueues } from "../../../App";
+import { MyContext, isMobile, pauseAllQueues, resumeAllQueues } from "../../../App";
 import { getFee } from "../../../background";
 import TipTap from "../../Chat/TipTap";
 import { MessageDisplay } from "../../Chat/MessageDisplay";
@@ -410,7 +410,7 @@ export const NewThread = ({
       <ReusableModal
         open={isOpen}
         customStyles={{
-          maxHeight: "95vh",
+          maxHeight: isMobile ? '95svh' : "95vh",
           maxWidth: "950px",
           height: "700px",
           borderRadius: "12px 12px 0px 0px",
@@ -421,25 +421,27 @@ export const NewThread = ({
       >
         <InstanceListHeader
           sx={{
-            height: "50px",
-            padding: "20px 42px",
+            height: isMobile ? 'auto' : "50px",
+            padding: isMobile ? '5px' : "20px 42px",
             flexDirection: "row",
+            alignItems: 'center',
             justifyContent: "space-between",
-            alignItems: "center",
             backgroundColor: "#434448",
           }}
         >
           <NewMessageHeaderP>
             {isMessage ? "Post Message" : "New Thread"}
           </NewMessageHeaderP>
-          <CloseContainer onClick={closeModal}>
+          <CloseContainer sx={{
+            height: '40px'
+          }} onClick={closeModal}>
             <NewMessageCloseImg src={ModalCloseSVG} />
           </CloseContainer>
         </InstanceListHeader>
         <InstanceListContainer
           sx={{
             backgroundColor: "#434448",
-            padding: "20px 42px",
+            padding: isMobile ? '5px' : "20px 42px",
             height: "calc(100% - 150px)",
             flexShrink: 0,
           }}
@@ -463,7 +465,7 @@ export const NewThread = ({
                     color: "white",
                     "& .MuiInput-input::placeholder": {
                       color: "rgba(255,255,255, 0.70) !important",
-                      fontSize: "20px",
+                      fontSize: isMobile ? '14px' : "20px",
                       fontStyle: "normal",
                       fontWeight: 400,
                       lineHeight: "120%", // 24px
@@ -491,7 +493,10 @@ export const NewThread = ({
               <MessageDisplay htmlContent={postReply?.textContentV2} />
             </Box>
           )}
-          <Spacer height="30px" />
+          {!isMobile && (
+                      <Spacer height="30px" />
+
+          )}
           <Box
             sx={{
               maxHeight: "40vh",
@@ -501,6 +506,8 @@ export const NewThread = ({
               setEditorRef={setEditorRef}
               onEnter={sendMail}
               disableEnter
+              overrideMobile
+              customEditorHeight="240px"
             />
             {/* <TextEditor
               inlineContent={value}
@@ -513,9 +520,9 @@ export const NewThread = ({
         <InstanceFooter
           sx={{
             backgroundColor: "#434448",
-            padding: "20px 42px",
+            padding: isMobile ? '5px' :  "20px 42px",
             alignItems: "center",
-            height: "90px",
+            height: isMobile ? 'auto' :  "90px",
           }}
         >
           <NewMessageSendButton onClick={sendMail}>

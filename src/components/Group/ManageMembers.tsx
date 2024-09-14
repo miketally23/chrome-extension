@@ -19,7 +19,7 @@ import { ListOfBans } from "./ListOfBans";
 import { ListOfJoinRequests } from "./ListOfJoinRequests";
 import { Box, Tab, Tabs } from "@mui/material";
 import { CustomizedSnackbars } from "../Snackbar/Snackbar";
-import { MyContext } from "../../App";
+import { MyContext, isMobile } from "../../App";
 import { getGroupMembers, getNames } from "./Group";
 import { LoadingSnackbar } from "../Snackbar/LoadingSnackbar";
 import { getFee } from "../../background";
@@ -173,63 +173,72 @@ export const ManageMembers = ({
           }}
         >
           <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
-            <Tabs
-              sx={{
-                "& .MuiTabs-indicator": {
-                  backgroundColor: "white",
-                },
-              }}
-              value={value}
-              onChange={handleChange}
-              aria-label="basic tabs example"
-            >
-              <Tab
-                sx={{
-                  "&.Mui-selected": {
-                    color: `white`,
-                  },
-                }}
-                label="List of members"
-                {...a11yProps(0)}
-              />
-               <Tab
-                sx={{
-                  "&.Mui-selected": {
-                    color: `white`,
-                  },
-                }}
-                label="Invite new member"
-                {...a11yProps(1)}
-              />
-              <Tab
-                sx={{
-                  "&.Mui-selected": {
-                    color: `white`,
-                  },
-                }}
-                label="List of invites"
-                {...a11yProps(2)}
-              />
-              <Tab
-                sx={{
-                  "&.Mui-selected": {
-                    color: `white`,
-                  },
-                }}
-                label="List of bans"
-                {...a11yProps(3)}
-              />
-             
-              <Tab
-                sx={{
-                  "&.Mui-selected": {
-                    color: `white`,
-                  },
-                }}
-                label="Join requests"
-                {...a11yProps(4)}
-              />
-            </Tabs>
+          <Tabs
+      value={value}
+      onChange={handleChange}
+      aria-label="basic tabs example"
+      variant="scrollable"  // Make tabs scrollable
+      scrollButtons="auto"  // Show scroll buttons automatically
+      allowScrollButtonsMobile  // Show scroll buttons on mobile as well
+      sx={{
+        "& .MuiTabs-indicator": {
+          backgroundColor: "white",
+        },
+        maxWidth: '100%',  // Ensure the tabs container fits within the available space
+        overflow: 'hidden', // Prevents overflow on small screens
+      }}
+    >
+      <Tab
+        label="List of members"
+        {...a11yProps(0)}
+        sx={{
+          "&.Mui-selected": {
+            color: "white",
+          },
+          fontSize: isMobile ? '0.75rem' : '1rem', // Adjust font size for mobile
+        }}
+      />
+      <Tab
+        label="Invite new member"
+        {...a11yProps(1)}
+        sx={{
+          "&.Mui-selected": {
+            color: "white",
+          },
+          fontSize: isMobile ? '0.75rem' : '1rem',
+        }}
+      />
+      <Tab
+        label="List of invites"
+        {...a11yProps(2)}
+        sx={{
+          "&.Mui-selected": {
+            color: "white",
+          },
+          fontSize: isMobile ? '0.75rem' : '1rem',
+        }}
+      />
+      <Tab
+        label="List of bans"
+        {...a11yProps(3)}
+        sx={{
+          "&.Mui-selected": {
+            color: "white",
+          },
+          fontSize: isMobile ? '0.75rem' : '1rem',
+        }}
+      />
+      <Tab
+        label="Join requests"
+        {...a11yProps(4)}
+        sx={{
+          "&.Mui-selected": {
+            color: "white",
+          },
+          fontSize: isMobile ? '0.75rem' : '1rem',
+        }}
+      />
+    </Tabs>
           </Box>
 
           {selectedGroup?.groupId && !isOwner &&  (
