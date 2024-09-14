@@ -1358,6 +1358,7 @@ export const Group = ({
       }, 200);
     });
     setSelectedDirect(null);
+    setNewChat(false)
     setGroupSection("announcement");
     chrome?.runtime?.sendMessage({
       action: "addGroupNotificationTimestamp",
@@ -1379,6 +1380,7 @@ export const Group = ({
       }, 200);
     });
     setGroupSection("chat");
+    setNewChat(false)
     setSelectedDirect(null);
     if (selectedGroupRef.current) {
       chrome?.runtime?.sendMessage({
@@ -2241,6 +2243,7 @@ export const Group = ({
                 onClick={() => {
                   setGroupSection("forum");
                   setSelectedDirect(null);
+                  setNewChat(false)
                 }}
               >
                 <ForumIcon
@@ -2339,7 +2342,9 @@ export const Group = ({
           >
             {selectedGroup && (
               <>
-                <Grid item xs={4}>
+                <Grid item xs={4} sx={{
+                  display: 'flex'
+                }}>
                   <Button
                     fullWidth
                     size="small"
@@ -2381,7 +2386,9 @@ export const Group = ({
                     ANN
                   </Button>
                 </Grid>
-                <Grid item xs={4}>
+                <Grid item xs={4} sx={{
+                  display: 'flex'
+                }}>
                   <Button
                     fullWidth
                     size="small"
@@ -2422,7 +2429,9 @@ export const Group = ({
                     Chat
                   </Button>
                 </Grid>
-                <Grid item xs={4}>
+                <Grid item xs={4} sx={{
+                  display: 'flex'
+                }}>
                   <Button
                     fullWidth
                     size="small"
@@ -2445,13 +2454,16 @@ export const Group = ({
                     }}
                     onClick={() => {
                       setSelectedDirect(null);
+                      setNewChat(false)
                       setGroupSection("forum")
                     } }
                   >
                     Forum
                   </Button>
                 </Grid>
-                <Grid item xs={4}>
+                <Grid item xs={4} sx={{
+                  display: 'flex'
+                }}>
                   <Button
                     fullWidth
                     size="small"
@@ -2475,7 +2487,9 @@ export const Group = ({
             )}
 
             {/* Second row: Groups, Home, Profile */}
-            <Grid item xs={4}>
+            <Grid item xs={4} sx={{
+                  display: 'flex',
+                }}>
               <Button
                 fullWidth
                 size="small"
@@ -2516,7 +2530,10 @@ export const Group = ({
                 {chatMode === "groups" ? "Groups" : "Direct"}
               </Button>
             </Grid>
-            <Grid item xs={2}>
+            <Grid item xs={2} sx={{
+                  display: 'flex',
+                  justifyContent: 'center'
+                }}>
               <IconButton
                 sx={{ padding: "0", color: "white" }} // Reduce padding for icons
                 onClick={goToHome}
@@ -2524,7 +2541,10 @@ export const Group = ({
                 <HomeIcon />
               </IconButton>
             </Grid>
-            <Grid item xs={2}>
+            <Grid item xs={2} xs={2} sx={{
+                  display: 'flex',
+                  justifyContent: 'center'
+                }}>
               <IconButton
                 sx={{ padding: "0", color: "white" }} // Reduce padding for icons
                 onClick={() => setIsOpenDrawerProfile(true)}

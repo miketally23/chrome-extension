@@ -1,5 +1,5 @@
 import React, { FC, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Box, Button, IconButton, Skeleton } from "@mui/material";
+import { Box, Button, ButtonBase, IconButton, Skeleton } from "@mui/material";
 import { ShowMessage } from "./ShowMessageWithoutModal";
 import {
   ComposeP,
@@ -479,8 +479,9 @@ export const Thread = ({
         />
         <Box sx={{
           display: 'flex',
-          gap: isMobile ? '5px' : '25px',
-          alignItems: 'center'
+          gap: isMobile ? '45px' : '35px',
+          alignItems: 'center',
+          padding: isMobile && '5px'
         }}>
           <ShowMessageReturnButton
           sx={{
@@ -501,23 +502,26 @@ export const Thread = ({
           {/* Conditionally render the scroll buttons */}
           {showScrollButton && (
             isAtBottom ? (
+              <ButtonBase onClick={scrollToPosition}>
               <ArrowUpwardIcon
-                onClick={scrollToPosition}
                 sx={{
                   color: 'white',
                   cursor: 'pointer',
                   fontSize: isMobile ? '28px' : '36px',
                 }}
               />
+              </ButtonBase>
             ) : (
+              <ButtonBase onClick={scrollToPosition}>
               <ArrowDownwardIcon
-                onClick={scrollToPosition}
+                
                 sx={{
                   color: 'white',
                   cursor: 'pointer',
                   fontSize: isMobile ? '28px' : '36px',
                 }}
               />
+              </ButtonBase>
             )
           )}
         </Box>
@@ -701,51 +705,71 @@ export const Thread = ({
                 }}
               >
                 <Button
-                  onClick={() => {
-                    getMailMessages(currentThread, null, null, false);
-                  }}
-                  disabled={!hasFirstPage}
-                  variant="contained"
-                >
-                  First Page
-                </Button>
-                <Button
-                  onClick={() => {
-                    getMailMessages(
-                      currentThread,
-                      messages[0].created,
-                      null,
-                      false
-                    );
-                  }}
-                  disabled={!hasPreviousPage}
-                  variant="contained"
-                >
-                  Previous Page
-                </Button>
-                <Button
-                  onClick={() => {
-                    getMailMessages(
-                      currentThread,
-                      null,
-                      messages[messages.length - 1].created,
-                      false
-                    );
-                  }}
-                  disabled={!hasNextPage}
-                  variant="contained"
-                >
-                  Next page
-                </Button>
-                <Button
-                  onClick={() => {
-                    getMailMessages(currentThread, null, null, true);
-                  }}
-                  disabled={!hasLastPage}
-                  variant="contained"
-                >
-                  Last page
-                </Button>
+            sx={{
+              padding: isMobile && '5px',
+              fontSize: isMobile && '14px',
+              textTransformation: 'capitalize'
+            }}
+              onClick={() => {
+                getMailMessages(currentThread, null, null, false);
+              }}
+              disabled={!hasFirstPage}
+              variant="contained"
+            >
+              First
+            </Button>
+            <Button
+             sx={{
+              padding: isMobile && '5px',
+              fontSize: isMobile && '14px',
+              textTransformation: 'capitalize'
+            }}
+              onClick={() => {
+                getMailMessages(
+                  currentThread,
+                  messages[0].created,
+                  null,
+                  false
+                );
+              }}
+              disabled={!hasPreviousPage}
+              variant="contained"
+            >
+              Previous
+            </Button>
+            <Button
+             sx={{
+              padding: isMobile && '5px',
+              fontSize: isMobile && '14px',
+              textTransformation: 'capitalize'
+            }}
+              onClick={() => {
+                getMailMessages(
+                  currentThread,
+                  null,
+                  messages[messages.length - 1].created,
+                  false
+                );
+              }}
+              disabled={!hasNextPage}
+              variant="contained"
+            >
+              Next
+            </Button>
+            <Button
+             sx={{
+              padding: isMobile && '5px',
+              fontSize: isMobile && '14px',
+              textTransformation: 'capitalize'
+            }}
+              onClick={() => {
+                getMailMessages(currentThread, null, null, true);
+              }}
+              disabled={!hasLastPage}
+              variant="contained"
+            >
+              Last
+            </Button>
               </Box>
               <Spacer height="30px" />
             </>

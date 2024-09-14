@@ -360,7 +360,8 @@ console.log('isFocusedParent', isFocusedParent)
         <>
         <Spacer height="30px" />
                 <Input sx={{
-                  fontSize: '18px'
+                  fontSize: '18px',
+                  padding: '5px'
                 }} placeholder='Name or address' value={directToValue} onChange={(e)=> setDirectToValue(e.target.value)} />
 
         </>
