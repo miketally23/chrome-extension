@@ -2541,7 +2541,7 @@ export const Group = ({
                 <HomeIcon />
               </IconButton>
             </Grid>
-            <Grid item xs={2} xs={2} sx={{
+            <Grid item xs={2}  sx={{
                   display: 'flex',
                   justifyContent: 'center'
                 }}>
