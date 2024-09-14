@@ -1461,7 +1461,7 @@ function App() {
               }}
             />
           </Box>
-          {!isMobile && (
+        
             <>
               <Spacer height="15px" />
               <Box
@@ -1571,7 +1571,7 @@ function App() {
                 )}
               </Box>
             </>
-          )}
+        
         </>
       )}
       {/* {extState !== "not-authenticated" && (

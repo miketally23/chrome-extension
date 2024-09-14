@@ -1357,6 +1357,7 @@ export const Group = ({
         res(null);
       }, 200);
     });
+    setSelectedDirect(null);
     setGroupSection("announcement");
     chrome?.runtime?.sendMessage({
       action: "addGroupNotificationTimestamp",
@@ -1378,6 +1379,7 @@ export const Group = ({
       }, 200);
     });
     setGroupSection("chat");
+    setSelectedDirect(null);
     if (selectedGroupRef.current) {
       chrome?.runtime?.sendMessage({
         action: "addTimestampEnterChat",
@@ -2238,6 +2240,7 @@ export const Group = ({
                 }}
                 onClick={() => {
                   setGroupSection("forum");
+                  setSelectedDirect(null);
                 }}
               >
                 <ForumIcon
@@ -2440,7 +2443,10 @@ export const Group = ({
                           backgroundColor: groupSection === "forum" ? "white" : "black", // Focus state
                         },
                     }}
-                    onClick={() => setGroupSection("forum")}
+                    onClick={() => {
+                      setSelectedDirect(null);
+                      setGroupSection("forum")
+                    } }
                   >
                     Forum
                   </Button>
