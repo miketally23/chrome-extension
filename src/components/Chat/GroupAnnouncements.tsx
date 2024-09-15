@@ -31,6 +31,7 @@ import { AnnouncementDiscussion } from "./AnnouncementDiscussion";
 import { MyContext, getBaseApiReact, isMobile, pauseAllQueues, resumeAllQueues } from "../../App";
 import { RequestQueueWithPromise } from "../../utils/queue/queue";
 import { CustomizedSnackbars } from "../Snackbar/Snackbar";
+import {  addDataPublishesFunc, getDataPublishesFunc } from "../Group/Group";
 
 export const requestQueueCommentCount = new RequestQueueWithPromise(3)
 export const requestQueuePublishedAccouncements = new RequestQueueWithPromise(3)
@@ -145,20 +146,34 @@ export const GroupAnnouncements = ({
   const hasInitialized = useRef(false);
   const hasInitializedWebsocket = useRef(false);
   const editorRef = useRef(null);
-
+  const dataPublishes = useRef({})
   const setEditorRef = (editorInstance) => {
     editorRef.current = editorInstance;
   };
 
-  const getAnnouncementData = async ({ identifier, name }) => {
+  useEffect(()=> {
+    if(!selectedGroup) return
+    (async ()=> {
+      const res = await getDataPublishesFunc(selectedGroup, 'anc')
+      dataPublishes.current = res || {}
+    })()
+  }, [selectedGroup])
+
+  const getAnnouncementData = async ({ identifier, name, resource }) => {
     try {
-   
-      const res = await requestQueuePublishedAccouncements.enqueue(()=> {
-        return fetch(
-          `${getBaseApiReact()}/arbitrary/DOCUMENT/${name}/${identifier}?encoding=base64`
-        );
-      }) 
-      const data = await res.text();
+      let data = dataPublishes.current[`${name}-${identifier}`]
+      if(!data || (data?.update || data?.created !== (resource?.updated || resource?.created))){
+        const res = await requestQueuePublishedAccouncements.enqueue(()=> {
+          return fetch(
+            `${getBaseApiReact()}/arbitrary/DOCUMENT/${name}/${identifier}?encoding=base64`
+          );
+        }) 
+         data = await res.text();
+         await addDataPublishesFunc({...resource, data}, selectedGroup, 'anc')
+      } else {
+        data = data.data
+      }
+    
       const response = await decryptPublishes([{ data }], secretKey);
   
       const messageData = response[0];
@@ -169,7 +184,9 @@ export const GroupAnnouncements = ({
         };
       });
   
-    } catch (error) {}
+    } catch (error) {
+      console.log('error', error)
+    }
   };
 
  
@@ -282,7 +299,7 @@ export const GroupAnnouncements = ({
           secretKeyObject
         );
         const randomUid = uid.rnd();
-      const identifier = `grp-${selectedGroup}-anc-${randomUid}`;
+        const identifier = `grp-${selectedGroup}-anc-${randomUid}`;
         const res = await publishAnc({
           encryptedData: encryptSingle,
           identifier
@@ -335,7 +352,7 @@ export const GroupAnnouncements = ({
         setAnnouncements(responseData);
         setIsLoading(false);
         for (const data of responseData) {
-          getAnnouncementData({ name: data.name, identifier: data.identifier });
+          getAnnouncementData({ name: data.name, identifier: data.identifier, resource: data });
         }
       } catch (error) {
       } finally {

@@ -22,7 +22,10 @@ import { subscribeToEvent, unsubscribeFromEvent } from "../../../utils/events";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import { getBaseApiReact, isMobile } from "../../../App";
 import { ArrowDownward as ArrowDownwardIcon, ArrowUpward as ArrowUpwardIcon } from '@mui/icons-material';
-
+import { addDataPublishesFunc, getDataPublishesFunc } from "../Group";
+import { RequestQueueWithPromise } from "../../../utils/queue/queue";
+const requestQueueSaveToLocal = new RequestQueueWithPromise(1)
+const requestQueueDownloadPost = new RequestQueueWithPromise(3)
 interface ThreadProps {
   currentThread: any;
   groupInfo: any;
@@ -30,11 +33,22 @@ interface ThreadProps {
   members: any;
 }
 
-const getEncryptedResource = async ({ name, identifier, secretKey }) => {
-  const res = await fetch(
-    `${getBaseApiReact()}/arbitrary/DOCUMENT/${name}/${identifier}?encoding=base64`
-  );
-  const data = await res.text();
+const getEncryptedResource = async ({ name, identifier, secretKey, resource, groupId, dataPublishes }) => {
+  let data = dataPublishes[`${name}-${identifier}`]
+    if(!data || (data?.update || data?.created !== (resource?.updated || resource?.created))){
+  const res = await requestQueueDownloadPost.enqueue(()=> {
+    return fetch(
+      `${getBaseApiReact()}/arbitrary/DOCUMENT/${name}/${identifier}?encoding=base64`
+    );
+  }) 
+   data = await res.text();
+   await requestQueueSaveToLocal.enqueue(()=> {
+    return addDataPublishesFunc({...resource, data}, groupId, 'thmsg')
+   })
+    
+    } else {
+      data = data.data
+    }
   const response = await decryptPublishes([{ data }], secretKey);
 
   const messageData = response[0];
@@ -71,6 +85,18 @@ export const Thread = ({
   const secretKeyRef = useRef(null);
   const currentThreadRef = useRef(null);
   const containerRef = useRef(null);
+  const dataPublishes = useRef({})
+
+ 
+  const getSavedData = useCallback(async (groupId)=> {
+    const res = await getDataPublishesFunc(groupId, 'thmsg')
+    dataPublishes.current = res || {}
+  }, [])
+
+  useEffect(()=> {
+    if(!groupInfo?.groupId) return
+    getSavedData(groupInfo?.groupId)
+  }, [groupInfo?.groupId])
 
   useEffect(() => {
     currentThreadRef.current = currentThread;
@@ -86,6 +112,9 @@ export const Thread = ({
         identifier: message.identifier,
         name: message.name,
         secretKey,
+        resource: message,
+        groupId: groupInfo?.groupId,
+        dataPublishes: dataPublishes.current
       });
 
       const fullObject = {
@@ -129,7 +158,7 @@ export const Thread = ({
   }
 
   const getMailMessages = React.useCallback(
-    async (groupInfo: any, before, after, isReverse) => {
+    async (groupInfo: any, before, after, isReverse, groupId) => {
       try {
         setTempPublishedList([])
         setIsLoading(true);
@@ -169,7 +198,7 @@ export const Thread = ({
         }
         // let newMessages: any[] = []
         for (const message of responseData) {
-          getIndividualMsg(message);
+            getIndividualMsg(message);
         }
         setMessages(fullArrayMsg);
         if (before === null && after === null && isReverse) {
@@ -220,17 +249,18 @@ export const Thread = ({
           updateThreadActivityCurrentThread()
         }
       } catch (error) {
+        console.log('error', error)
       } finally {
         setIsLoading(false);
+        getSavedData(groupId)
       }
     },
     [messages, secretKey]
   );
   const getMessages = React.useCallback(async () => {
-
-    if (!currentThread || !secretKey) return;
-    await getMailMessages(currentThread, null, null, false);
-  }, [getMailMessages, currentThread, secretKey]);
+    if (!currentThread || !secretKey || !groupInfo?.groupId) return;
+    await getMailMessages(currentThread, null, null, false, groupInfo?.groupId);
+  }, [getMailMessages, currentThread, secretKey, groupInfo?.groupId]);
   const firstMount = useRef(false);
 
   const saveTimestamp = useCallback((currentThread: any, username?: string) => {
@@ -327,6 +357,9 @@ export const Thread = ({
               identifier: message.identifier,
               name: message.name,
               secretKey: secretKeyRef.current,
+              resource: message,
+              groupId: groupInfo?.groupId,
+              dataPublishes: dataPublishes.current
             });
 
             const fullObject = {
@@ -369,7 +402,7 @@ export const Thread = ({
   const threadFetchModeFunc = (e) => {
     const mode = e.detail?.mode;
     if (mode === "last-page") {
-      getMailMessages(currentThread, null, null, true);
+      getMailMessages(currentThread, null, null, true, groupInfo?.groupId);
     }
     firstMount.current = true;
   };
@@ -443,7 +476,6 @@ export const Thread = ({
     }
   };
 
-  console.log('showScrollButton', showScrollButton)
 
   if (!currentThread) return null;
   return (
@@ -566,7 +598,7 @@ export const Thread = ({
               textTransformation: 'capitalize'
             }}
               onClick={() => {
-                getMailMessages(currentThread, null, null, false);
+                getMailMessages(currentThread, null, null, false, groupInfo?.groupId);
               }}
               disabled={!hasFirstPage}
               variant="contained"
@@ -584,7 +616,8 @@ export const Thread = ({
                   currentThread,
                   messages[0].created,
                   null,
-                  false
+                  false,
+                  groupInfo?.groupId
                 );
               }}
               disabled={!hasPreviousPage}
@@ -603,7 +636,8 @@ export const Thread = ({
                   currentThread,
                   null,
                   messages[messages.length - 1].created,
-                  false
+                  false,
+                  groupInfo?.groupId
                 );
               }}
               disabled={!hasNextPage}
@@ -618,7 +652,7 @@ export const Thread = ({
               textTransformation: 'capitalize'
             }}
               onClick={() => {
-                getMailMessages(currentThread, null, null, true);
+                getMailMessages(currentThread, null, null, true, groupInfo?.groupId);
               }}
               disabled={!hasLastPage}
               variant="contained"
@@ -680,7 +714,7 @@ export const Thread = ({
                   variant="outlined"
                   startIcon={<RefreshIcon />}
                   onClick={() => {
-                    getMailMessages(currentThread, null, null, true);
+                    getMailMessages(currentThread, null, null, true, groupInfo?.groupId);
                   }}
                   sx={{
                     color: "white",
@@ -711,7 +745,7 @@ export const Thread = ({
               textTransformation: 'capitalize'
             }}
               onClick={() => {
-                getMailMessages(currentThread, null, null, false);
+                getMailMessages(currentThread, null, null, false, groupInfo?.groupId);
               }}
               disabled={!hasFirstPage}
               variant="contained"
@@ -729,7 +763,8 @@ export const Thread = ({
                   currentThread,
                   messages[0].created,
                   null,
-                  false
+                  false,
+                  groupInfo?.groupId
                 );
               }}
               disabled={!hasPreviousPage}
@@ -748,7 +783,8 @@ export const Thread = ({
                   currentThread,
                   null,
                   messages[messages.length - 1].created,
-                  false
+                  false,
+                  groupInfo?.groupId
                 );
               }}
               disabled={!hasNextPage}
@@ -763,7 +799,7 @@ export const Thread = ({
               textTransformation: 'capitalize'
             }}
               onClick={() => {
-                getMailMessages(currentThread, null, null, true);
+                getMailMessages(currentThread, null, null, true, groupInfo?.groupId);
               }}
               disabled={!hasLastPage}
               variant="contained"

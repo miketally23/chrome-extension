@@ -203,6 +203,51 @@ export const decryptResource = async (data: string) => {
   } catch (error) {}
 };
 
+export const addDataPublishesFunc = async (data: string, groupId, type) => {
+  try {
+    return new Promise((res, rej) => {
+      chrome?.runtime?.sendMessage(
+        {
+          action: "addDataPublishes",
+          payload: {
+            data,
+            groupId,
+            type
+          },
+        },
+        (response) => {
+          if (!response?.error) {
+            res(response);
+          }
+          rej(response.error);
+        }
+      );
+    });
+  } catch (error) {}
+};
+
+export const getDataPublishesFunc = async (groupId, type) => {
+  try {
+    return new Promise((res, rej) => {
+      chrome?.runtime?.sendMessage(
+        {
+          action: "getDataPublishes",
+          payload: {
+            groupId,
+            type
+          },
+        },
+        (response) => {
+          if (!response?.error) {
+            res(response);
+          }
+          rej(response.error);
+        }
+      );
+    });
+  } catch (error) {}
+};
+
 export async function getNameInfo(address: string) {
   const response = await fetch(`${getBaseApiReact()}/names/address/` + address);
   const nameData = await response.json();
@@ -567,7 +612,7 @@ export const Group = ({
     const queryString = admins.map((name) => `name=${name}`).join("&");
     const url = `${getBaseApiReact()}/arbitrary/resources/search?mode=ALL&service=DOCUMENT_PRIVATE&identifier=symmetric-qchat-group-${
       selectedGroup?.groupId
-    }&exactmatchnames=true&limit=0&reverse=true&${queryString}`;
+    }&exactmatchnames=true&limit=0&reverse=true&${queryString}&prefix=true`;
     const response = await fetch(url);
     if (!response.ok) {
       throw new Error("network error");

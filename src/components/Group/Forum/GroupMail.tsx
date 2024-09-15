@@ -55,6 +55,7 @@ import { executeEvent, subscribeToEvent, unsubscribeFromEvent } from "../../../u
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { getBaseApiReact } from "../../../App";
 import { WrapperUserAction } from "../../WrapperUserAction";
+import { addDataPublishesFunc, getDataPublishesFunc } from "../Group";
 const filterOptions = ["Recently active", "Newest", "Oldest"];
 
 export const threadIdentifier = "DOCUMENT";
@@ -76,12 +77,21 @@ export const GroupMail = ({
   const [isOpenFilterList, setIsOpenFilterList] = useState<boolean>(false);
   const anchorElInstanceFilter = useRef<any>(null);
   const [tempPublishedList, setTempPublishedList] = useState([])
+  const dataPublishes = useRef({})
 
   const [isLoading, setIsLoading] = useState(false)
   const groupIdRef = useRef<any>(null);
   const groupId = useMemo(() => {
     return selectedGroup?.groupId;
   }, [selectedGroup]);
+
+  useEffect(()=> {
+    if(!groupId) return
+    (async ()=> {
+      const res = await getDataPublishesFunc(groupId, 'thread')
+      dataPublishes.current = res || {}
+    })()
+  }, [groupId])
 
   useEffect(() => {
     if (groupId !== groupIdRef?.current) {
@@ -110,12 +120,18 @@ export const GroupMail = ({
    
   }
 
-  const getEncryptedResource = async ({ name, identifier }) => {
-  
+  const getEncryptedResource = async ({ name, identifier, resource }) => {
+    let data = dataPublishes.current[`${name}-${identifier}`]
+    if(!data || (data?.update || data?.created !== (resource?.updated || resource?.created))){
     const res = await fetch(
       `${getBaseApiReact()}/arbitrary/DOCUMENT/${name}/${identifier}?encoding=base64`
     );
-    const data = await res.text();
+     data = await res.text();
+     await addDataPublishesFunc({...resource, data}, groupId, 'thread')
+
+    } else {
+      data = data.data
+    }
     const response = await decryptPublishes([{ data }], secretKey);
 
     const messageData = response[0];
@@ -190,6 +206,7 @@ export const GroupMail = ({
                 getEncryptedResource({
                   name: message.name,
                   identifier: message.identifier,
+                  resource: message
                 }),
                 delay(5000),
               ]);
@@ -309,6 +326,7 @@ export const GroupMail = ({
                   getEncryptedResource({
                     name: thread.name,
                     identifier: message.threadId,
+                    resource: thread
                   }),
                   delay(10000),
                 ]);

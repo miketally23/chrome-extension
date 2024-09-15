@@ -21,7 +21,7 @@ export const AnnouncementItem = ({ message, messageData, setSelectedAnnouncement
 
         // dispatch(setIsLoadingGlobal(true))
         const identifier = `cm-${message.identifier}`;
-        const url = `${getBaseApiReact()}/arbitrary/resources/search?mode=ALL&service=DOCUMENT&identifier=${identifier}&limit=0&includemetadata=false&offset=${offset}&reverse=true`;
+        const url = `${getBaseApiReact()}/arbitrary/resources/search?mode=ALL&service=DOCUMENT&identifier=${identifier}&limit=0&includemetadata=false&offset=${offset}&reverse=true&prefix=true`;
        
         const response =  await requestQueueCommentCount.enqueue(() => { 
           return fetch(url, {

@@ -20,7 +20,7 @@ export const CreateCommonSecret = ({groupId, secretKey, isOwner,  myAddress, sec
     const queryString = admins.map((name) => `name=${name}`).join("&");
     const url = `${getBaseApiReact()}/arbitrary/resources/search?mode=ALL&service=DOCUMENT_PRIVATE&identifier=symmetric-qchat-group-${
       groupId
-    }&exactmatchnames=true&limit=0&reverse=true&${queryString}`;
+    }&exactmatchnames=true&limit=0&reverse=true&${queryString}&prefix=true`;
     const response = await fetch(url);
     if(!response.ok){
       throw new Error('network error')

@@ -1087,6 +1087,89 @@ export async function getPublicKey(receiver) {
   }
 }
 
+const MAX_STORAGE_SIZE = 3 * 1024 * 1024; // 3MB in bytes
+
+
+async function getDataPublishes(groupId, type) {
+  const wallet = await getSaveWallet();
+  const address = wallet.address0;
+
+  return new Promise((resolve) => {
+    chrome.storage.local.get([`${address}-publishData`], (result) => {
+      if (chrome.runtime.lastError) {
+        console.error('Error retrieving data:', chrome.runtime.lastError);
+        resolve(null); // Return null in case of an error
+        return;
+      }
+
+      let storedData = result[`${address}-publishData`] || {}; // Get the stored data or initialize an empty object
+      let groupData = storedData[groupId] || {}; // Get data by groupId
+      let typeData = groupData[type] || {}; // Get data by type
+
+      resolve(typeData); // Resolve with the data inside the specific type
+    });
+  });
+}
+
+
+async function addDataPublishes(newData, groupId, type) {
+  const wallet = await getSaveWallet();
+  const address = wallet.address0;
+  const nameIdentifier = `${newData.name}-${newData.identifier}`;
+
+  // Prevent adding data larger than 50KB
+  if (newData?.size > 50000) return false;
+
+  return new Promise((res) => {
+    chrome.storage.local.get([`${address}-publishData`], (result) => {
+      let storedData = result[`${address}-publishData`] || {}; // Get existing data or initialize
+      let groupData = storedData[groupId] || {}; // Get or initialize group by groupId
+      let typeData = groupData[type] || {}; // Get or initialize the type within the group
+
+      let totalSize = 0;
+
+      // Calculate the current size of all stored data
+      Object.values(storedData).forEach(group => {
+        Object.values(group).forEach(type => {
+          Object.values(type).forEach(data => {
+            totalSize += data.size; // Accumulate the sizes of actual data
+          });
+        });
+      });
+
+      // Check if adding the new data exceeds 3MB
+      if (totalSize + newData.size > MAX_STORAGE_SIZE) {
+        // Sort and remove older data within the group and type
+        let dataEntries = Object.entries(typeData);
+        dataEntries.sort((a, b) => a[1].timestampSaved - b[1].timestampSaved);
+
+        // Remove old data until there's enough space
+        while (totalSize + newData.size > MAX_STORAGE_SIZE && dataEntries.length > 0) {
+          const removedEntry = dataEntries.shift();
+          totalSize -= removedEntry[1].size;
+          delete typeData[removedEntry[0]]; // Remove from the typeData
+        }
+      }
+
+      // Add or update the new data within the group and type
+      if (totalSize + newData.size <= MAX_STORAGE_SIZE) {
+        typeData[`${nameIdentifier}`] = newData; // Add new data under name-identifier
+        groupData[type] = typeData; // Update type data within the group
+        storedData[groupId] = groupData; // Update group data within the stored data
+
+        // Save the updated structure back to chrome.storage.local
+        chrome.storage.local.set({ [`${address}-publishData`]: storedData }, () => {
+          res(true); // Data successfully added
+        });
+      } else {
+        console.error('Failed to add data, still exceeds storage limit.');
+        res(false); // Failure due to storage limit
+      }
+    });
+  });
+}
+
+
 async function decryptWallet({ password, wallet, walletVersion }) {
   try {
     const response = await decryptStoredWallet(password, wallet);
@@ -2713,7 +2796,34 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
                   });
               }
       
+
               break;
+              case "addDataPublishes":
+              {
+                const { data, groupId, type } = request.payload;
+                addDataPublishes(data, groupId, type)
+                  .then((res) => {
+                    sendResponse(res);
+                  })
+                  .catch((error) => {
+                    sendResponse({ error: error.message });
+                    console.error(error.message);
+                  });
+              }
+              break;
+              case "getDataPublishes":
+                {
+                  const { groupId, type } = request.payload;
+                  getDataPublishes(groupId, type)
+                    .then((res) => {
+                      sendResponse(res);
+                    })
+                    .catch((error) => {
+                      sendResponse({ error: error.message });
+                      console.error(error.message);
+                    });
+                }
+                break;
               case "cancelBan":
               {
                 const { groupId, qortalAddress } = request.payload;
@@ -3704,8 +3814,8 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
           const address = wallet.address0;
           const key1 = `tempPublish-${address}`
           const key2 = `group-data-${address}`
-
-          chrome.storage.local.remove(["keyPair", "walletInfo", "apiKey", "active-groups-directs", key1, key2], () => {
+          const key3 = `${address}-publishData`
+          chrome.storage.local.remove(["keyPair", "walletInfo", "apiKey", "active-groups-directs", key1, key2, key3], () => {
             if (chrome.runtime.lastError) {
               // Handle error
               console.error(chrome.runtime.lastError.message);
