@@ -33,6 +33,7 @@ import RefreshIcon from "@mui/icons-material/Refresh";
 import AnnouncementsIcon from "@mui/icons-material/Notifications";
 import GroupIcon from "@mui/icons-material/Group";
 import PersonIcon from "@mui/icons-material/Person";
+
 import {
   AuthenticatedContainerInnerRight,
   CustomButton,
@@ -45,6 +46,7 @@ import MarkChatUnreadIcon from "@mui/icons-material/MarkChatUnread";
 import {
   MyContext,
   clearAllQueues,
+  getArbitraryEndpointReact,
   getBaseApiReact,
   isMobile,
   pauseAllQueues,
@@ -74,6 +76,7 @@ import { flushSync } from "react-dom";
 import { useMessageQueue } from "../../MessageQueueContext";
 import { DrawerComponent } from "../Drawer/Drawer";
 import { isExtMsg } from "../../background";
+import { ContextMenu } from "../ContextMenu";
 
 // let touchStartY = 0;
 // let disablePullToRefresh = false;
@@ -195,6 +198,7 @@ export const decryptResource = async (data: string) => {
         (response) => {
           if (!response?.error) {
             res(response);
+            return
           }
           rej(response.error);
         }
@@ -399,8 +403,11 @@ export const Group = ({
   const [groupAnnouncements, setGroupAnnouncements] = React.useState({});
   const [defaultThread, setDefaultThread] = React.useState(null);
   const [isOpenDrawer, setIsOpenDrawer] = React.useState(false);
-
+  const [hideCommonKeyPopup, setHideCommonKeyPopup] = React.useState(false)
+  const [isLoadingGroupMessage, setIsLoadingGroupMessage] = React.useState('')
   const [drawerMode, setDrawerMode] = React.useState("groups");
+  const [mutedGroups, setMutedGroups] = useState([])
+
   const isFocusedRef = useRef(true);
   const selectedGroupRef = useRef(null);
   const selectedDirectRef = useRef(null);
@@ -429,6 +436,37 @@ export const Group = ({
   useEffect(() => {
     selectedDirectRef.current = selectedDirect;
   }, [selectedDirect]);
+
+  const getUserSettings = async () => {
+    try {
+      return new Promise((res, rej) => {
+        chrome?.runtime?.sendMessage(
+          {
+            action: "getUserSettings",
+            payload: {
+                key: 'mutedGroups'
+            }
+          },
+          (response) => {
+            if (!response?.error) {
+               
+                setMutedGroups(response || []);
+              res(response);
+              return
+            }
+            rej(response.error);
+          }
+        );
+      });
+    } catch (error) {
+        console.log('error', error)
+    }
+  };
+
+  useEffect(()=> {
+  
+    getUserSettings()
+  }, [])
 
   const getTimestampEnterChat = async () => {
     try {
@@ -610,7 +648,7 @@ export const Group = ({
   const getPublishesFromAdmins = async (admins: string[]) => {
     // const validApi = await findUsableApi();
     const queryString = admins.map((name) => `name=${name}`).join("&");
-    const url = `${getBaseApiReact()}/arbitrary/resources/search?mode=ALL&service=DOCUMENT_PRIVATE&identifier=symmetric-qchat-group-${
+    const url = `${getBaseApiReact()}${getArbitraryEndpointReact()}?mode=ALL&service=DOCUMENT_PRIVATE&identifier=symmetric-qchat-group-${
       selectedGroup?.groupId
     }&exactmatchnames=true&limit=0&reverse=true&${queryString}&prefix=true`;
     const response = await fetch(url);
@@ -642,21 +680,22 @@ export const Group = ({
     secretKeyToPublish?: boolean
   ) => {
     try {
+      setIsLoadingGroupMessage('Locating encryption keys')
       // setGroupDataLastSet(null)
       pauseAllQueues();
       let dataFromStorage;
       let publishFromStorage;
       let adminsFromStorage;
-      const groupData = await getGroupDataSingle(selectedGroup?.groupId);
-      if (
-        groupData?.secretKeyData &&
-        Date.now() - groupData?.timestampLastSet < 3600000
-      ) {
-        dataFromStorage = groupData.secretKeyData;
-        publishFromStorage = groupData.secretKeyResource;
-        adminsFromStorage = groupData.admins;
-        // setGroupDataLastSet(groupData.timestampLastSet)
-      }
+      // const groupData = await getGroupDataSingle(selectedGroup?.groupId);
+      // if (
+      //   groupData?.secretKeyData &&
+      //   Date.now() - groupData?.timestampLastSet < 3600000
+      // ) {
+      //   dataFromStorage = groupData.secretKeyData;
+      //   publishFromStorage = groupData.secretKeyResource;
+      //   adminsFromStorage = groupData.admins;
+      //   // setGroupDataLastSet(groupData.timestampLastSet)
+      // }
 
       if (
         secretKeyToPublish &&
@@ -704,6 +743,7 @@ export const Group = ({
       if (dataFromStorage) {
         data = dataFromStorage;
       } else {
+        setIsLoadingGroupMessage('Downloading encryption keys')
         const res = await fetch(
           `${getBaseApiReact()}/arbitrary/DOCUMENT_PRIVATE/${publish.name}/${
             publish.identifier
@@ -748,6 +788,7 @@ export const Group = ({
       }
     } finally {
       setIsLoadingGroup(false);
+      setIsLoadingGroupMessage('')
       if (!secretKeyToPublish) {
         // await getAdmins(selectedGroup?.groupId);
       }
@@ -967,7 +1008,7 @@ export const Group = ({
       secretKey &&
       admins.includes(myAddress)
     ) {
-      console.log("goung through", admins);
+     
       // getAdmins(selectedGroup?.groupId);
       getMembers(selectedGroup?.groupId);
       initiatedGetMembers.current = true;
@@ -1156,6 +1197,41 @@ export const Group = ({
     };
   }, [directs, selectedDirect]);
 
+  const handleMarkAsRead = (e)=> {
+    const {groupId} = e.detail
+    chrome?.runtime?.sendMessage({
+      action: "addTimestampEnterChat",
+      payload: {
+        timestamp: Date.now(),
+        groupId,
+      },
+    });
+
+   
+
+    chrome?.runtime?.sendMessage({
+      action: "addGroupNotificationTimestamp",
+      payload: {
+        timestamp: Date.now(),
+        groupId,
+      },
+    });
+    setTimeout(() => {
+      getGroupAnnouncements();
+      getTimestampEnterChat();
+    }, 200);
+  }
+
+
+  useEffect(() => {
+    subscribeToEvent("markAsRead", handleMarkAsRead);
+
+    return () => {
+      unsubscribeFromEvent("markAsRead", handleMarkAsRead);
+    };
+  }, []);
+
+
   const resetAllStatesAndRefs = () => {
     // Reset all useState values to their initial states
     setSecretKey(null);
@@ -1173,6 +1249,7 @@ export const Group = ({
     setMembers([]);
     setGroupOwner(null);
     setTriedToFetchSecretKey(false);
+    setHideCommonKeyPopup(false)
     setOpenAddGroup(false);
     setIsInitialGroups(false);
     setOpenManageMembers(false);
@@ -1641,7 +1718,7 @@ export const Group = ({
                 onClick={() => {
                   clearAllQueues();
                   setSelectedDirect(null);
-
+                  setTriedToFetchSecretKey(false);
                   setNewChat(false);
                   setSelectedGroup(null);
                   setSecretKey(null);
@@ -1652,7 +1729,7 @@ export const Group = ({
                   setAdminsWithNames([]);
                   setMembers([]);
                   setMemberCountFromSecretKeyData(null);
-                  setTriedToFetchSecretKey(false);
+                  setHideCommonKeyPopup(false);
                   setFirstSecretKeyInCreation(false);
                   // setGroupSection("announcement");
                   setGroupSection("chat");
@@ -1701,6 +1778,7 @@ export const Group = ({
                     group?.groupId === selectedGroup?.groupId && "white",
                 }}
               >
+                <ContextMenu mutedGroups={mutedGroups} getUserSettings={getUserSettings} groupId={group.groupId}>
                 <Box
                   sx={{
                     display: "flex",
@@ -1764,6 +1842,7 @@ export const Group = ({
                       />
                     )}
                 </Box>
+                </ContextMenu>
               </ListItem>
             </List>
           ))}
@@ -2019,8 +2098,9 @@ export const Group = ({
                 {admins.includes(myAddress) &&
                   shouldReEncrypt &&
                   triedToFetchSecretKey &&
-                  !firstSecretKeyInCreation && (
+                  !firstSecretKeyInCreation && !hideCommonKeyPopup && (
                     <CreateCommonSecret
+                    setHideCommonKeyPopup={setHideCommonKeyPopup}
                       groupId={selectedGroup?.groupId}
                       secretKey={secretKey}
                       secretKeyDetails={secretKeyDetails}
@@ -2351,7 +2431,7 @@ export const Group = ({
         <LoadingSnackbar
           open={isLoadingGroup}
           info={{
-            message: "Setting up group... please wait.",
+            message: isLoadingGroupMessage || "Setting up group... please wait.",
           }}
         />
 

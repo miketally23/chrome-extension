@@ -53,7 +53,7 @@ import ArrowDownSVG from "../../../assets/svgs/ArrowDown.svg";
 import { LoadingSnackbar } from "../../Snackbar/LoadingSnackbar";
 import { executeEvent, subscribeToEvent, unsubscribeFromEvent } from "../../../utils/events";
 import RefreshIcon from '@mui/icons-material/Refresh';
-import { getBaseApiReact } from "../../../App";
+import { getArbitraryEndpointReact, getBaseApiReact } from "../../../App";
 import { WrapperUserAction } from "../../WrapperUserAction";
 import { addDataPublishesFunc, getDataPublishesFunc } from "../Group";
 const filterOptions = ["Recently active", "Newest", "Oldest"];
@@ -126,6 +126,7 @@ export const GroupMail = ({
     const res = await fetch(
       `${getBaseApiReact()}/arbitrary/DOCUMENT/${name}/${identifier}?encoding=base64`
     );
+    if(!res?.ok) return
      data = await res.text();
      await addDataPublishesFunc({...resource, data}, groupId, 'thread')
 
@@ -176,7 +177,7 @@ export const GroupMail = ({
         }
         const identifier = `grp-${groupId}-thread-`;
 
-        const url = `${getBaseApiReact()}/arbitrary/resources/search?mode=ALL&service=${threadIdentifier}&identifier=${identifier}&limit=${20}&includemetadata=false&offset=${offset}&reverse=${isReverse}&prefix=true`;
+        const url = `${getBaseApiReact()}${getArbitraryEndpointReact()}?mode=ALL&service=${threadIdentifier}&identifier=${identifier}&limit=${20}&includemetadata=false&offset=${offset}&reverse=${isReverse}&prefix=true`;
         const response = await fetch(url, {
           method: "GET",
           headers: {
@@ -263,7 +264,7 @@ export const GroupMail = ({
 
         // dispatch(setIsLoadingCustom("Loading recent threads"));
         const identifier = `thmsg-grp-${groupId}-thread-`;
-        const url = `${getBaseApiReact()}/arbitrary/resources/search?mode=ALL&service=${threadIdentifier}&identifier=${identifier}&limit=100&includemetadata=false&offset=${0}&reverse=true&prefix=true`;
+        const url = `${getBaseApiReact()}${getArbitraryEndpointReact()}?mode=ALL&service=${threadIdentifier}&identifier=${identifier}&limit=100&includemetadata=false&offset=${0}&reverse=true&prefix=true`;
         const response = await fetch(url, {
           method: "GET",
           headers: {
@@ -299,7 +300,7 @@ export const GroupMail = ({
         const getMessageForThreads = newArray.map(async (message: any) => {
           try {
             const identifierQuery = message.threadId;
-            const url = `${getBaseApiReact()}/arbitrary/resources/search?mode=ALL&service=${threadIdentifier}&identifier=${identifierQuery}&limit=1&includemetadata=false&offset=${0}&reverse=true&prefix=true`;
+            const url = `${getBaseApiReact()}${getArbitraryEndpointReact()}?mode=ALL&service=${threadIdentifier}&identifier=${identifierQuery}&limit=1&includemetadata=false&offset=${0}&reverse=true&prefix=true`;
             const response = await fetch(url, {
               method: "GET",
               headers: {

@@ -1,5 +1,6 @@
 // @ts-nocheck
 // import { encryptAndPublishSymmetricKeyGroupChat } from "./backgroundFunctions/encryption";
+import { constant, isArray } from "lodash";
 import {
   decryptGroupEncryption,
   encryptAndPublishSymmetricKeyGroupChat,
@@ -25,18 +26,18 @@ import { RequestQueueWithPromise } from "./utils/queue/queue";
 import { validateAddress } from "./utils/validateAddress";
 import { Sha256 } from "asmcrypto.js";
 
-let lastGroupNotification
-export const groupApi = "https://ext-node.qortal.link"
-export const groupApiSocket = "wss://ext-node.qortal.link"
-export const groupApiLocal = "http://127.0.0.1:12391"
-export const groupApiSocketLocal = "ws://127.0.0.1:12391"
-const timeDifferenceForNotificationChatsBackground = 600000
-const requestQueueAnnouncements = new RequestQueueWithPromise(1)
-let isMobile = false
+let lastGroupNotification;
+export const groupApi = "https://ext-node.qortal.link";
+export const groupApiSocket = "wss://ext-node.qortal.link";
+export const groupApiLocal = "http://127.0.0.1:12391";
+export const groupApiSocketLocal = "ws://127.0.0.1:12391";
+const timeDifferenceForNotificationChatsBackground = 600000;
+const requestQueueAnnouncements = new RequestQueueWithPromise(1);
+let isMobile = false;
 
 const isMobileDevice = () => {
   const userAgent = navigator.userAgent || navigator.vendor || window.opera;
-  
+
   if (/android/i.test(userAgent)) {
     return true; // Android device
   }
@@ -49,20 +50,20 @@ const isMobileDevice = () => {
 };
 
 if (isMobileDevice()) {
-  isMobile = true
+  isMobile = true;
   console.log("Running on a mobile device");
 } else {
   console.log("Running on a desktop");
 }
 const allQueues = {
   requestQueueAnnouncements: requestQueueAnnouncements,
-}
+};
 
 const controlAllQueues = (action) => {
   Object.keys(allQueues).forEach((key) => {
     const val = allQueues[key];
     try {
-      if (typeof val[action] === 'function') {
+      if (typeof val[action] === "function") {
         val[action]();
       }
     } catch (error) {
@@ -80,16 +81,18 @@ export const clearAllQueues = () => {
       console.error(error);
     }
   });
-}
+};
 
- const pauseAllQueues = () => controlAllQueues('pause');
- const resumeAllQueues = () => controlAllQueues('resume');
-const checkDifference = (createdTimestamp)=> {
-  return (Date.now() - createdTimestamp) < timeDifferenceForNotificationChatsBackground
-}
+const pauseAllQueues = () => controlAllQueues("pause");
+const resumeAllQueues = () => controlAllQueues("resume");
+const checkDifference = (createdTimestamp) => {
+  return (
+    Date.now() - createdTimestamp < timeDifferenceForNotificationChatsBackground
+  );
+};
 const getApiKeyFromStorage = async () => {
   return new Promise((resolve, reject) => {
-    chrome.storage.local.get('apiKey', (result) => {
+    chrome.storage.local.get("apiKey", (result) => {
       if (chrome.runtime.lastError) {
         return reject(chrome.runtime.lastError);
       }
@@ -98,9 +101,24 @@ const getApiKeyFromStorage = async () => {
   });
 };
 
+// const getArbitraryEndpoint = ()=> {
+//   const apiKey = await getApiKeyFromStorage(); // Retrieve apiKey asynchronously
+//   if (apiKey) {
+//     return `/arbitrary/resources/search`;
+//   } else {
+//     return `/arbitrary/resources/searchsimple`;
+//   }
+// }
+const getArbitraryEndpoint = async () => {
+  const apiKey = await getApiKeyFromStorage(); // Retrieve apiKey asynchronously
+  if (apiKey) {
+    return `/arbitrary/resources/searchsimple`;
+  } else {
+    return `/arbitrary/resources/searchsimple`;
+  }
+};
+
 export const getBaseApi = async (customApi?: string) => {
-
-
   if (customApi) {
     return customApi;
   }
@@ -115,7 +133,7 @@ export const getBaseApi = async (customApi?: string) => {
 
 export const createEndpointSocket = async (endpoint) => {
   const apiKey = await getApiKeyFromStorage(); // Retrieve apiKey asynchronously
-  
+
   if (apiKey) {
     return `${groupApiSocketLocal}${endpoint}`;
   } else {
@@ -132,13 +150,12 @@ export const createEndpoint = async (endpoint, customApi) => {
 
   if (apiKey) {
     // Check if the endpoint already contains a query string
-    const separator = endpoint.includes('?') ? '&' : '?';
+    const separator = endpoint.includes("?") ? "&" : "?";
     return `${groupApiLocal}${endpoint}${separator}apiKey=${apiKey}`;
   } else {
     return `${groupApi}${endpoint}`;
   }
 };
-
 
 export const walletVersion = 2;
 // List of your API endpoints
@@ -157,14 +174,14 @@ const buyTradeNodeBaseUrl = "https://appnode.qortal.org";
 const proxyAccountAddress = "QXPejUe5Za1KD3zCMViWCX35AreMQ9H7ku";
 const proxyAccountPublicKey = "5hP6stDWybojoDw5t8z9D51nV945oMPX7qBd29rhX1G7";
 const pendingResponses = new Map();
-let groups = null
+let groups = null;
 
-let socket
+let socket;
 let timeoutId;
 let groupSocketTimeout;
 let socketTimeout: any;
-let interval
-let intervalThreads
+let interval;
+let intervalThreads;
 // Function to check each API endpoint
 export async function findUsableApi() {
   for (const endpoint of apiEndpoints) {
@@ -187,25 +204,24 @@ export async function findUsableApi() {
   throw new Error("No usable API found");
 }
 
-export function isExtMsg(data){
-  let isMsgFromExtensionGroup = true
+export function isExtMsg(data) {
+  let isMsgFromExtensionGroup = true;
   try {
-    const decode1 = atob(data)
-    const decode2 = atob(decode1)
+    const decode1 = atob(data);
+    const decode2 = atob(decode1);
     const keyStr = decode2.slice(0, 10);
-	
+
     // Convert the key string back to a number
     const highestKey = parseInt(keyStr, 10);
-    if(isNaN(highestKey)){
-      isMsgFromExtensionGroup = false
+    if (isNaN(highestKey)) {
+      isMsgFromExtensionGroup = false;
     }
   } catch (error) {
-    isMsgFromExtensionGroup = false
+    isMsgFromExtensionGroup = false;
   }
 
-  return isMsgFromExtensionGroup
+  return isMsgFromExtensionGroup;
 }
-
 
 async function checkWebviewFocus() {
   return new Promise((resolve) => {
@@ -215,7 +231,7 @@ async function checkWebviewFocus() {
     }, 1000);
 
     // Send message to the content script to check focus
-    chrome.runtime.sendMessage({ action: 'CHECK_FOCUS' }, (response) => {
+    chrome.runtime.sendMessage({ action: "CHECK_FOCUS" }, (response) => {
       clearTimeout(timeout); // Clear the timeout if we get a response
 
       if (chrome.runtime.lastError) {
@@ -228,185 +244,212 @@ async function checkWebviewFocus() {
 }
 
 function playNotificationSound() {
-  chrome.runtime.sendMessage({ action: 'PLAY_NOTIFICATION_SOUND' });
+  chrome.runtime.sendMessage({ action: "PLAY_NOTIFICATION_SOUND" });
 }
 
-const handleNotificationDirect = async (directs)=> {
-  let isFocused
+const handleNotificationDirect = async (directs) => {
+  let isFocused;
   const wallet = await getSaveWallet();
   const address = wallet.address0;
-  const dataDirects = directs.filter((direct)=> direct?.sender !== address)
+  const dataDirects = directs.filter((direct) => direct?.sender !== address);
   try {
-    if(!dataDirects || dataDirects?.length === 0) return
-    isFocused = await checkWebviewFocus()
-   
-    if(isFocused){
-      throw new Error('isFocused')
+    if (!dataDirects || dataDirects?.length === 0) return;
+    isFocused = await checkWebviewFocus();
+
+    if (isFocused) {
+      throw new Error("isFocused");
     }
-    const newActiveChats= dataDirects
-    const oldActiveChats =  await getChatHeadsDirect()
+    const newActiveChats = dataDirects;
+    const oldActiveChats = await getChatHeadsDirect();
 
-if(newActiveChats?.length === 0) return
+    if (newActiveChats?.length === 0) return;
 
-let newestLatestTimestamp
-let oldestLatestTimestamp
-// Find the latest timestamp from newActiveChats
-newActiveChats?.forEach(newChat => {
-if (!newestLatestTimestamp || newChat?.timestamp > newestLatestTimestamp?.timestamp) {
-    newestLatestTimestamp = newChat;
-}
-});
+    let newestLatestTimestamp;
+    let oldestLatestTimestamp;
+    // Find the latest timestamp from newActiveChats
+    newActiveChats?.forEach((newChat) => {
+      if (
+        !newestLatestTimestamp ||
+        newChat?.timestamp > newestLatestTimestamp?.timestamp
+      ) {
+        newestLatestTimestamp = newChat;
+      }
+    });
 
-// Find the latest timestamp from oldActiveChats
-oldActiveChats?.forEach(oldChat => {
-if (!oldestLatestTimestamp || oldChat?.timestamp > oldestLatestTimestamp?.timestamp) {
-    oldestLatestTimestamp = oldChat;
-}
-});
+    // Find the latest timestamp from oldActiveChats
+    oldActiveChats?.forEach((oldChat) => {
+      if (
+        !oldestLatestTimestamp ||
+        oldChat?.timestamp > oldestLatestTimestamp?.timestamp
+      ) {
+        oldestLatestTimestamp = oldChat;
+      }
+    });
 
-  
-  if(checkDifference(newestLatestTimestamp.timestamp) && !oldestLatestTimestamp ||  (newestLatestTimestamp && newestLatestTimestamp?.timestamp > oldestLatestTimestamp?.timestamp)){
-        const notificationId = 'chat_notification_' + Date.now() + '_type=direct' + `_from=${newestLatestTimestamp.address}`;
-        chrome.notifications.create(notificationId, {
-          type: 'basic',
-          iconUrl: 'qort.png', // Add an appropriate icon for chat notifications
-          title: `New Direct message! ${newestLatestTimestamp?.name && `from ${newestLatestTimestamp.name}`}`,
-          message: 'You have received a new direct message',
-          priority: 2, // Use the maximum priority to ensure it's noticeable
-          // buttons: [
-          //   { title: 'Go to group' }
-          // ]
-        });
-        if(!isMobile){
-          setTimeout(() => {
-            chrome.notifications.clear(notificationId);
-          }, 7000);
-        }
-      
-        // chrome.runtime.sendMessage(
-        //   {
-        //     action: "notification",
-        //     payload: {
-        //     },
-        //   }
-        // )
-        // audio.play();
-        playNotificationSound()
-    
-
-      
-    }
-
-  } catch (error) {
-   
-    if(!isFocused){
-      chrome.runtime.sendMessage(
-        {
-          action: "notification",
-          payload: {
-          },
-        },
-        (response) => {
-        
-          if (!response?.error) {
-         
-          }
-     
-        }
-      );
-      const notificationId = 'chat_notification_' + Date.now() 
+    if (
+      (checkDifference(newestLatestTimestamp.timestamp) &&
+        !oldestLatestTimestamp) ||
+      (newestLatestTimestamp &&
+        newestLatestTimestamp?.timestamp > oldestLatestTimestamp?.timestamp)
+    ) {
+      const notificationId =
+        "chat_notification_" +
+        Date.now() +
+        "_type=direct" +
+        `_from=${newestLatestTimestamp.address}`;
       chrome.notifications.create(notificationId, {
-        type: 'basic',
-        iconUrl: 'qort.png', // Add an appropriate icon for chat notifications
-        title: `New Direct message!`,
-        message: 'You have received a new direct message',
+        type: "basic",
+        iconUrl: "qort.png", // Add an appropriate icon for chat notifications
+        title: `New Direct message! ${
+          newestLatestTimestamp?.name && `from ${newestLatestTimestamp.name}`
+        }`,
+        message: "You have received a new direct message",
         priority: 2, // Use the maximum priority to ensure it's noticeable
         // buttons: [
         //   { title: 'Go to group' }
         // ]
       });
-      if(!isMobile){
-      setTimeout(() => {
-        chrome.notifications.clear(notificationId);
-      }, 7000);
-    }
-      playNotificationSound()
-      // audio.play();
-    // }
-    }
-    
-  } finally {
-    setChatHeadsDirect(dataDirects)
+      if (!isMobile) {
+        setTimeout(() => {
+          chrome.notifications.clear(notificationId);
+        }, 7000);
+      }
+
       // chrome.runtime.sendMessage(
       //   {
-      //     action: "setChatHeads",
+      //     action: "notification",
       //     payload: {
-      //       data,
       //     },
       //   }
-      // );
-  
+      // )
+      // audio.play();
+      playNotificationSound();
+    }
+  } catch (error) {
+    if (!isFocused) {
+      chrome.runtime.sendMessage(
+        {
+          action: "notification",
+          payload: {},
+        },
+        (response) => {
+          if (!response?.error) {
+          }
+        }
+      );
+      const notificationId = "chat_notification_" + Date.now();
+      chrome.notifications.create(notificationId, {
+        type: "basic",
+        iconUrl: "qort.png", // Add an appropriate icon for chat notifications
+        title: `New Direct message!`,
+        message: "You have received a new direct message",
+        priority: 2, // Use the maximum priority to ensure it's noticeable
+        // buttons: [
+        //   { title: 'Go to group' }
+        // ]
+      });
+      if (!isMobile) {
+        setTimeout(() => {
+          chrome.notifications.clear(notificationId);
+        }, 7000);
+      }
+      playNotificationSound();
+      // audio.play();
+      // }
+    }
+  } finally {
+    setChatHeadsDirect(dataDirects);
+    // chrome.runtime.sendMessage(
+    //   {
+    //     action: "setChatHeads",
+    //     payload: {
+    //       data,
+    //     },
+    //   }
+    // );
   }
-}
-async function getThreadActivity(){
+};
+async function getThreadActivity() {
   const wallet = await getSaveWallet();
   const address = wallet.address0;
-  const key = `threadactivity-${address}`
+  const key = `threadactivity-${address}`;
   const res = await chrome.storage.local.get([key]);
-if (res?.[key]) {
-  const parsedData = JSON.parse(res[key])
-  return parsedData;
-} else {
-  return null
-}
+  if (res?.[key]) {
+    const parsedData = JSON.parse(res[key]);
+    return parsedData;
+  } else {
+    return null;
+  }
 }
 
-async function updateThreadActivity({threadId, qortalName, groupId, thread}) {
+async function updateThreadActivity({ threadId, qortalName, groupId, thread }) {
   const wallet = await getSaveWallet();
   const address = wallet.address0;
   const ONE_WEEK_IN_MS = 7 * 24 * 60 * 60 * 1000; // One week in milliseconds
-  let lastResetTime = 0
+  let lastResetTime = 0;
   // Retrieve the last reset timestamp from storage
-  const key = `threadactivity-${address}`
+  const key = `threadactivity-${address}`;
 
   chrome.storage.local.get([key], (data) => {
-    let threads
-    
+    let threads;
+
     if (!data[key] || Object.keys(data?.[key]?.length === 0)) {
-      threads = { createdThreads: [], mostVisitedThreads: [], recentThreads: [] };
+      threads = {
+        createdThreads: [],
+        mostVisitedThreads: [],
+        recentThreads: [],
+      };
     } else {
-      threads = JSON.parse(data[key])
+      threads = JSON.parse(data[key]);
     }
-    if(threads?.lastResetTime){
-      lastResetTime = threads.lastResetTime
+    if (threads?.lastResetTime) {
+      lastResetTime = threads.lastResetTime;
     }
-    
+
     const currentTime = Date.now();
-    
+
     // Check if a week has passed since the last reset
     if (!lastResetTime || currentTime - lastResetTime > ONE_WEEK_IN_MS) {
       // Reset the visit counts for all most visited threads
-      threads.mostVisitedThreads.forEach(thread => thread.visitCount = 0);
+      threads.mostVisitedThreads.forEach((thread) => (thread.visitCount = 0));
       lastResetTime = currentTime; // Update the last reset time
-      threads.lastResetTime = lastResetTime
+      threads.lastResetTime = lastResetTime;
     }
 
     // Update the recent threads list
-    threads.recentThreads = threads.recentThreads.filter(t => t.threadId !== threadId);
-    threads.recentThreads.unshift({ threadId, qortalName, groupId, thread, visitCount: 1, lastVisited: Date.now() });
-    
+    threads.recentThreads = threads.recentThreads.filter(
+      (t) => t.threadId !== threadId
+    );
+    threads.recentThreads.unshift({
+      threadId,
+      qortalName,
+      groupId,
+      thread,
+      visitCount: 1,
+      lastVisited: Date.now(),
+    });
+
     // Sort the recent threads by lastVisited time (descending)
     threads.recentThreads.sort((a, b) => b.lastVisited - a.lastVisited);
     // Limit the recent threads list to 2 items
     threads.recentThreads = threads.recentThreads.slice(0, 2);
 
     // Update the most visited threads list
-    const existingThread = threads.mostVisitedThreads.find(t => t.threadId === threadId);
+    const existingThread = threads.mostVisitedThreads.find(
+      (t) => t.threadId === threadId
+    );
     if (existingThread) {
       existingThread.visitCount += 1;
       existingThread.lastVisited = Date.now(); // Update the last visited time as well
     } else {
-      threads.mostVisitedThreads.push({ threadId, qortalName, groupId, thread, visitCount: 1, lastVisited: Date.now() });
+      threads.mostVisitedThreads.push({
+        threadId,
+        qortalName,
+        groupId,
+        thread,
+        visitCount: 1,
+        lastVisited: Date.now(),
+      });
     }
 
     // Sort the most visited threads by visitCount (descending)
@@ -416,68 +459,90 @@ async function updateThreadActivity({threadId, qortalName, groupId, thread}) {
 
     // Store the updated thread information and last reset time
     // chrome.storage.local.set({ threads, lastResetTime });
-   
+
     const dataString = JSON.stringify(threads);
-    chrome.storage.local.set({ [`threadactivity-${address}`]: dataString })
+    chrome.storage.local.set({ [`threadactivity-${address}`]: dataString });
   });
 }
 
-
-const handleNotification = async (groups)=> {
+const handleNotification = async (groups) => {
   const wallet = await getSaveWallet();
   const address = wallet.address0;
-  let isFocused
-  const data = groups.filter((group)=> group?.sender !== address)
+  let mutedGroups = await getUserSettings({key: 'mutedGroups'}) || []
+  if(!isArray(mutedGroups)) mutedGroups = []
+
+  let isFocused;
+  const data = groups.filter((group) => group?.sender !== address && !mutedGroups.includes(group.groupId));
   try {
-   if(!data || data?.length === 0) return
-    isFocused = await checkWebviewFocus()
-    
-    if(isFocused){
-      throw new Error('isFocused')
+    if (!data || data?.length === 0) return;
+    isFocused = await checkWebviewFocus();
+
+    if (isFocused) {
+      throw new Error("isFocused");
     }
-    const newActiveChats= data
-    const oldActiveChats =  await getChatHeads()
+    const newActiveChats = data;
+    const oldActiveChats = await getChatHeads();
 
+    let results = [];
+    let newestLatestTimestamp;
+    let oldestLatestTimestamp;
+    // Find the latest timestamp from newActiveChats
+    newActiveChats?.forEach((newChat) => {
+      if (
+        !newestLatestTimestamp ||
+        newChat?.timestamp > newestLatestTimestamp?.timestamp
+      ) {
+        newestLatestTimestamp = newChat;
+      }
+    });
 
-  let results = []
-  let newestLatestTimestamp
-  let oldestLatestTimestamp
- // Find the latest timestamp from newActiveChats
- newActiveChats?.forEach(newChat => {
-  if (!newestLatestTimestamp || newChat?.timestamp > newestLatestTimestamp?.timestamp) {
-      newestLatestTimestamp = newChat;
-  }
-  });
-  
-  // Find the latest timestamp from oldActiveChats
-  oldActiveChats?.forEach(oldChat => {
-  if (!oldestLatestTimestamp || oldChat?.timestamp > oldestLatestTimestamp?.timestamp) {
-      oldestLatestTimestamp = oldChat;
-  }
-  });
-  
-    
-    if(checkDifference(newestLatestTimestamp.timestamp) && !oldestLatestTimestamp ||  (newestLatestTimestamp && newestLatestTimestamp?.timestamp > oldestLatestTimestamp?.timestamp)){
-      if (!lastGroupNotification || ((Date.now() - lastGroupNotification) >= 120000)) {
-        if(!newestLatestTimestamp?.data || !isExtMsg(newestLatestTimestamp?.data)) return
-       
-        const notificationId = 'chat_notification_' + Date.now() + '_type=group' + `_from=${newestLatestTimestamp.groupId}`;
-   
+    // Find the latest timestamp from oldActiveChats
+    oldActiveChats?.forEach((oldChat) => {
+      if (
+        !oldestLatestTimestamp ||
+        oldChat?.timestamp > oldestLatestTimestamp?.timestamp
+      ) {
+        oldestLatestTimestamp = oldChat;
+      }
+    });
+
+    if (
+      (checkDifference(newestLatestTimestamp.timestamp) &&
+        !oldestLatestTimestamp) ||
+      (newestLatestTimestamp &&
+        newestLatestTimestamp?.timestamp > oldestLatestTimestamp?.timestamp)
+    ) {
+      if (
+        !lastGroupNotification ||
+        Date.now() - lastGroupNotification >= 120000
+      ) {
+        if (
+          !newestLatestTimestamp?.data ||
+          !isExtMsg(newestLatestTimestamp?.data)
+        )
+          return;
+
+        const notificationId =
+          "chat_notification_" +
+          Date.now() +
+          "_type=group" +
+          `_from=${newestLatestTimestamp.groupId}`;
+
         chrome.notifications.create(notificationId, {
-          type: 'basic',
-          iconUrl: 'qort.png', // Add an appropriate icon for chat notifications
-          title: 'New Group Message!',
+          type: "basic",
+          iconUrl: "qort.png", // Add an appropriate icon for chat notifications
+          title: "New Group Message!",
           message: `You have received a new message from ${newestLatestTimestamp?.groupName}`,
           priority: 2, // Use the maximum priority to ensure it's noticeable
           // buttons: [
           //   { title: 'Go to group' }
           // ]
         });
-        if(!isMobile){
-        setTimeout(() => {
-          chrome.notifications.clear(notificationId);
-        }, 7000);
-      }
+        if (!isMobile) {
+          setTimeout(() => {
+            chrome.notifications.clear(notificationId);
+          }, 7000);
+        }
         // chrome.runtime.sendMessage(
         //   {
         //     action: "notification",
@@ -486,177 +551,173 @@ const handleNotification = async (groups)=> {
         //   }
         // )
         // audio.play();
-        playNotificationSound()
-        lastGroupNotification = Date.now()
-
+        playNotificationSound();
+        lastGroupNotification = Date.now();
       }
     }
-
   } catch (error) {
-   
-    if(!isFocused){
+    if (!isFocused) {
       chrome.runtime.sendMessage(
         {
           action: "notification",
-          payload: {
-          },
+          payload: {},
         },
         (response) => {
-        
           if (!response?.error) {
-         
           }
-     
         }
       );
-      const notificationId = 'chat_notification_' + Date.now();
+      const notificationId = "chat_notification_" + Date.now();
       chrome.notifications.create(notificationId, {
-        type: 'basic',
-        iconUrl: 'qort.png', // Add an appropriate icon for chat notifications
-        title: 'New Group Message!',
-        message: 'You have received a new message from one of your groups',
+        type: "basic",
+        iconUrl: "qort.png", // Add an appropriate icon for chat notifications
+        title: "New Group Message!",
+        message: "You have received a new message from one of your groups",
         priority: 2, // Use the maximum priority to ensure it's noticeable
         // buttons: [
         //   { title: 'Go to group' }
         // ]
       });
-      if(!isMobile){
-      setTimeout(() => {
-        chrome.notifications.clear(notificationId);
-      }, 7000);
-    }
-      playNotificationSound()
+      if (!isMobile) {
+        setTimeout(() => {
+          chrome.notifications.clear(notificationId);
+        }, 7000);
+      }
+      playNotificationSound();
       // audio.play();
-      lastGroupNotification = Date.now()
-    // }
+      lastGroupNotification = Date.now();
+      // }
     }
-    
   } finally {
-    if(!data || data?.length === 0) return
-    setChatHeads(data)
-      // chrome.runtime.sendMessage(
-      //   {
-      //     action: "setChatHeads",
-      //     payload: {
-      //       data,
-      //     },
-      //   }
-      // );
-  
+    if (!data || data?.length === 0) return;
+    setChatHeads(data);
+    // chrome.runtime.sendMessage(
+    //   {
+    //     action: "setChatHeads",
+    //     payload: {
+    //       data,
+    //     },
+    //   }
+    // );
   }
-}
+};
 
 const checkThreads = async (bringBack) => {
   try {
-   
-    let myName = ""
-      const userData = await getUserInfo()
-      if(userData?.name){
-        myName = userData.name
-      }
-    let newAnnouncements = []
-    let dataToBringBack = []
-    const threadActivity = await getThreadActivity()
-    if(!threadActivity) return null
-    
+    let myName = "";
+    const userData = await getUserInfo();
+    if (userData?.name) {
+      myName = userData.name;
+    }
+    let newAnnouncements = [];
+    let dataToBringBack = [];
+    const threadActivity = await getThreadActivity();
+    if (!threadActivity) return null;
+
     const selectedThreads = [
       ...threadActivity.createdThreads.slice(0, 2),
       ...threadActivity.mostVisitedThreads.slice(0, 2),
       ...threadActivity.recentThreads.slice(0, 2),
-    ]
+    ];
 
-    if(selectedThreads?.length === 0) return null
-    const tempData = {
-
-    }
-    for (const thread of selectedThreads){
+    if (selectedThreads?.length === 0) return null;
+    const tempData = {};
+    for (const thread of selectedThreads) {
       try {
-        const identifier = `thmsg-${thread?.threadId}`
-        const name = thread?.qortalName
-        const url = await createEndpoint(`/arbitrary/resources/search?mode=ALL&service=DOCUMENT&identifier=${identifier}&limit=1&includemetadata=false&offset=${0}&reverse=true&prefix=true`);
+        const identifier = `thmsg-${thread?.threadId}`;
+        const name = thread?.qortalName;
+        const endpoint = await getArbitraryEndpoint();
+        const url = await createEndpoint(
+          `${endpoint}?mode=ALL&service=DOCUMENT&identifier=${identifier}&limit=1&includemetadata=false&offset=${0}&reverse=true&prefix=true`
+        );
         const response = await fetch(url, {
-          method: 'GET',
+          method: "GET",
           headers: {
-            'Content-Type': 'application/json'
-          }
-        })
-        const responseData = await response.json()
-       
-        const latestMessage = responseData.filter((pub)=> pub?.name !== myName)[0]
+            "Content-Type": "application/json",
+          },
+        });
+        const responseData = await response.json();
+
+        const latestMessage = responseData.filter(
+          (pub) => pub?.name !== myName
+        )[0];
         // const latestMessage = responseData[0]
 
         if (!latestMessage) {
-          continue
+          continue;
         }
-        
-        if(checkDifference(latestMessage.created) && latestMessage.created > thread?.lastVisited && (!thread?.lastNotified || thread?.lastNotified < thread?.created)){
-          tempData[thread.threadId] = latestMessage.created
-          newAnnouncements.push(thread)
-       
+
+        if (
+          checkDifference(latestMessage.created) &&
+          latestMessage.created > thread?.lastVisited &&
+          (!thread?.lastNotified || thread?.lastNotified < thread?.created)
+        ) {
+          tempData[thread.threadId] = latestMessage.created;
+          newAnnouncements.push(thread);
         }
-        if(latestMessage.created > thread?.lastVisited){
-          dataToBringBack.push(thread)
-       
+        if (latestMessage.created > thread?.lastVisited) {
+          dataToBringBack.push(thread);
         }
       } catch (error) {
-        conosle.log({error})
+        conosle.log({ error });
       }
     }
-    
 
-    if(bringBack){
-
-      return dataToBringBack
+    if (bringBack) {
+      return dataToBringBack;
     }
 
     const updateThreadWithLastNotified = {
       ...threadActivity,
-      createdThreads: (threadActivity?.createdThreads || [])?.map((item)=> {
-        if(tempData[item.threadId]){
+      createdThreads: (threadActivity?.createdThreads || [])?.map((item) => {
+        if (tempData[item.threadId]) {
           return {
             ...item,
-            lastNotified: tempData[item.threadId]
-          }
+            lastNotified: tempData[item.threadId],
+          };
         } else {
-          return item
+          return item;
         }
-        
       }),
-      mostVisitedThreads: (threadActivity?.mostVisitedThreads || [])?.map((item)=> {
-        if(tempData[item.threadId]){
+      mostVisitedThreads: (threadActivity?.mostVisitedThreads || [])?.map(
+        (item) => {
+          if (tempData[item.threadId]) {
+            return {
+              ...item,
+              lastNotified: tempData[item.threadId],
+            };
+          } else {
+            return item;
+          }
+        }
+      ),
+      recentThreads: (threadActivity?.recentThreads || [])?.map((item) => {
+        if (tempData[item.threadId]) {
           return {
             ...item,
-            lastNotified: tempData[item.threadId]
-          }
+            lastNotified: tempData[item.threadId],
+          };
         } else {
-          return item
+          return item;
         }
       }),
-      recentThreads: (threadActivity?.recentThreads || [])?.map((item)=> {
-        if(tempData[item.threadId]){
-          return {
-            ...item,
-            lastNotified: tempData[item.threadId]
-          }
-        } else {
-          return item
-        }
-      }),
-    }
-   
-    const wallet = await getSaveWallet();
-  const address = wallet.address0;
-    const dataString = JSON.stringify(updateThreadWithLastNotified);
-    chrome.storage.local.set({ [`threadactivity-${address}`]: dataString })
-    
+    };
 
-   
-   if(newAnnouncements.length > 0){
-    const notificationId = 'chat_notification_' + Date.now() + '_type=thread-post' + `_data=${JSON.stringify(newAnnouncements[0])}`;
+    const wallet = await getSaveWallet();
+    const address = wallet.address0;
+    const dataString = JSON.stringify(updateThreadWithLastNotified);
+    chrome.storage.local.set({ [`threadactivity-${address}`]: dataString });
+
+    if (newAnnouncements.length > 0) {
+      const notificationId =
+        "chat_notification_" +
+        Date.now() +
+        "_type=thread-post" +
+        `_data=${JSON.stringify(newAnnouncements[0])}`;
 
       chrome.notifications.create(notificationId, {
-        type: 'basic',
-        iconUrl: 'qort.png', // Add an appropriate icon for chat notifications
+        type: "basic",
+        iconUrl: "qort.png", // Add an appropriate icon for chat notifications
         title: `New thread post!`,
         message: `New post in ${newAnnouncements[0]?.thread?.threadData?.title}`,
         priority: 2, // Use the maximum priority to ensure it's noticeable
@@ -664,160 +725,171 @@ const checkThreads = async (bringBack) => {
         //   { title: 'Go to group' }
         // ]
       });
-      if(!isMobile){
-      setTimeout(() => {
-        chrome.notifications.clear(notificationId);
-      }, 7000);
+      if (!isMobile) {
+        setTimeout(() => {
+          chrome.notifications.clear(notificationId);
+        }, 7000);
+      }
+      playNotificationSound();
     }
-      playNotificationSound()
-   }
-   const savedtimestampAfter = await getTimestampGroupAnnouncement()
-   chrome.runtime.sendMessage({
-    action: "SET_GROUP_ANNOUNCEMENTS",
-    payload: savedtimestampAfter,
-  });
+    const savedtimestampAfter = await getTimestampGroupAnnouncement();
+    chrome.runtime.sendMessage({
+      action: "SET_GROUP_ANNOUNCEMENTS",
+      payload: savedtimestampAfter,
+    });
   } catch (error) {
-   
   } finally {
   }
-}
-const checkNewMessages = 
-  async () => {
-    try {
-      let myName = ""
-      const userData = await getUserInfo()
-      if(userData?.name){
-        myName = userData.name
-      }
- 
-      let newAnnouncements = []
-      const activeData = await getStoredData('active-groups-directs') || { groups: [], directs: [] };
-      const groups = activeData?.groups
-      if(!groups || groups?.length === 0) return
-      const savedtimestamp = await getTimestampGroupAnnouncement()
+};
+const checkNewMessages = async () => {
+  try {
+    let mutedGroups = await getUserSettings({key: 'mutedGroups'}) || []
+    if(!isArray(mutedGroups)) mutedGroups = []
+    let myName = "";
+    const userData = await getUserInfo();
+    if (userData?.name) {
+      myName = userData.name;
+    }
 
-      await Promise.all(groups.map(async (group) => {
+    let newAnnouncements = [];
+    const activeData = (await getStoredData("active-groups-directs")) || {
+      groups: [],
+      directs: [],
+    };
+    const groups = activeData?.groups;
+    if (!groups || groups?.length === 0) return;
+    const savedtimestamp = await getTimestampGroupAnnouncement();
+
+    await Promise.all(
+      groups.map(async (group) => {
         try {
           const identifier = `grp-${group.groupId}-anc-`;
-          const url =  await createEndpoint(`/arbitrary/resources/search?mode=ALL&service=DOCUMENT&identifier=${identifier}&limit=1&includemetadata=false&offset=0&reverse=true&prefix=true`);
-          const response = await requestQueueAnnouncements.enqueue(()=> {
-           return  fetch(url, {
-              method: 'GET',
+          const endpoint = await getArbitraryEndpoint();
+          const url = await createEndpoint(
+            `${endpoint}?mode=ALL&service=DOCUMENT&identifier=${identifier}&limit=1&includemetadata=false&offset=0&reverse=true&prefix=true`
+          );
+          const response = await requestQueueAnnouncements.enqueue(() => {
+            return fetch(url, {
+              method: "GET",
               headers: {
-                'Content-Type': 'application/json'
-              }
+                "Content-Type": "application/json",
+              },
             });
-          }) 
+          });
           const responseData = await response.json();
-          
-          const latestMessage = responseData.filter((pub) => pub?.name !== myName)[0];
+
+          const latestMessage = responseData.filter(
+            (pub) => pub?.name !== myName
+          )[0];
           if (!latestMessage) {
             return; // continue to the next group
           }
-      
-          if (checkDifference(latestMessage.created) && (!savedtimestamp[group.groupId] || latestMessage.created > savedtimestamp?.[group.groupId]?.notification)) {
+
+          if (
+            checkDifference(latestMessage.created) &&
+            (!savedtimestamp[group.groupId] ||
+              latestMessage.created >
+                savedtimestamp?.[group.groupId]?.notification)
+          ) {
             newAnnouncements.push(group);
-            await addTimestampGroupAnnouncement({ groupId: group.groupId, timestamp: Date.now() });
+            await addTimestampGroupAnnouncement({
+              groupId: group.groupId,
+              timestamp: Date.now(),
+            });
             // save new timestamp
           }
         } catch (error) {
           console.error(error); // Handle error if needed
         }
-      }));
-     if(newAnnouncements.length > 0){
-      const notificationId = 'chat_notification_' + Date.now() + '_type=group-announcement' + `_from=${newAnnouncements[0]?.groupId}`;
+      })
+    );
+    if (newAnnouncements.length > 0 && !mutedGroups.includes(newAnnouncements[0]?.groupId)) {
+      const notificationId =
+        "chat_notification_" +
+        Date.now() +
+        "_type=group-announcement" +
+        `_from=${newAnnouncements[0]?.groupId}`;
 
-        chrome.notifications.create(notificationId, {
-          type: 'basic',
-          iconUrl: 'qort.png', // Add an appropriate icon for chat notifications
-          title: `New group announcement!`,
-          message: `You have received a new announcement from ${newAnnouncements[0]?.groupName}`,
-          priority: 2, // Use the maximum priority to ensure it's noticeable
-          // buttons: [
-          //   { title: 'Go to group' }
-          // ]
-        });
-        if(!isMobile){
+      chrome.notifications.create(notificationId, {
+        type: "basic",
+        iconUrl: "qort.png", // Add an appropriate icon for chat notifications
+        title: `New group announcement!`,
+        message: `You have received a new announcement from ${newAnnouncements[0]?.groupName}`,
+        priority: 2, // Use the maximum priority to ensure it's noticeable
+        // buttons: [
+        //   { title: 'Go to group' }
+        // ]
+      });
+      if (!isMobile) {
         setTimeout(() => {
           chrome.notifications.clear(notificationId);
         }, 7000);
       }
-        playNotificationSound()
-     }
-     const savedtimestampAfter = await getTimestampGroupAnnouncement()
-     chrome.runtime.sendMessage({
+      playNotificationSound();
+    }
+    const savedtimestampAfter = await getTimestampGroupAnnouncement();
+    chrome.runtime.sendMessage({
       action: "SET_GROUP_ANNOUNCEMENTS",
       payload: savedtimestampAfter,
     });
-    } catch (error) {
-   
-    } finally {
-    }
-  }
-
-const listenForNewGroupAnnouncements = async ()=> {
-  try {
-    setTimeout(() => {
-      checkNewMessages()
-    }, 500);
-    if(interval){
-      clearInterval(interval)
-    }
-   
-    let isCalling = false
-    interval = setInterval(async () => {
-      if (isCalling) return
-      isCalling = true
-      const res = await checkNewMessages()
-      isCalling = false
-    }, 180000)
   } catch (error) {
-    
-  }
-}
-const listenForThreadUpdates = async ()=> {
-  try {
-    setTimeout(() => {
-      checkThreads()
-    }, 500);
-    if(intervalThreads){
-      clearInterval(intervalThreads)
-    }
-   
-    let isCalling = false
-    intervalThreads = setInterval(async () => {
-      if (isCalling) return
-      isCalling = true
-      const res = await checkThreads()
-      isCalling = false
-    }, 60000)
-  } catch (error) {
-    
-  }
-}
-
-
-
-
-const forceCloseWebSocket = () => {
-  if (socket) {
-   
-    
-    clearTimeout(timeoutId);
-    clearTimeout(groupSocketTimeout);
-    clearTimeout(socketTimeout);
-    timeoutId = null
-    groupSocketTimeout = null
-    socket.close(1000, 'forced')
-    socket = null
+  } finally {
   }
 };
 
+const listenForNewGroupAnnouncements = async () => {
+  try {
+    setTimeout(() => {
+      checkNewMessages();
+    }, 500);
+    if (interval) {
+      clearInterval(interval);
+    }
+
+    let isCalling = false;
+    interval = setInterval(async () => {
+      if (isCalling) return;
+      isCalling = true;
+      const res = await checkNewMessages();
+      isCalling = false;
+    }, 180000);
+  } catch (error) {}
+};
+const listenForThreadUpdates = async () => {
+  try {
+    setTimeout(() => {
+      checkThreads();
+    }, 500);
+    if (intervalThreads) {
+      clearInterval(intervalThreads);
+    }
+
+    let isCalling = false;
+    intervalThreads = setInterval(async () => {
+      if (isCalling) return;
+      isCalling = true;
+      const res = await checkThreads();
+      isCalling = false;
+    }, 60000);
+  } catch (error) {}
+};
+
+const forceCloseWebSocket = () => {
+  if (socket) {
+    clearTimeout(timeoutId);
+    clearTimeout(groupSocketTimeout);
+    clearTimeout(socketTimeout);
+    timeoutId = null;
+    groupSocketTimeout = null;
+    socket.close(1000, "forced");
+    socket = null;
+  }
+};
 
 async function getNameInfo() {
   const wallet = await getSaveWallet();
   const address = wallet.address0;
-  const validApi = await getBaseApi()
+  const validApi = await getBaseApi();
   const response = await fetch(validApi + "/names/address/" + address);
   const nameData = await response.json();
   if (nameData?.length > 0) {
@@ -827,7 +899,7 @@ async function getNameInfo() {
   }
 }
 async function getAddressInfo(address) {
-  const validApi = await getBaseApi()
+  const validApi = await getBaseApi();
   const response = await fetch(validApi + "/addresses/" + address);
   const data = await response.json();
 
@@ -859,7 +931,7 @@ async function getSaveWallet() {
   }
 }
 
-async function clearAllNotifications(){
+async function clearAllNotifications() {
   const notifications = await chrome.notifications.getAll();
   for (const notificationId of Object.keys(notifications)) {
     await chrome.notifications.clear(notificationId);
@@ -895,7 +967,7 @@ async function getTradeInfo(qortalAtAddress) {
 async function getBalanceInfo() {
   const wallet = await getSaveWallet();
   const address = wallet.address0;
-  const validApi = await getBaseApi()
+  const validApi = await getBaseApi();
   const response = await fetch(validApi + "/addresses/balance/" + address);
 
   if (!response?.ok) throw new Error("Cannot fetch balance");
@@ -924,7 +996,10 @@ async function getLTCBalance() {
 
 const processTransactionVersion2Chat = async (body: any, customApi) => {
   // const validApi = await findUsableApi();
-  const url = await createEndpoint("/transactions/process?apiVersion=2", customApi);
+  const url = await createEndpoint(
+    "/transactions/process?apiVersion=2",
+    customApi
+  );
   return fetch(url, {
     method: "POST",
     headers: {},
@@ -962,7 +1037,7 @@ const processTransactionVersion2 = async (body: any) => {
     } catch (jsonError) {
       try {
         const text = await response.text();
-        return text
+        return text;
       } catch (textError) {
         throw new Error(`Failed to parse response as both JSON and text.`);
       }
@@ -972,7 +1047,6 @@ const processTransactionVersion2 = async (body: any) => {
     throw error; // Re-throw the error after logging it
   }
 };
-
 
 const transaction = async (
   { type, params, apiVersion, keyPair }: any,
@@ -985,9 +1059,9 @@ const transaction = async (
     const signedBytes = Base58.encode(tx.signedBytes);
     res = await processTransactionVersion2(signedBytes, validApi);
   }
-  let success = true
-  if(res?.error){
-    success = false
+  let success = true;
+  if (res?.error) {
+    success = false;
   }
 
   return {
@@ -1025,7 +1099,7 @@ const makeTransactionRequest = async (
 const getLastRef = async () => {
   const wallet = await getSaveWallet();
   const address = wallet.address0;
-  const validApi = await getBaseApi()
+  const validApi = await getBaseApi();
   const response = await fetch(
     validApi + "/addresses/lastreference/" + address
   );
@@ -1034,7 +1108,7 @@ const getLastRef = async () => {
   return data;
 };
 const sendQortFee = async () => {
-  const validApi = await getBaseApi()
+  const validApi = await getBaseApi();
   const response = await fetch(
     validApi + "/transactions/unitfee?txType=PAYMENT"
   );
@@ -1054,7 +1128,7 @@ async function getNameOrAddress(receiver) {
     if (isAddress) {
       return receiver;
     }
-    const validApi = await getBaseApi()
+    const validApi = await getBaseApi();
 
     const response = await fetch(validApi + "/names/" + receiver);
     const data = await response.json();
@@ -1071,24 +1145,23 @@ async function getNameOrAddress(receiver) {
 
 export async function getPublicKey(receiver) {
   try {
-    const validApi = await getBaseApi()
+    const validApi = await getBaseApi();
 
     const response = await fetch(validApi + "/addresses/publickey/" + receiver);
     if (!response?.ok) throw new Error("Cannot fetch recipient's public key");
 
     const data = await response.text();
-    if (!data?.error && data !== 'false') return data;
+    if (!data?.error && data !== "false") return data;
     if (data?.error) {
       throw new Error("Cannot fetch recipient's public key");
     }
-     throw new Error("Cannot fetch recipient's public key");
+    throw new Error("Cannot fetch recipient's public key");
   } catch (error) {
     throw new Error(error?.message || "cannot validate address or name");
   }
 }
 
 const MAX_STORAGE_SIZE = 3 * 1024 * 1024; // 3MB in bytes
-
 
 async function getDataPublishes(groupId, type) {
   const wallet = await getSaveWallet();
@@ -1097,7 +1170,7 @@ async function getDataPublishes(groupId, type) {
   return new Promise((resolve) => {
     chrome.storage.local.get([`${address}-publishData`], (result) => {
       if (chrome.runtime.lastError) {
-        console.error('Error retrieving data:', chrome.runtime.lastError);
+        console.error("Error retrieving data:", chrome.runtime.lastError);
         resolve(null); // Return null in case of an error
         return;
       }
@@ -1110,7 +1183,6 @@ async function getDataPublishes(groupId, type) {
     });
   });
 }
-
 
 async function addDataPublishes(newData, groupId, type) {
   const wallet = await getSaveWallet();
@@ -1129,9 +1201,9 @@ async function addDataPublishes(newData, groupId, type) {
       let totalSize = 0;
 
       // Calculate the current size of all stored data
-      Object.values(storedData).forEach(group => {
-        Object.values(group).forEach(type => {
-          Object.values(type).forEach(data => {
+      Object.values(storedData).forEach((group) => {
+        Object.values(group).forEach((type) => {
+          Object.values(type).forEach((data) => {
             totalSize += data.size; // Accumulate the sizes of actual data
           });
         });
@@ -1144,7 +1216,10 @@ async function addDataPublishes(newData, groupId, type) {
         dataEntries.sort((a, b) => a[1].timestampSaved - b[1].timestampSaved);
 
         // Remove old data until there's enough space
-        while (totalSize + newData.size > MAX_STORAGE_SIZE && dataEntries.length > 0) {
+        while (
+          totalSize + newData.size > MAX_STORAGE_SIZE &&
+          dataEntries.length > 0
+        ) {
           const removedEntry = dataEntries.shift();
           totalSize -= removedEntry[1].size;
           delete typeData[removedEntry[0]]; // Remove from the typeData
@@ -1158,17 +1233,65 @@ async function addDataPublishes(newData, groupId, type) {
         storedData[groupId] = groupData; // Update group data within the stored data
 
         // Save the updated structure back to chrome.storage.local
-        chrome.storage.local.set({ [`${address}-publishData`]: storedData }, () => {
-          res(true); // Data successfully added
-        });
+        chrome.storage.local.set(
+          { [`${address}-publishData`]: storedData },
+          () => {
+            res(true); // Data successfully added
+          }
+        );
       } else {
-        console.error('Failed to add data, still exceeds storage limit.');
+        console.error("Failed to add data, still exceeds storage limit.");
         res(false); // Failure due to storage limit
       }
     });
   });
 }
 
+// Fetch user settings based on the key
+async function getUserSettings({ key }) {
+  const wallet = await getSaveWallet();
+  const address = wallet.address0;
+
+  return new Promise((resolve) => {
+    chrome.storage.local.get([`${address}-userSettings`], (result) => {
+      if (chrome.runtime.lastError) {
+        console.error("Error retrieving data:", chrome.runtime.lastError);
+        resolve(null); // Return null in case of an error
+        return;
+      }
+
+      const storedData = result[`${address}-userSettings`] || {}; // Get the stored data or initialize an empty object
+      const value = storedData[key] || null; // Get data by key
+
+      resolve(value); // Resolve with the data for the specific key
+    });
+  });
+}
+
+// Add or update user settings
+async function addUserSettings({ keyValue }) {
+  const wallet = await getSaveWallet();
+  const address = wallet.address0;
+  const { key, value } = keyValue;
+
+  // No need to check size here, unless value is a large object. For simple settings, size checks aren't necessary.
+
+  return new Promise((res) => {
+    chrome.storage.local.get([`${address}-userSettings`], (result) => {
+      let storedData = result[`${address}-userSettings`] || {}; // Get existing data or initialize
+
+      storedData[key] = value; // Update the key-value pair within the stored data
+
+      // Save the updated structure back to chrome.storage.local
+      chrome.storage.local.set(
+        { [`${address}-userSettings`]: storedData },
+        () => {
+          res(true); // Data successfully added
+        }
+      );
+    });
+  });
+}
 
 async function decryptWallet({ password, wallet, walletVersion }) {
   try {
@@ -1212,17 +1335,19 @@ async function decryptWallet({ password, wallet, walletVersion }) {
 
     return true;
   } catch (error) {
-  
     throw new Error(error.message);
   }
 }
 
-async function signChatFunc(chatBytesArray, chatNonce, customApi,  keyPair) {
+async function signChatFunc(chatBytesArray, chatNonce, customApi, keyPair) {
   let response;
   try {
     const signedChatBytes = signChat(chatBytesArray, chatNonce, keyPair);
-    
-    const res = await processTransactionVersion2Chat(signedChatBytes, customApi);
+
+    const res = await processTransactionVersion2Chat(
+      signedChatBytes,
+      customApi
+    );
     response = res;
   } catch (e) {
     console.error(e);
@@ -1297,9 +1422,8 @@ const getStoredData = async (key) => {
   });
 };
 
-async function handleActiveGroupDataFromSocket({groups, directs}){
+async function handleActiveGroupDataFromSocket({ groups, directs }) {
   try {
-   
     chrome.runtime.sendMessage({
       action: "SET_GROUPS",
       payload: groups,
@@ -1308,25 +1432,20 @@ async function handleActiveGroupDataFromSocket({groups, directs}){
       action: "SET_DIRECTS",
       payload: directs,
     });
-    groups = groups
-    directs = directs
+    groups = groups;
+    directs = directs;
     const activeData = {
-      groups: groups || [],  // Your groups data here
-      directs: directs || []  // Your directs data here
+      groups: groups || [], // Your groups data here
+      directs: directs || [], // Your directs data here
     };
-    
-    // Save the active data to localStorage
-    chrome.storage.local.set({ 'active-groups-directs': activeData });
-    try {
-      handleNotification(groups)
-    handleNotificationDirect(directs)
 
-    } catch (error) {
-      
-    }
-  } catch (error) {
-    
-  }
+    // Save the active data to localStorage
+    chrome.storage.local.set({ "active-groups-directs": activeData });
+    try {
+      handleNotification(groups);
+      handleNotificationDirect(directs);
+    } catch (error) {}
+  } catch (error) {}
 }
 
 async function sendChat({ qortAddress, recipientPublicKey, message }) {
@@ -1397,7 +1516,6 @@ async function sendChat({ qortAddress, recipientPublicKey, message }) {
   return _response;
 }
 
-
 async function sendChatGroup({
   groupId,
   typeMessage,
@@ -1419,7 +1537,7 @@ async function sendChatGroup({
   // const balance = await getBalanceInfo();
   // const hasEnoughBalance = +balance < 4 ? false : true;
   const difficulty = 8;
- 
+
   const tx = await createTransaction(181, keyPair, {
     timestamp: Date.now(),
     groupID: Number(groupId),
@@ -1432,7 +1550,7 @@ async function sendChatGroup({
     isEncrypted: 0, // Set default to not encrypted for groups
     isText: 1,
   });
- 
+
   // if (!hasEnoughBalance) {
   //   throw new Error("Must have at least 4 QORT to send a chat message");
   // }
@@ -1443,12 +1561,7 @@ async function sendChatGroup({
     path,
     difficulty,
   });
-  let _response = await signChatFunc(
-    chatBytesArray,
-    nonce,
-    null,
-    keyPair
-  );
+  let _response = await signChatFunc(chatBytesArray, nonce, null, keyPair);
   if (_response?.error) {
     throw new Error(_response?.message);
   }
@@ -1461,25 +1574,22 @@ async function sendChatDirect({
   typeMessage,
   chatReference,
   messageText,
-  publicKeyOfRecipient
+  publicKeyOfRecipient,
 }) {
- 
-  let recipientPublicKey
-  let recipientAddress = address
-  if(publicKeyOfRecipient){
-    recipientPublicKey = publicKeyOfRecipient
+  let recipientPublicKey;
+  let recipientAddress = address;
+  if (publicKeyOfRecipient) {
+    recipientPublicKey = publicKeyOfRecipient;
   } else {
-     recipientAddress = await getNameOrAddress(directTo)
-     recipientPublicKey = await getPublicKey(recipientAddress)
+    recipientAddress = await getNameOrAddress(directTo);
+    recipientPublicKey = await getPublicKey(recipientAddress);
   }
-  if(!recipientAddress){
-    recipientAddress = await getNameOrAddress(directTo)
+  if (!recipientAddress) {
+    recipientAddress = await getNameOrAddress(directTo);
   }
-  
 
-  
-  if(!recipientPublicKey) throw new Error('Cannot retrieve publickey')
-  
+  if (!recipientPublicKey) throw new Error("Cannot retrieve publickey");
+
   let _reference = new Uint8Array(64);
   self.crypto.getRandomValues(_reference);
 
@@ -1494,9 +1604,9 @@ async function sendChatDirect({
   };
   // const balance = await getBalanceInfo();
   // const hasEnoughBalance = +balance < 4 ? false : true;
-  
+
   const difficulty = 8;
-  
+
   const finalJson = {
     message: messageText,
     version: 2,
@@ -1506,59 +1616,59 @@ async function sendChatDirect({
     timestamp: Date.now(),
     recipient: recipientAddress,
     recipientPublicKey: recipientPublicKey,
-    hasChatReference:  0,
+    hasChatReference: 0,
     message: messageStringified,
     lastReference: reference,
     proofOfWorkNonce: 0,
-    isEncrypted: 1, 
+    isEncrypted: 1,
     isText: 1,
   });
-  
+
   // if (!hasEnoughBalance) {
   //   throw new Error("Must have at least 4 QORT to send a chat message");
   // }
   const path = chrome.runtime.getURL("memory-pow.wasm.full");
-  
-  
+
   const { nonce, chatBytesArray } = await computePow({
     chatBytes: tx.chatBytes,
     path,
     difficulty,
   });
-  
-  let _response = await signChatFunc(
-    chatBytesArray,
-    nonce,
-    null,
-    keyPair
-  );
+
+  let _response = await signChatFunc(chatBytesArray, nonce, null, keyPair);
   if (_response?.error) {
     throw new Error(_response?.message);
   }
   return _response;
 }
 
-async function decryptSingleFunc({ messages, secretKeyObject, skipDecodeBase64 }) {
+async function decryptSingleFunc({
+  messages,
+  secretKeyObject,
+  skipDecodeBase64,
+}) {
   let holdMessages = [];
-  
+
   for (const message of messages) {
     try {
       const res = await decryptSingle({
         data64: message.data,
         secretKeyObject,
-        skipDecodeBase64
+        skipDecodeBase64,
       });
-      
+
       const decryptToUnit8Array = base64ToUint8Array(res);
       const responseData = uint8ArrayToObject(decryptToUnit8Array);
       holdMessages.push({ ...message, text: responseData });
-    } catch (error) {
-
-    }
+    } catch (error) {}
   }
   return holdMessages;
 }
-async function decryptSingleForPublishes({ messages, secretKeyObject, skipDecodeBase64 }) {
+async function decryptSingleForPublishes({
+  messages,
+  secretKeyObject,
+  skipDecodeBase64,
+}) {
   let holdMessages = [];
 
   for (const message of messages) {
@@ -1566,21 +1676,19 @@ async function decryptSingleForPublishes({ messages, secretKeyObject, skipDecode
       const res = await decryptSingle({
         data64: message.data,
         secretKeyObject,
-        skipDecodeBase64
+        skipDecodeBase64,
       });
-   
+
       const decryptToUnit8Array = base64ToUint8Array(res);
       const responseData = uint8ArrayToObject(decryptToUnit8Array);
       holdMessages.push({ ...message, decryptedData: responseData });
-    } catch (error) {
-
-    }
+    } catch (error) {}
   }
   return holdMessages;
 }
 
 async function decryptDirectFunc({ messages, involvingAddress }) {
-  const senderPublicKey = await getPublicKey(involvingAddress)
+  const senderPublicKey = await getPublicKey(involvingAddress);
   let holdMessages = [];
 
   const resKeyPair = await getKeyPair();
@@ -1592,7 +1700,6 @@ async function decryptDirectFunc({ messages, involvingAddress }) {
     publicKey: uint8PublicKey,
   };
   for (const message of messages) {
- 
     try {
       const decodedMessage = decryptChatMessage(
         message.data,
@@ -1602,9 +1709,7 @@ async function decryptDirectFunc({ messages, involvingAddress }) {
       );
       const parsedMessage = JSON.parse(decodedMessage);
       holdMessages.push({ ...message, ...parsedMessage });
-    } catch (error) {
-     
-    }
+    } catch (error) {}
   }
   return holdMessages;
 }
@@ -1659,25 +1764,30 @@ async function createBuyOrderTx({ crosschainAtInfo }) {
   }
 }
 
-async function sendChatNotification(res, groupId, secretKeyObject, numberOfMembers){
+async function sendChatNotification(
+  res,
+  groupId,
+  secretKeyObject,
+  numberOfMembers
+) {
   try {
-const data = await objectToBase64({
-  type: "notification",
-  subType: "new-group-encryption",
-  data: {
-    timestamp: res.timestamp,
-    name: res.name,
-    message: `${res.name} has updated the encryption key`,
-    numberOfMembers
-  },
-})
-     
+    const data = await objectToBase64({
+      type: "notification",
+      subType: "new-group-encryption",
+      data: {
+        timestamp: res.timestamp,
+        name: res.name,
+        message: `${res.name} has updated the encryption key`,
+        numberOfMembers,
+      },
+    });
+
     encryptSingle({
       data64: data,
       secretKeyObject: secretKeyObject,
     })
       .then((res2) => {
-        pauseAllQueues()
+        pauseAllQueues();
         sendChatGroup({
           groupId,
           typeMessage: undefined,
@@ -1686,37 +1796,35 @@ const data = await objectToBase64({
         })
           .then(() => {})
           .catch((error) => {
-            console.error('1',error.message);
-          }).finally(()=> {
-            resumeAllQueues()
+            console.error("1", error.message);
           })
+          .finally(() => {
+            resumeAllQueues();
+          });
       })
       .catch((error) => {
-        console.error('2',error.message);
-        
+        console.error("2", error.message);
       });
-  } catch (error) {
-    
-  }
+  } catch (error) {}
 }
 
-export const getFee = async(txType)=> {
+export const getFee = async (txType) => {
+  const timestamp = Date.now();
+  const data = await reusableGet(
+    `/transactions/unitfee?txType=${txType}&timestamp=${timestamp}`
+  );
+  const arbitraryFee = (Number(data) / 1e8).toFixed(8);
 
-	const timestamp = Date.now()
-		const data = await reusableGet(`/transactions/unitfee?txType=${txType}&timestamp=${timestamp}`)
-		const arbitraryFee = (Number(data) / 1e8).toFixed(8)
+  return {
+    timestamp,
+    fee: arbitraryFee,
+  };
+};
 
-		return {
-			timestamp,
-			fee: 	arbitraryFee
-		}
-	
-}
-
-async function leaveGroup({groupId}){
+async function leaveGroup({ groupId }) {
   const wallet = await getSaveWallet();
   const address = wallet.address0;
-  const lastReference = await getLastRef()
+  const lastReference = await getLastRef();
   const resKeyPair = await getKeyPair();
   const parsedData = JSON.parse(resKeyPair);
   const uint8PrivateKey = Base58.decode(parsedData.privateKey);
@@ -1725,29 +1833,27 @@ async function leaveGroup({groupId}){
     privateKey: uint8PrivateKey,
     publicKey: uint8PublicKey,
   };
-  const feeres = await getFee('LEAVE_GROUP')
+  const feeres = await getFee("LEAVE_GROUP");
 
   const tx = await createTransaction(32, keyPair, {
     fee: feeres.fee,
     registrantAddress: address,
-					rGroupId: groupId,
-					lastReference: lastReference,
-
-
-
+    rGroupId: groupId,
+    lastReference: lastReference,
   });
-  
+
   const signedBytes = Base58.encode(tx.signedBytes);
 
-  const res = await processTransactionVersion2(signedBytes)
-  if(!res?.signature) throw new Error('Transaction was not able to be processed')
-  return res
+  const res = await processTransactionVersion2(signedBytes);
+  if (!res?.signature)
+    throw new Error("Transaction was not able to be processed");
+  return res;
 }
 
-async function joinGroup({groupId}){
+async function joinGroup({ groupId }) {
   const wallet = await getSaveWallet();
   const address = wallet.address0;
-  const lastReference = await getLastRef()
+  const lastReference = await getLastRef();
   const resKeyPair = await getKeyPair();
   const parsedData = JSON.parse(resKeyPair);
   const uint8PrivateKey = Base58.decode(parsedData.privateKey);
@@ -1756,27 +1862,25 @@ async function joinGroup({groupId}){
     privateKey: uint8PrivateKey,
     publicKey: uint8PublicKey,
   };
-  const feeres = await getFee('JOIN_GROUP')
+  const feeres = await getFee("JOIN_GROUP");
 
   const tx = await createTransaction(31, keyPair, {
     fee: feeres.fee,
     registrantAddress: address,
-					rGroupId: groupId,
-					lastReference: lastReference,
-
-
-
+    rGroupId: groupId,
+    lastReference: lastReference,
   });
 
   const signedBytes = Base58.encode(tx.signedBytes);
 
-  const res = await processTransactionVersion2(signedBytes)
-  if(!res?.signature) throw new Error(res?.message || 'Transaction was not able to be processed')
-  return res
+  const res = await processTransactionVersion2(signedBytes);
+  if (!res?.signature)
+    throw new Error(res?.message || "Transaction was not able to be processed");
+  return res;
 }
 
-async function cancelInvitationToGroup({groupId, qortalAddress}){
-  const lastReference = await getLastRef()
+async function cancelInvitationToGroup({ groupId, qortalAddress }) {
+  const lastReference = await getLastRef();
   const resKeyPair = await getKeyPair();
   const parsedData = JSON.parse(resKeyPair);
   const uint8PrivateKey = Base58.decode(parsedData.privateKey);
@@ -1785,25 +1889,25 @@ async function cancelInvitationToGroup({groupId, qortalAddress}){
     privateKey: uint8PrivateKey,
     publicKey: uint8PublicKey,
   };
-  const feeres = await getFee('CANCEL_GROUP_INVITE')
+  const feeres = await getFee("CANCEL_GROUP_INVITE");
 
   const tx = await createTransaction(30, keyPair, {
     fee: feeres.fee,
-					recipient: qortalAddress,
-					rGroupId: groupId,
-					lastReference: lastReference,
-
+    recipient: qortalAddress,
+    rGroupId: groupId,
+    lastReference: lastReference,
   });
- 
+
   const signedBytes = Base58.encode(tx.signedBytes);
 
-  const res = await processTransactionVersion2(signedBytes)
-  if(!res?.signature) throw new Error('Transaction was not able to be processed')
-  return res
+  const res = await processTransactionVersion2(signedBytes);
+  if (!res?.signature)
+    throw new Error("Transaction was not able to be processed");
+  return res;
 }
 
-async function cancelBan({groupId, qortalAddress}){
-  const lastReference = await getLastRef()
+async function cancelBan({ groupId, qortalAddress }) {
+  const lastReference = await getLastRef();
   const resKeyPair = await getKeyPair();
   const parsedData = JSON.parse(resKeyPair);
   const uint8PrivateKey = Base58.decode(parsedData.privateKey);
@@ -1812,24 +1916,24 @@ async function cancelBan({groupId, qortalAddress}){
     privateKey: uint8PrivateKey,
     publicKey: uint8PublicKey,
   };
-  const feeres = await getFee('CANCEL_GROUP_BAN')
+  const feeres = await getFee("CANCEL_GROUP_BAN");
 
   const tx = await createTransaction(27, keyPair, {
     fee: feeres.fee,
-					recipient: qortalAddress,
-					rGroupId: groupId,
-					lastReference: lastReference,
-
+    recipient: qortalAddress,
+    rGroupId: groupId,
+    lastReference: lastReference,
   });
- 
+
   const signedBytes = Base58.encode(tx.signedBytes);
 
-  const res = await processTransactionVersion2(signedBytes)
-  if(!res?.signature) throw new Error('Transaction was not able to be processed')
-  return res
+  const res = await processTransactionVersion2(signedBytes);
+  if (!res?.signature)
+    throw new Error("Transaction was not able to be processed");
+  return res;
 }
-async function registerName({name}){
-  const lastReference = await getLastRef()
+async function registerName({ name }) {
+  const lastReference = await getLastRef();
   const resKeyPair = await getKeyPair();
   const parsedData = JSON.parse(resKeyPair);
   const uint8PrivateKey = Base58.decode(parsedData.privateKey);
@@ -1838,24 +1942,24 @@ async function registerName({name}){
     privateKey: uint8PrivateKey,
     publicKey: uint8PublicKey,
   };
-  const feeres = await getFee('REGISTER_NAME')
+  const feeres = await getFee("REGISTER_NAME");
 
   const tx = await createTransaction(3, keyPair, {
     fee: feeres.fee,
     name,
     value: "",
-		lastReference: lastReference,
-
+    lastReference: lastReference,
   });
- 
+
   const signedBytes = Base58.encode(tx.signedBytes);
 
-  const res = await processTransactionVersion2(signedBytes)
-  if(!res?.signature) throw new Error('Transaction was not able to be processed')
-  return res
+  const res = await processTransactionVersion2(signedBytes);
+  if (!res?.signature)
+    throw new Error("Transaction was not able to be processed");
+  return res;
 }
-async function makeAdmin({groupId, qortalAddress}){
-  const lastReference = await getLastRef()
+async function makeAdmin({ groupId, qortalAddress }) {
+  const lastReference = await getLastRef();
   const resKeyPair = await getKeyPair();
   const parsedData = JSON.parse(resKeyPair);
   const uint8PrivateKey = Base58.decode(parsedData.privateKey);
@@ -1864,25 +1968,25 @@ async function makeAdmin({groupId, qortalAddress}){
     privateKey: uint8PrivateKey,
     publicKey: uint8PublicKey,
   };
-  const feeres = await getFee('ADD_GROUP_ADMIN')
+  const feeres = await getFee("ADD_GROUP_ADMIN");
 
   const tx = await createTransaction(24, keyPair, {
     fee: feeres.fee,
-					recipient: qortalAddress,
-					rGroupId: groupId,
-					lastReference: lastReference,
-
+    recipient: qortalAddress,
+    rGroupId: groupId,
+    lastReference: lastReference,
   });
- 
+
   const signedBytes = Base58.encode(tx.signedBytes);
 
-  const res = await processTransactionVersion2(signedBytes)
-  if(!res?.signature) throw new Error('Transaction was not able to be processed')
-  return res
+  const res = await processTransactionVersion2(signedBytes);
+  if (!res?.signature)
+    throw new Error("Transaction was not able to be processed");
+  return res;
 }
 
-async function removeAdmin({groupId, qortalAddress}){
-  const lastReference = await getLastRef()
+async function removeAdmin({ groupId, qortalAddress }) {
+  const lastReference = await getLastRef();
   const resKeyPair = await getKeyPair();
   const parsedData = JSON.parse(resKeyPair);
   const uint8PrivateKey = Base58.decode(parsedData.privateKey);
@@ -1891,25 +1995,30 @@ async function removeAdmin({groupId, qortalAddress}){
     privateKey: uint8PrivateKey,
     publicKey: uint8PublicKey,
   };
-  const feeres = await getFee('REMOVE_GROUP_ADMIN')
+  const feeres = await getFee("REMOVE_GROUP_ADMIN");
 
   const tx = await createTransaction(25, keyPair, {
     fee: feeres.fee,
-					recipient: qortalAddress,
-					rGroupId: groupId,
-					lastReference: lastReference,
-
+    recipient: qortalAddress,
+    rGroupId: groupId,
+    lastReference: lastReference,
   });
- 
+
   const signedBytes = Base58.encode(tx.signedBytes);
 
-  const res = await processTransactionVersion2(signedBytes)
-  if(!res?.signature) throw new Error('Transaction was not able to be processed')
-  return res
+  const res = await processTransactionVersion2(signedBytes);
+  if (!res?.signature)
+    throw new Error("Transaction was not able to be processed");
+  return res;
 }
 
-async function banFromGroup({groupId, qortalAddress, rBanReason = "", rBanTime}){
-  const lastReference = await getLastRef()
+async function banFromGroup({
+  groupId,
+  qortalAddress,
+  rBanReason = "",
+  rBanTime,
+}) {
+  const lastReference = await getLastRef();
   const resKeyPair = await getKeyPair();
   const parsedData = JSON.parse(resKeyPair);
   const uint8PrivateKey = Base58.decode(parsedData.privateKey);
@@ -1918,29 +2027,27 @@ async function banFromGroup({groupId, qortalAddress, rBanReason = "", rBanTime})
     privateKey: uint8PrivateKey,
     publicKey: uint8PublicKey,
   };
-  const feeres = await getFee('GROUP_BAN')
+  const feeres = await getFee("GROUP_BAN");
 
   const tx = await createTransaction(26, keyPair, {
     fee: feeres.fee,
-					recipient: qortalAddress,
-					rGroupId: groupId,
-          rBanReason: rBanReason,
-          rBanTime,
-					lastReference: lastReference,
-
+    recipient: qortalAddress,
+    rGroupId: groupId,
+    rBanReason: rBanReason,
+    rBanTime,
+    lastReference: lastReference,
   });
 
   const signedBytes = Base58.encode(tx.signedBytes);
 
-  const res = await processTransactionVersion2(signedBytes)
-  if(!res?.signature) throw new Error('Transaction was not able to be processed')
-  return res
+  const res = await processTransactionVersion2(signedBytes);
+  if (!res?.signature)
+    throw new Error("Transaction was not able to be processed");
+  return res;
 }
 
- 
-
-async function kickFromGroup({groupId, qortalAddress, rBanReason = ""}){
-  const lastReference = await getLastRef()
+async function kickFromGroup({ groupId, qortalAddress, rBanReason = "" }) {
+  const lastReference = await getLastRef();
   const resKeyPair = await getKeyPair();
   const parsedData = JSON.parse(resKeyPair);
   const uint8PrivateKey = Base58.decode(parsedData.privateKey);
@@ -1949,32 +2056,37 @@ async function kickFromGroup({groupId, qortalAddress, rBanReason = ""}){
     privateKey: uint8PrivateKey,
     publicKey: uint8PublicKey,
   };
-  const feeres = await getFee('GROUP_KICK')
+  const feeres = await getFee("GROUP_KICK");
 
   const tx = await createTransaction(28, keyPair, {
     fee: feeres.fee,
-					recipient: qortalAddress,
-					rGroupId: groupId,
-          rBanReason: rBanReason,
-					lastReference: lastReference,
-
+    recipient: qortalAddress,
+    rGroupId: groupId,
+    rBanReason: rBanReason,
+    lastReference: lastReference,
   });
- 
+
   const signedBytes = Base58.encode(tx.signedBytes);
 
-  const res = await processTransactionVersion2(signedBytes)
-  if(!res?.signature) throw new Error('Transaction was not able to be processed')
-  return res
+  const res = await processTransactionVersion2(signedBytes);
+  if (!res?.signature)
+    throw new Error("Transaction was not able to be processed");
+  return res;
 }
 
-
-
-async function createGroup({ groupName, groupDescription, groupType, groupApprovalThreshold, minBlock, maxBlock}){
+async function createGroup({
+  groupName,
+  groupDescription,
+  groupType,
+  groupApprovalThreshold,
+  minBlock,
+  maxBlock,
+}) {
   const wallet = await getSaveWallet();
   const address = wallet.address0;
-  if(!address) throw new Error('Cannot find user')
-  const lastReference = await getLastRef()
-  const feeres = await getFee('CREATE_GROUP')
+  if (!address) throw new Error("Cannot find user");
+  const lastReference = await getLastRef();
+  const feeres = await getFee("CREATE_GROUP");
   const resKeyPair = await getKeyPair();
   const parsedData = JSON.parse(resKeyPair);
   const uint8PrivateKey = Base58.decode(parsedData.privateKey);
@@ -1985,29 +2097,29 @@ async function createGroup({ groupName, groupDescription, groupType, groupApprov
   };
 
   const tx = await createTransaction(22, keyPair, {
-          fee: feeres.fee,
-					registrantAddress: address,
-					rGroupName: groupName,
-					rGroupDesc: groupDescription,
-					rGroupType: groupType,
-					rGroupApprovalThreshold: groupApprovalThreshold,
-					rGroupMinimumBlockDelay: minBlock,
-					rGroupMaximumBlockDelay: maxBlock,
-					lastReference: lastReference,
-
+    fee: feeres.fee,
+    registrantAddress: address,
+    rGroupName: groupName,
+    rGroupDesc: groupDescription,
+    rGroupType: groupType,
+    rGroupApprovalThreshold: groupApprovalThreshold,
+    rGroupMinimumBlockDelay: minBlock,
+    rGroupMaximumBlockDelay: maxBlock,
+    lastReference: lastReference,
   });
-  
+
   const signedBytes = Base58.encode(tx.signedBytes);
 
-  const res = await processTransactionVersion2(signedBytes)
-  if(!res?.signature) throw new Error('Transaction was not able to be processed')
-  return res
+  const res = await processTransactionVersion2(signedBytes);
+  if (!res?.signature)
+    throw new Error("Transaction was not able to be processed");
+  return res;
 }
-async function inviteToGroup({groupId, qortalAddress, inviteTime}){
-  const address = await getNameOrAddress(qortalAddress)
-  if(!address) throw new Error('Cannot find user')
-  const lastReference = await getLastRef()
-  const feeres = await getFee('GROUP_INVITE')
+async function inviteToGroup({ groupId, qortalAddress, inviteTime }) {
+  const address = await getNameOrAddress(qortalAddress);
+  if (!address) throw new Error("Cannot find user");
+  const lastReference = await getLastRef();
+  const feeres = await getFee("GROUP_INVITE");
   const resKeyPair = await getKeyPair();
   const parsedData = JSON.parse(resKeyPair);
   const uint8PrivateKey = Base58.decode(parsedData.privateKey);
@@ -2017,21 +2129,20 @@ async function inviteToGroup({groupId, qortalAddress, inviteTime}){
     publicKey: uint8PublicKey,
   };
 
-
   const tx = await createTransaction(29, keyPair, {
     fee: feeres.fee,
-					recipient: address,
-					rGroupId: groupId,
-					rInviteTime: inviteTime,
-					lastReference: lastReference,
-
+    recipient: address,
+    rGroupId: groupId,
+    rInviteTime: inviteTime,
+    lastReference: lastReference,
   });
- 
+
   const signedBytes = Base58.encode(tx.signedBytes);
 
-  const res = await processTransactionVersion2(signedBytes)
-  if(!res?.signature) throw new Error('Transaction was not able to be processed')
-  return res
+  const res = await processTransactionVersion2(signedBytes);
+  if (!res?.signature)
+    throw new Error("Transaction was not able to be processed");
+  return res;
 }
 
 async function sendCoin({ password, amount, receiver }, skipConfirmPassword) {
@@ -2059,7 +2170,7 @@ async function sendCoin({ password, amount, receiver }, skipConfirmPassword) {
 
     const lastRef = await getLastRef();
     const fee = await sendQortFee();
-    const validApi = await findUsableApi()
+    const validApi = await findUsableApi();
 
     const res = await makeTransactionRequest(
       confirmReceiver,
@@ -2069,7 +2180,7 @@ async function sendCoin({ password, amount, receiver }, skipConfirmPassword) {
       keyPair,
       validApi
     );
-   
+
     return { res, validApi };
   } catch (error) {
     throw new Error(error.message);
@@ -2265,7 +2376,7 @@ async function listenForChatMessageForBuyOrder({
   }
 }
 
-function removeDuplicateWindow(popupUrl){
+function removeDuplicateWindow(popupUrl) {
   chrome.windows.getAll(
     { populate: true, windowTypes: ["popup"] },
     (windows) => {
@@ -2280,31 +2391,32 @@ function removeDuplicateWindow(popupUrl){
       const existingPopups = windows.filter(
         (w) =>
           w.tabs &&
-          w.tabs.some(
-            (tab) => tab.url && tab.url.startsWith(popupUrl)
-          )
+          w.tabs.some((tab) => tab.url && tab.url.startsWith(popupUrl))
       );
-         
-      if(existingPopupsPending.length > 1){
-        chrome.windows.remove(existingPopupsPending?.[0]?.tabs?.[0]?.windowId, () => {
-         
-        });
-      } else if(existingPopupsPending.length > 0 && existingPopups.length > 0){
-        chrome.windows.remove(existingPopupsPending?.[0]?.tabs?.[0]?.windowId, () => {
-         
-        });
+
+      if (existingPopupsPending.length > 1) {
+        chrome.windows.remove(
+          existingPopupsPending?.[0]?.tabs?.[0]?.windowId,
+          () => {}
+        );
+      } else if (
+        existingPopupsPending.length > 0 &&
+        existingPopups.length > 0
+      ) {
+        chrome.windows.remove(
+          existingPopupsPending?.[0]?.tabs?.[0]?.windowId,
+          () => {}
+        );
       }
     }
   );
 }
 
-
-
-async function setChatHeads(data){
+async function setChatHeads(data) {
   const wallet = await getSaveWallet();
   const address = wallet.address0;
   const dataString = JSON.stringify(data);
- return await new Promise((resolve, reject) => {
+  return await new Promise((resolve, reject) => {
     chrome.storage.local.set({ [`chatheads-${address}`]: dataString }, () => {
       if (chrome.runtime.lastError) {
         reject(new Error(chrome.runtime.lastError.message));
@@ -2315,10 +2427,10 @@ async function setChatHeads(data){
   });
 }
 
-async function getTempPublish(){
+async function getTempPublish() {
   const wallet = await getSaveWallet();
   const address = wallet.address0;
-  const key = `tempPublish-${address}`
+  const key = `tempPublish-${address}`;
   const res = await chrome.storage.local.get([key]);
   const SIX_MINUTES = 6 * 60 * 1000; // 6 minutes in milliseconds
 
@@ -2339,7 +2451,6 @@ async function getTempPublish(){
       })
     );
 
-   
     if (JSON.stringify(filteredData) !== JSON.stringify(parsedData)) {
       const dataString = JSON.stringify(filteredData);
       await chrome.storage.local.set({ [key]: dataString });
@@ -2350,21 +2461,21 @@ async function getTempPublish(){
   }
 }
 
-async function saveTempPublish({data, key}){
-  const existingTemp = await getTempPublish()
+async function saveTempPublish({ data, key }) {
+  const existingTemp = await getTempPublish();
   const wallet = await getSaveWallet();
   const address = wallet.address0;
   const newTemp = {
     ...existingTemp,
     [key]: {
       ...(existingTemp[key] || {}),
-      [data.identifier] : {
+      [data.identifier]: {
         data,
-        timestampSaved: Date.now()
-      }
-    }
-  }
-  
+        timestampSaved: Date.now(),
+      },
+    },
+  };
+
   const dataString = JSON.stringify(newTemp);
 
   return await new Promise((resolve, reject) => {
@@ -2372,115 +2483,124 @@ async function saveTempPublish({data, key}){
       if (chrome.runtime.lastError) {
         reject(new Error(chrome.runtime.lastError.message));
       } else {
-      
         resolve(newTemp[key]);
       }
     });
   });
 }
 
-async function setChatHeadsDirect(data){
+async function setChatHeadsDirect(data) {
   const wallet = await getSaveWallet();
   const address = wallet.address0;
   const dataString = JSON.stringify(data);
- return await new Promise((resolve, reject) => {
-    chrome.storage.local.set({ [`chatheads-direct-${address}`]: dataString }, () => {
-      if (chrome.runtime.lastError) {
-        reject(new Error(chrome.runtime.lastError.message));
-      } else {
-        resolve(true);
+  return await new Promise((resolve, reject) => {
+    chrome.storage.local.set(
+      { [`chatheads-direct-${address}`]: dataString },
+      () => {
+        if (chrome.runtime.lastError) {
+          reject(new Error(chrome.runtime.lastError.message));
+        } else {
+          resolve(true);
+        }
       }
-    });
+    );
   });
 }
 
-
-
-async function getTimestampEnterChat(){
+async function getTimestampEnterChat() {
   const wallet = await getSaveWallet();
   const address = wallet.address0;
-  const key = `enter-chat-timestamp-${address}`
+  const key = `enter-chat-timestamp-${address}`;
   const res = await chrome.storage.local.get([key]);
-if (res?.[key]) {
-  const parsedData = JSON.parse(res[key])
-  return parsedData;
-} else {
-  return {}
+  if (res?.[key]) {
+    const parsedData = JSON.parse(res[key]);
+    return parsedData;
+  } else {
+    return {};
+  }
 }
-}
-async function getTimestampGroupAnnouncement(){
+async function getTimestampGroupAnnouncement() {
   const wallet = await getSaveWallet();
   const address = wallet.address0;
-  const key = `group-announcement-${address}`
+  const key = `group-announcement-${address}`;
   const res = await chrome.storage.local.get([key]);
-if (res?.[key]) {
-  const parsedData = JSON.parse(res[key])
-  return parsedData;
-} else {
-  return {}
-}
+  if (res?.[key]) {
+    const parsedData = JSON.parse(res[key]);
+    return parsedData;
+  } else {
+    return {};
+  }
 }
 
-async function addTimestampGroupAnnouncement({groupId, timestamp, seenTimestamp}){
+async function addTimestampGroupAnnouncement({
+  groupId,
+  timestamp,
+  seenTimestamp,
+}) {
   const wallet = await getSaveWallet();
   const address = wallet.address0;
-  const data = await getTimestampGroupAnnouncement() || {}
+  const data = (await getTimestampGroupAnnouncement()) || {};
   data[groupId] = {
     notification: timestamp,
-    seentimestamp: seenTimestamp ? true :  false
-  }
+    seentimestamp: seenTimestamp ? true : false,
+  };
   const dataString = JSON.stringify(data);
- return await new Promise((resolve, reject) => {
-    chrome.storage.local.set({ [`group-announcement-${address}`]: dataString }, () => {
-      if (chrome.runtime.lastError) {
-        reject(new Error(chrome.runtime.lastError.message));
-      } else {
-        resolve(true);
+  return await new Promise((resolve, reject) => {
+    chrome.storage.local.set(
+      { [`group-announcement-${address}`]: dataString },
+      () => {
+        if (chrome.runtime.lastError) {
+          reject(new Error(chrome.runtime.lastError.message));
+        } else {
+          resolve(true);
+        }
       }
-    });
+    );
   });
 }
 
-async function getGroupData(){
+async function getGroupData() {
   const wallet = await getSaveWallet();
   const address = wallet.address0;
-  const key = `group-data-${address}`
+  const key = `group-data-${address}`;
   const res = await chrome.storage.local.get([key]);
-if (res?.[key]) {
-  const parsedData = JSON.parse(res[key])
-  return parsedData;
-} else {
-  return {}
+  if (res?.[key]) {
+    const parsedData = JSON.parse(res[key]);
+    return parsedData;
+  } else {
+    return {};
+  }
 }
-}
-async function getGroupDataSingle(groupId){
+async function getGroupDataSingle(groupId) {
   const wallet = await getSaveWallet();
   const address = wallet.address0;
-  const key = `group-data-${address}`
+  const key = `group-data-${address}`;
   const res = await chrome.storage.local.get([key]);
-if (res?.[key]) {
-  const parsedData = JSON.parse(res[key])
-  return parsedData[groupId] || null;
-} else {
-  return null
-}
+  if (res?.[key]) {
+    const parsedData = JSON.parse(res[key]);
+    return parsedData[groupId] || null;
+  } else {
+    return null;
+  }
 }
 
-async function setGroupData({groupId,
+async function setGroupData({
+  groupId,
   secretKeyData,
   secretKeyResource,
-  admins}){
+  admins,
+}) {
   const wallet = await getSaveWallet();
   const address = wallet.address0;
-  const data = await getGroupData() || {}
+  const data = (await getGroupData()) || {};
   data[groupId] = {
     timestampLastSet: Date.now(),
     admins,
     secretKeyData,
     secretKeyResource,
-  }
+  };
   const dataString = JSON.stringify(data);
- return await new Promise((resolve, reject) => {
+  return await new Promise((resolve, reject) => {
     chrome.storage.local.set({ [`group-data-${address}`]: dataString }, () => {
       if (chrome.runtime.lastError) {
         reject(new Error(chrome.runtime.lastError.message));
@@ -2491,63 +2611,64 @@ async function setGroupData({groupId,
   });
 }
 
-
-
-async function addTimestampEnterChat({groupId, timestamp}){
+async function addTimestampEnterChat({ groupId, timestamp }) {
   const wallet = await getSaveWallet();
   const address = wallet.address0;
-  const data = await getTimestampEnterChat()
-  data[groupId] = timestamp
+  const data = await getTimestampEnterChat();
+  data[groupId] = timestamp;
   const dataString = JSON.stringify(data);
- return await new Promise((resolve, reject) => {
-    chrome.storage.local.set({ [`enter-chat-timestamp-${address}`]: dataString }, () => {
-      if (chrome.runtime.lastError) {
-        reject(new Error(chrome.runtime.lastError.message));
-      } else {
-        resolve(true);
+  return await new Promise((resolve, reject) => {
+    chrome.storage.local.set(
+      { [`enter-chat-timestamp-${address}`]: dataString },
+      () => {
+        if (chrome.runtime.lastError) {
+          reject(new Error(chrome.runtime.lastError.message));
+        } else {
+          resolve(true);
+        }
       }
-    });
+    );
   });
 }
 
-async function notifyAdminRegenerateSecretKey({groupName, adminAddress}){
+async function notifyAdminRegenerateSecretKey({ groupName, adminAddress }) {
   const wallet = await getSaveWallet();
   const address = wallet.address0;
-  const name = await getNameInfo(address)
-  const nameOrAddress = name || address
+  const name = await getNameInfo(address);
+  const nameOrAddress = name || address;
   await sendChatDirect({
     directTo: adminAddress,
     typeMessage: undefined,
     chatReference: undefined,
-    messageText: `<p>Member ${nameOrAddress} has requested that you regenerate the group's secret key. Group: ${groupName}</p>`
-  })
-  return true
+    messageText: `<p>Member ${nameOrAddress} has requested that you regenerate the group's secret key. Group: ${groupName}</p>`,
+  });
+  return true;
 }
 
-async function getChatHeads(){
+async function getChatHeads() {
   const wallet = await getSaveWallet();
   const address = wallet.address0;
-  const key = `chatheads-${address}`
+  const key = `chatheads-${address}`;
   const res = await chrome.storage.local.get([key]);
-if (res?.[key]) {
-  const parsedData = JSON.parse(res[key])
-  return parsedData;
-} else {
-  throw new Error("No Chatheads saved");
-}
+  if (res?.[key]) {
+    const parsedData = JSON.parse(res[key]);
+    return parsedData;
+  } else {
+    throw new Error("No Chatheads saved");
+  }
 }
 
-async function getChatHeadsDirect(){
+async function getChatHeadsDirect() {
   const wallet = await getSaveWallet();
   const address = wallet.address0;
-  const key = `chatheads-direct-${address}`
+  const key = `chatheads-direct-${address}`;
   const res = await chrome.storage.local.get([key]);
-if (res?.[key]) {
-  const parsedData = JSON.parse(res[key])
-  return parsedData;
-} else {
-  throw new Error("No Chatheads saved");
-}
+  if (res?.[key]) {
+    const parsedData = JSON.parse(res[key]);
+    return parsedData;
+  } else {
+    throw new Error("No Chatheads saved");
+  }
 }
 chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
   if (request) {
@@ -2603,7 +2724,6 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
       case "userInfo":
         getUserInfo()
           .then((name) => {
-         
             sendResponse(name);
           })
           .catch((error) => {
@@ -2654,10 +2774,10 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
         {
           const { receiver, password, amount } = request.payload;
           sendCoin({ receiver, password, amount })
-            .then(({res}) => {
-              if(!res?.success){
+            .then(({ res }) => {
+              if (!res?.success) {
                 sendResponse({ error: res?.data?.message });
-                return
+                return;
               }
               sendResponse(true);
             })
@@ -2668,7 +2788,7 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
         }
 
         break;
-        case "inviteToGroup":
+      case "inviteToGroup":
         {
           const { groupId, qortalAddress, inviteTime } = request.payload;
           inviteToGroup({ groupId, qortalAddress, inviteTime })
@@ -2682,7 +2802,7 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
         }
 
         break;
-        case "saveTempPublish":
+      case "saveTempPublish":
         {
           const { data, key } = request.payload;
           saveTempPublish({ data, key })
@@ -2693,12 +2813,11 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
               sendResponse({ error: error.message });
               console.error(error.message);
             });
-          return true
+          return true;
         }
         break;
-        case "getTempPublish":
+      case "getTempPublish":
         {
-       
           getTempPublish()
             .then((res) => {
               sendResponse(res);
@@ -2708,13 +2827,27 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
               console.error(error.message);
             });
         }
-        
+
         break;
-        
-        case "createGroup":
+
+      case "createGroup":
         {
-          const {  groupName, groupDescription, groupType, groupApprovalThreshold, minBlock, maxBlock } = request.payload;
-          createGroup({ groupName, groupDescription, groupType, groupApprovalThreshold, minBlock, maxBlock })
+          const {
+            groupName,
+            groupDescription,
+            groupType,
+            groupApprovalThreshold,
+            minBlock,
+            maxBlock,
+          } = request.payload;
+          createGroup({
+            groupName,
+            groupDescription,
+            groupType,
+            groupApprovalThreshold,
+            minBlock,
+            maxBlock,
+          })
             .then((res) => {
               sendResponse(res);
             })
@@ -2725,162 +2858,187 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
         }
 
         break;
-        case "cancelInvitationToGroup":
-          {
-            const { groupId, qortalAddress } = request.payload;
-            cancelInvitationToGroup({ groupId, qortalAddress })
-              .then((res) => {
-                sendResponse(res);
-              })
-              .catch((error) => {
-                sendResponse({ error: error.message });
-                console.error(error.message);
-              });
-          }
-  
-          break;
-          case "leaveGroup":
-            {
-              const { groupId } = request.payload;
-              leaveGroup({ groupId })
-                .then((res) => {
-                  sendResponse(res);
-                })
-                .catch((error) => {
-                  sendResponse({ error: error.message });
-                  console.error(error.message);
-                });
-            }
-    
-            break;
-            case "joinGroup":
-              {
-                const { groupId } = request.payload;
-                joinGroup({ groupId })
-                  .then((res) => {
-                    sendResponse(res);
-                  })
-                  .catch((error) => {
-             
-                    sendResponse({ error: error.message });
-                    console.error(error.message);
-                  });
-              }
-      
-              break;
-            
-          case "kickFromGroup":
-            {
-              const { groupId, qortalAddress, rBanReason } = request.payload;
-              kickFromGroup({ groupId, qortalAddress, rBanReason })
-                .then((res) => {
-                  sendResponse(res);
-                })
-                .catch((error) => {
-                  sendResponse({ error: error.message });
-                  console.error(error.message);
-                });
-            }
-    
-            break;
-            case "banFromGroup":
-              {
-                const { groupId, qortalAddress, rBanReason, rBanTime } = request.payload;
-                banFromGroup({ groupId, qortalAddress, rBanReason, rBanTime })
-                  .then((res) => {
-                    sendResponse(res);
-                  })
-                  .catch((error) => {
-                    sendResponse({ error: error.message });
-                    console.error(error.message);
-                  });
-              }
-      
+      case "cancelInvitationToGroup":
+        {
+          const { groupId, qortalAddress } = request.payload;
+          cancelInvitationToGroup({ groupId, qortalAddress })
+            .then((res) => {
+              sendResponse(res);
+            })
+            .catch((error) => {
+              sendResponse({ error: error.message });
+              console.error(error.message);
+            });
+        }
 
-              break;
-              case "addDataPublishes":
-              {
-                const { data, groupId, type } = request.payload;
-                addDataPublishes(data, groupId, type)
-                  .then((res) => {
-                    sendResponse(res);
-                  })
-                  .catch((error) => {
-                    sendResponse({ error: error.message });
-                    console.error(error.message);
-                  });
-              }
-              break;
-              case "getDataPublishes":
-                {
-                  const { groupId, type } = request.payload;
-                  getDataPublishes(groupId, type)
-                    .then((res) => {
-                      sendResponse(res);
-                    })
-                    .catch((error) => {
-                      sendResponse({ error: error.message });
-                      console.error(error.message);
-                    });
-                }
-                break;
-              case "cancelBan":
-              {
-                const { groupId, qortalAddress } = request.payload;
-                cancelBan({ groupId, qortalAddress})
-                  .then((res) => {
-                    sendResponse(res);
-                  })
-                  .catch((error) => {
-                    sendResponse({ error: error.message });
-                    console.error(error.message);
-                  });
-              }
-      
-              break;
-              case "registerName":
-                {
-                  const {  name } = request.payload;
-                  registerName({  name})
-                    .then((res) => {
-                      sendResponse(res);
-                    })
-                    .catch((error) => {
-                      sendResponse({ error: error.message });
-                      console.error(error.message);
-                    });
-                }
-        
-                break;
-              case "makeAdmin":
-                {
-                  const { groupId, qortalAddress } = request.payload;
-                  makeAdmin({ groupId, qortalAddress})
-                    .then((res) => {
-                      sendResponse(res);
-                    })
-                    .catch((error) => {
-                      sendResponse({ error: error.message });
-                      console.error(error.message);
-                    });
-                }
-        
-                break;
-                case "removeAdmin":
-                  {
-                    const { groupId, qortalAddress } = request.payload;
-                    removeAdmin({ groupId, qortalAddress})
-                      .then((res) => {
-                        sendResponse(res);
-                      })
-                      .catch((error) => {
-                        sendResponse({ error: error.message });
-                        console.error(error.message);
-                      });
-                  }
-          
-                  break;
-              
+        break;
+      case "leaveGroup":
+        {
+          const { groupId } = request.payload;
+          leaveGroup({ groupId })
+            .then((res) => {
+              sendResponse(res);
+            })
+            .catch((error) => {
+              sendResponse({ error: error.message });
+              console.error(error.message);
+            });
+        }
+
+        break;
+      case "joinGroup":
+        {
+          const { groupId } = request.payload;
+          joinGroup({ groupId })
+            .then((res) => {
+              sendResponse(res);
+            })
+            .catch((error) => {
+              sendResponse({ error: error.message });
+              console.error(error.message);
+            });
+        }
+
+        break;
+
+      case "kickFromGroup":
+        {
+          const { groupId, qortalAddress, rBanReason } = request.payload;
+          kickFromGroup({ groupId, qortalAddress, rBanReason })
+            .then((res) => {
+              sendResponse(res);
+            })
+            .catch((error) => {
+              sendResponse({ error: error.message });
+              console.error(error.message);
+            });
+        }
+
+        break;
+      case "banFromGroup":
+        {
+          const { groupId, qortalAddress, rBanReason, rBanTime } =
+            request.payload;
+          banFromGroup({ groupId, qortalAddress, rBanReason, rBanTime })
+            .then((res) => {
+              sendResponse(res);
+            })
+            .catch((error) => {
+              sendResponse({ error: error.message });
+              console.error(error.message);
+            });
+        }
+
+        break;
+      case "addDataPublishes":
+        {
+          const { data, groupId, type } = request.payload;
+          addDataPublishes(data, groupId, type)
+            .then((res) => {
+              sendResponse(res);
+            })
+            .catch((error) => {
+              sendResponse({ error: error.message });
+              console.error(error.message);
+            });
+        }
+        break;
+      case "getDataPublishes":
+        {
+          const { groupId, type } = request.payload;
+          getDataPublishes(groupId, type)
+            .then((res) => {
+              sendResponse(res);
+            })
+            .catch((error) => {
+              sendResponse({ error: error.message });
+              console.error(error.message);
+            });
+        }
+        break;
+      case "addUserSettings":
+        {
+          const { keyValue } = request.payload;
+          addUserSettings({keyValue})
+            .then((res) => {
+              sendResponse(res);
+            })
+            .catch((error) => {
+              sendResponse({ error: error.message });
+              console.error(error.message);
+            });
+        }
+        break;
+      case "getUserSettings":
+        {
+          const { key } = request.payload;
+          getUserSettings({key})
+            .then((res) => {
+              sendResponse(res);
+            })
+            .catch((error) => {
+              sendResponse({ error: error.message });
+              console.error(error.message);
+            });
+        }
+        break;
+      case "cancelBan":
+        {
+          const { groupId, qortalAddress } = request.payload;
+          cancelBan({ groupId, qortalAddress })
+            .then((res) => {
+              sendResponse(res);
+            })
+            .catch((error) => {
+              sendResponse({ error: error.message });
+              console.error(error.message);
+            });
+        }
+
+        break;
+      case "registerName":
+        {
+          const { name } = request.payload;
+          registerName({ name })
+            .then((res) => {
+              sendResponse(res);
+            })
+            .catch((error) => {
+              sendResponse({ error: error.message });
+              console.error(error.message);
+            });
+        }
+
+        break;
+      case "makeAdmin":
+        {
+          const { groupId, qortalAddress } = request.payload;
+          makeAdmin({ groupId, qortalAddress })
+            .then((res) => {
+              sendResponse(res);
+            })
+            .catch((error) => {
+              sendResponse({ error: error.message });
+              console.error(error.message);
+            });
+        }
+
+        break;
+      case "removeAdmin":
+        {
+          const { groupId, qortalAddress } = request.payload;
+          removeAdmin({ groupId, qortalAddress })
+            .then((res) => {
+              sendResponse(res);
+            })
+            .catch((error) => {
+              sendResponse({ error: error.message });
+              console.error(error.message);
+            });
+        }
+
+        break;
+
       case "oauth": {
         const { nodeBaseUrl, senderAddress, senderPublicKey, timestamp } =
           request.payload;
@@ -2902,11 +3060,10 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
         break;
       }
       case "setChatHeads": {
-        const { data} =
-          request.payload;
+        const { data } = request.payload;
 
-          setChatHeads({
-          data
+        setChatHeads({
+          data,
         })
           .then((res) => {
             sendResponse(res);
@@ -2919,10 +3076,8 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
         break;
       }
       case "getChatHeads": {
-       
-          getChatHeads()
+        getChatHeads()
           .then((res) => {
-         
             sendResponse(res);
           })
           .catch((error) => {
@@ -2933,32 +3088,29 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
         break;
       }
       case "notification": {
-        const notificationId = 'chat_notification_' + Date.now(); // Create a unique ID
+        const notificationId = "chat_notification_" + Date.now(); // Create a unique ID
 
-        const {  } =
-          request.payload;
-          chrome.notifications.create(notificationId, {
-            type: 'basic',
-            iconUrl: 'qort.png', // Add an appropriate icon for chat notifications
-            title: 'New Group Message!',
-            message: 'You have received a new message from one of your groups',
-            priority: 2, // Use the maximum priority to ensure it's noticeable
-            // buttons: [
-            //   { title: 'Go to group' }
-            // ]
-          });
-          // Set a timeout to clear the notification after 'timeout' milliseconds
-  setTimeout(() => {
-    chrome.notifications.clear(notificationId);
-  }, 3000);
-          sendResponse(true)
+        const {} = request.payload;
+        chrome.notifications.create(notificationId, {
+          type: "basic",
+          iconUrl: "qort.png", // Add an appropriate icon for chat notifications
+          title: "New Group Message!",
+          message: "You have received a new message from one of your groups",
+          priority: 2, // Use the maximum priority to ensure it's noticeable
+          // buttons: [
+          //   { title: 'Go to group' }
+          // ]
+        });
+        // Set a timeout to clear the notification after 'timeout' milliseconds
+        setTimeout(() => {
+          chrome.notifications.clear(notificationId);
+        }, 3000);
+        sendResponse(true);
         break;
       }
       case "addTimestampEnterChat": {
-
-        const { groupId, timestamp } =
-          request.payload;
-          addTimestampEnterChat({groupId, timestamp})
+        const { groupId, timestamp } = request.payload;
+        addTimestampEnterChat({ groupId, timestamp })
           .then((res) => {
             sendResponse(res);
           })
@@ -2971,48 +3123,46 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
 
       case "setApiKey": {
         const { payload } = request;
-       
-        
+
         // Save the apiKey in chrome.storage.local for persistence
         chrome.storage.local.set({ apiKey: payload }, () => {
-       
-          sendResponse(true)
+          sendResponse(true);
         });
-        return true
+        return true;
         break;
       }
       case "getApiKey": {
         getApiKeyFromStorage()
-        .then((res) => {
-          sendResponse(res);
-        })
-        .catch((error) => {
-          sendResponse({ error: error.message });
-          console.error(error.message);
-        });
-        return true
+          .then((res) => {
+            sendResponse(res);
+          })
+          .catch((error) => {
+            sendResponse({ error: error.message });
+            console.error(error.message);
+          });
+        return true;
         break;
       }
       case "notifyAdminRegenerateSecretKey": {
-        const { groupName, adminAddress } =
-        request.payload;
-        notifyAdminRegenerateSecretKey({groupName, adminAddress})
-        .then((res) => {
-          sendResponse(res);
-        })
-        .catch((error) => {
-          sendResponse({ error: error.message });
-          console.error(error.message);
-        });
+        const { groupName, adminAddress } = request.payload;
+        notifyAdminRegenerateSecretKey({ groupName, adminAddress })
+          .then((res) => {
+            sendResponse(res);
+          })
+          .catch((error) => {
+            sendResponse({ error: error.message });
+            console.error(error.message);
+          });
         break;
       }
 
-      
       case "addGroupNotificationTimestamp": {
-
-        const { groupId, timestamp } =
-          request.payload;
-          addTimestampGroupAnnouncement({groupId, timestamp, seenTimestamp: true})
+        const { groupId, timestamp } = request.payload;
+        addTimestampGroupAnnouncement({
+          groupId,
+          timestamp,
+          seenTimestamp: true,
+        })
           .then((res) => {
             sendResponse(res);
           })
@@ -3023,30 +3173,20 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
         break;
       }
       case "clearAllNotifications": {
-
-      ;
-      clearAllNotifications()
-          .then((res) => {
-            
-          })
-          .catch((error) => {
-            
-          });
+        clearAllNotifications()
+          .then((res) => {})
+          .catch((error) => {});
         break;
       }
       case "setGroupData": {
-
-        const { groupId,
+        const { groupId, secretKeyData, secretKeyResource, admins } =
+          request.payload;
+        setGroupData({
+          groupId,
           secretKeyData,
           secretKeyResource,
-          admins} =
-          request.payload;
-          setGroupData({
-            groupId,
-            secretKeyData,
-            secretKeyResource,
-            admins
-          })
+          admins,
+        })
           .then((res) => {
             sendResponse(res);
           })
@@ -3057,20 +3197,20 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
         break;
       }
       case "getGroupDataSingle": {
-        const {groupId} = request.payload
+        const { groupId } = request.payload;
         getGroupDataSingle(groupId)
-        .then((res) => {
-          sendResponse(res);
-        })
-        .catch((error) => {
-          sendResponse({ error: error.message });
-          console.error(error.message);
-        });
-        return true
+          .then((res) => {
+            sendResponse(res);
+          })
+          .catch((error) => {
+            sendResponse({ error: error.message });
+            console.error(error.message);
+          });
+        return true;
         break;
       }
       case "getTimestampEnterChat": {
-          getTimestampEnterChat()
+        getTimestampEnterChat()
           .then((res) => {
             sendResponse(res);
           })
@@ -3082,15 +3222,15 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
       }
       case "getGroupNotificationTimestamp": {
         getTimestampGroupAnnouncement()
-        .then((res) => {
-          sendResponse(res);
-        })
-        .catch((error) => {
-          sendResponse({ error: error.message });
-          console.error(error.message);
-        });
-      break;
-    }
+          .then((res) => {
+            sendResponse(res);
+          })
+          .catch((error) => {
+            sendResponse({ error: error.message });
+            console.error(error.message);
+          });
+        break;
+      }
       case "authentication":
         {
           getSaveWallet()
@@ -3098,7 +3238,9 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
               sendResponse(true);
             })
             .catch((error) => {
-              const popupUrl = chrome.runtime.getURL("index.html?secondary=true");
+              const popupUrl = chrome.runtime.getURL(
+                "index.html?secondary=true"
+              );
 
               chrome.windows.getAll(
                 { populate: true, windowTypes: ["popup"] },
@@ -3133,16 +3275,21 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
                       const topPosition =
                         (primaryDisplay.bounds.height - windowHeight) / 2;
 
-                      chrome.windows.create({
-                        url: chrome.runtime.getURL("index.html?secondary=true"),
-                        type: "popup",
-                        width: windowWidth,
-                        height: windowHeight,
-                        left: leftPosition,
-                        top: 0,
-                      } , () => {
-                        removeDuplicateWindow(popupUrl)
-                      });
+                      chrome.windows.create(
+                        {
+                          url: chrome.runtime.getURL(
+                            "index.html?secondary=true"
+                          ),
+                          type: "popup",
+                          width: windowWidth,
+                          height: windowHeight,
+                          left: leftPosition,
+                          top: 0,
+                        },
+                        () => {
+                          removeDuplicateWindow(popupUrl);
+                        }
+                      );
                     });
                   }
 
@@ -3189,7 +3336,7 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
                         error: "User has not authenticated, try again.",
                       });
                       clearInterval(intervalId); // Stop checking due to timeout
-                 
+
                       // Handle timeout situation if needed
                     }
                   };
@@ -3202,12 +3349,12 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
         break;
       case "buyOrder":
         {
-       
           const { qortalAtAddress, hostname } = request.payload;
           getTradeInfo(qortalAtAddress)
             .then((crosschainAtInfo) => {
-             
-              const popupUrl = chrome.runtime.getURL("index.html?secondary=true")
+              const popupUrl = chrome.runtime.getURL(
+                "index.html?secondary=true"
+              );
 
               chrome.windows.getAll(
                 { populate: true, windowTypes: ["popup"] },
@@ -3242,16 +3389,21 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
                       const topPosition =
                         (primaryDisplay.bounds.height - windowHeight) / 2;
 
-                      chrome.windows.create({
-                        url: chrome.runtime.getURL("index.html?secondary=true"),
-                        type: "popup",
-                        width: windowWidth,
-                        height: windowHeight,
-                        left: leftPosition,
-                        top: 0,
-                      }, () => {
-                        removeDuplicateWindow(popupUrl)
-                      });
+                      chrome.windows.create(
+                        {
+                          url: chrome.runtime.getURL(
+                            "index.html?secondary=true"
+                          ),
+                          type: "popup",
+                          width: windowWidth,
+                          height: windowHeight,
+                          left: leftPosition,
+                          top: 0,
+                        },
+                        () => {
+                          removeDuplicateWindow(popupUrl);
+                        }
+                      );
                     });
                   }
 
@@ -3285,7 +3437,6 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
         break;
       case "connection":
         {
-         
           const { hostname } = request.payload;
 
           connection(hostname)
@@ -3296,7 +3447,9 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
               ) {
                 sendResponse(true);
               } else {
-                const popupUrl = chrome.runtime.getURL("index.html?secondary=true");
+                const popupUrl = chrome.runtime.getURL(
+                  "index.html?secondary=true"
+                );
                 chrome.windows.getAll(
                   { populate: true, windowTypes: ["popup"] },
                   (windows) => {
@@ -3308,19 +3461,16 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
                           (tab) => tab.url && tab.url.startsWith(popupUrl)
                         )
                     );
-                    
+
                     if (existingPopup) {
                       // If the popup exists but is minimized or not focused, focus it
                       chrome.windows.update(existingPopup.id, {
                         focused: true,
                         state: "normal",
                       });
-                    } else  {
-                     
-                    
+                    } else {
                       // No existing popup found, create a new one
                       chrome.system.display.getInfo((displays) => {
-                       
                         // Assuming the primary display is the first one (adjust logic as needed)
                         const primaryDisplay = displays[0];
                         const screenWidth = primaryDisplay.bounds.width;
@@ -3334,16 +3484,19 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
                         const topPosition =
                           (primaryDisplay.bounds.height - windowHeight) / 2;
 
-                          chrome.windows.create({
+                        chrome.windows.create(
+                          {
                             url: popupUrl,
                             type: "popup",
                             width: windowWidth,
                             height: windowHeight,
                             left: leftPosition,
                             top: 0,
-                          }, () => {
-                            removeDuplicateWindow(popupUrl)
-                          });
+                          },
+                          () => {
+                            removeDuplicateWindow(popupUrl);
+                          }
+                        );
                       });
                     }
 
@@ -3411,16 +3564,19 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
                   const topPosition =
                     (primaryDisplay.bounds.height - windowHeight) / 2;
 
-                  chrome.windows.create({
-                    url: chrome.runtime.getURL("index.html?secondary=true"),
-                    type: "popup",
-                    width: windowWidth,
-                    height: windowHeight,
-                    left: leftPosition,
-                    top: 0,
-                  }, () => {
-                    removeDuplicateWindow(popupUrl)
-                  });
+                  chrome.windows.create(
+                    {
+                      url: chrome.runtime.getURL("index.html?secondary=true"),
+                      type: "popup",
+                      width: windowWidth,
+                      height: windowHeight,
+                      left: leftPosition,
+                      top: 0,
+                    },
+                    () => {
+                      removeDuplicateWindow(popupUrl);
+                    }
+                  );
                 });
               }
 
@@ -3544,10 +3700,10 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
           previousData,
           previousNumber,
         })
-          .then(({data, numberOfMembers}) => {
+          .then(({ data, numberOfMembers }) => {
             sendResponse(data);
-          
-            if(!previousData){
+
+            if (!previousData) {
               // first secret key of the group
               sendChatGroup({
                 groupId,
@@ -3557,11 +3713,11 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
               })
                 .then(() => {})
                 .catch((error) => {
-                  console.error('1',error.message);
+                  console.error("1", error.message);
                 });
-              return
+              return;
             }
-            sendChatNotification(data, groupId, previousData, numberOfMembers)
+            sendChatNotification(data, groupId, previousData, numberOfMembers);
           })
           .catch((error) => {
             console.error(error.message);
@@ -3574,27 +3730,27 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
         const { encryptedData, identifier } = request.payload;
 
         publishGroupEncryptedResource({
-          encryptedData, identifier
+          encryptedData,
+          identifier,
         })
           .then((data) => {
             sendResponse(data);
-           
           })
           .catch((error) => {
             console.error(error.message);
             sendResponse({ error: error.message });
           });
-          return true
+        return true;
         break;
       }
       case "handleActiveGroupDataFromSocket": {
         const { groups, directs } = request.payload;
         handleActiveGroupDataFromSocket({
-          groups, directs
+          groups,
+          directs,
         })
           .then((data) => {
             sendResponse(true);
-           
           })
           .catch((error) => {
             console.error(error.message);
@@ -3606,9 +3762,7 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
       case "getThreadActivity": {
         checkThreads(true)
           .then((data) => {
-          
             sendResponse(data);
-           
           })
           .catch((error) => {
             console.error(error.message);
@@ -3618,14 +3772,12 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
         break;
       }
 
-      
       case "updateThreadActivity": {
         const { threadId, qortalName, groupId, thread } = request.payload;
 
-        updateThreadActivity({threadId, qortalName, groupId, thread})
+        updateThreadActivity({ threadId, qortalName, groupId, thread })
           .then(() => {
             sendResponse(true);
-           
           })
           .catch((error) => {
             console.error(error.message);
@@ -3653,7 +3805,6 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
 
         encryptSingle({ data64: data, secretKeyObject: secretKeyObject })
           .then((res) => {
-           
             sendResponse(res);
           })
           .catch((error) => {
@@ -3668,7 +3819,6 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
 
         decryptSingleFunc({ messages: data, secretKeyObject, skipDecodeBase64 })
           .then((res) => {
-          
             sendResponse(res);
           })
           .catch((error) => {
@@ -3679,24 +3829,27 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
         break;
       }
       case "pauseAllQueues": {
-        pauseAllQueues()
-        sendResponse(res);
+        pauseAllQueues();
+        sendResponse(true);
 
         break;
-        break;
+      
       }
       case "resumeAllQueues": {
-        resumeAllQueues()
-        sendResponse(res);
+        resumeAllQueues();
+        sendResponse(true);
 
         break;
       }
       case "decryptSingleForPublishes": {
         const { data, secretKeyObject, skipDecodeBase64 } = request.payload;
 
-        decryptSingleForPublishes({ messages: data, secretKeyObject, skipDecodeBase64 })
+        decryptSingleForPublishes({
+          messages: data,
+          secretKeyObject,
+          skipDecodeBase64,
+        })
           .then((res) => {
-         
             sendResponse(res);
           })
           .catch((error) => {
@@ -3706,13 +3859,12 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
 
         break;
       }
-      
+
       case "decryptDirect": {
         const { data, involvingAddress } = request.payload;
 
         decryptDirectFunc({ messages: data, involvingAddress })
           .then((res) => {
-           
             sendResponse(res);
           })
           .catch((error) => {
@@ -3722,7 +3874,7 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
 
         break;
       }
-      
+
       case "sendChatGroup": {
         const {
           groupId,
@@ -3733,7 +3885,6 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
 
         sendChatGroup({ groupId, typeMessage, chatReference, messageText })
           .then((res) => {
-           
             sendResponse(res);
           })
           .catch((error) => {
@@ -3750,12 +3901,18 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
           chatReference = undefined,
           messageText,
           publicKeyOfRecipient,
-          address
+          address,
         } = request.payload;
 
-        sendChatDirect({ directTo, chatReference, messageText, typeMessage, publicKeyOfRecipient, address })
+        sendChatDirect({
+          directTo,
+          chatReference,
+          messageText,
+          typeMessage,
+          publicKeyOfRecipient,
+          address,
+        })
           .then((res) => {
-          
             sendResponse(res);
           })
           .catch((error) => {
@@ -3766,11 +3923,9 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
         break;
       }
       case "setupGroupWebsocket": {
-         
-            checkNewMessages()
-        checkThreads()
-     
-       
+        checkNewMessages();
+        checkThreads();
+
         // if(socket){
         //   if(groups){
         //     console.log('hasgroups1')
@@ -3794,7 +3949,7 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
         //   listenForNewGroupAnnouncements()
         //   listenForThreadUpdates()
         // }, 200);
-        sendResponse(true)
+        sendResponse(true);
 
         break;
       }
@@ -3802,39 +3957,47 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
       case "logout":
         {
           try {
-            const logoutFunc = async()=> {
-          forceCloseWebSocket()
-          clearAllQueues()
-          if(interval){
-            // for announcement notification
-            clearInterval(interval)
-          }
+            const logoutFunc = async () => {
+              forceCloseWebSocket();
+              clearAllQueues();
+              if (interval) {
+                // for announcement notification
+                clearInterval(interval);
+              }
 
-          const wallet = await getSaveWallet();
-          const address = wallet.address0;
-          const key1 = `tempPublish-${address}`
-          const key2 = `group-data-${address}`
-          const key3 = `${address}-publishData`
-          chrome.storage.local.remove(["keyPair", "walletInfo", "apiKey", "active-groups-directs", key1, key2, key3], () => {
-            if (chrome.runtime.lastError) {
-              // Handle error
-              console.error(chrome.runtime.lastError.message);
-            } else {
-              chrome.tabs.query({}, function (tabs) {
-                tabs.forEach((tab) => {
-                  chrome.tabs.sendMessage(tab.id, { type: "LOGOUT" });
-                });
-              });
-              // Data removed successfully
-              sendResponse(true);
-            }
-          });
-            }
-            logoutFunc()
-          } catch (error) {
-            
-          }
-         
+              const wallet = await getSaveWallet();
+              const address = wallet.address0;
+              const key1 = `tempPublish-${address}`;
+              const key2 = `group-data-${address}`;
+              const key3 = `${address}-publishData`;
+              chrome.storage.local.remove(
+                [
+                  "keyPair",
+                  "walletInfo",
+                  "apiKey",
+                  "active-groups-directs",
+                  key1,
+                  key2,
+                  key3,
+                ],
+                () => {
+                  if (chrome.runtime.lastError) {
+                    // Handle error
+                    console.error(chrome.runtime.lastError.message);
+                  } else {
+                    chrome.tabs.query({}, function (tabs) {
+                      tabs.forEach((tab) => {
+                        chrome.tabs.sendMessage(tab.id, { type: "LOGOUT" });
+                      });
+                    });
+                    // Data removed successfully
+                    sendResponse(true);
+                  }
+                }
+              );
+            };
+            logoutFunc();
+          } catch (error) {}
         }
 
         break;
@@ -3847,17 +4010,20 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
 const saveWindowBounds = (windowId) => {
   chrome.windows.get(windowId, (window) => {
     const { top, left, width, height } = window;
-    chrome.storage.local.set({
-      windowBounds: { top, left, width, height }
-    }, () => {
-      console.log('Window bounds saved:', { top, left, width, height });
-    });
+    chrome.storage.local.set(
+      {
+        windowBounds: { top, left, width, height },
+      },
+      () => {
+        console.log("Window bounds saved:", { top, left, width, height });
+      }
+    );
   });
 };
 
 // Function to restore window position and size
 const restoreWindowBounds = (callback) => {
-  chrome.storage.local.get('windowBounds', (data) => {
+  chrome.storage.local.get("windowBounds", (data) => {
     if (data.windowBounds) {
       callback(data.windowBounds);
     } else {
@@ -3871,22 +4037,37 @@ chrome.action?.onClicked?.addListener((tab) => {
   chrome.windows.getAll(
     { populate: true, windowTypes: ["popup"] },
     (windows) => {
+      console.log("windows", windows);
       // Attempt to find an existing popup window that has a tab with the correct URL
-      const existingPopup = windows.find(
-        (w) =>
-          {
-          
-            return w.tabs &&
-            w.tabs.some((tab) => tab.url && tab.url.startsWith(popupUrl));
-          }
-      );
+      const existingPopup = windows.find((w) => {
+        return (
+          w.tabs &&
+          w.tabs.some((tab) => tab.url && tab.url.startsWith(popupUrl))
+        );
+      });
       if (existingPopup) {
+        console.log("Focusing existing popup window", existingPopup.id);
         // If the popup exists but is minimized or not focused, focus it
-        chrome.windows.update(existingPopup.id, {
-          focused: true,
-          state: "normal",
-        });
+
+        if (isMobile) {
+          const correctTab = existingPopup.tabs.find(
+            (tab) => tab.url && tab.url.startsWith(popupUrl)
+          );
+          if (correctTab) {
+            chrome.tabs.update(correctTab.id, { active: true });
+            chrome.windows.update(existingPopup.id, {
+              focused: true,
+              state: "normal",
+            });
+          }
+        } else {
+          chrome.windows.update(existingPopup.id, {
+            focused: true,
+            state: "normal",
+          });
+        }
       } else {
+        console.log("No existing popup, creating new window...");
         // No existing popup found, restore the saved bounds or create a new one
         restoreWindowBounds((savedBounds) => {
           chrome.system.display.getInfo((displays) => {
@@ -3896,31 +4077,31 @@ chrome.action?.onClicked?.addListener((tab) => {
             const screenHeight = primaryDisplay.bounds.height;
 
             // Create a new window that uses the saved bounds if available
-            chrome.windows.create({
-              url: chrome.runtime.getURL("index.html?main=true"),
-              type: "popup",
-              width: savedBounds ? savedBounds.width : screenWidth,
-              height: savedBounds ? savedBounds.height : screenHeight,
-              left: savedBounds ? savedBounds.left : 0,
-              top: savedBounds ? savedBounds.top : 0,
-            }, (newWindow) => {
-             
+            chrome.windows.create(
+              {
+                url: chrome.runtime.getURL("index.html?main=true"),
+                type: "popup",
+                width: savedBounds ? savedBounds.width : screenWidth,
+                height: savedBounds ? savedBounds.height : screenHeight,
+                left: savedBounds ? savedBounds.left : 0,
+                top: savedBounds ? savedBounds.top : 0,
+              },
+              (newWindow) => {
+                // Listen for changes in the window's size or position and save them
+                chrome.windows.onBoundsChanged.addListener((window) => {
+                  if (window.id === newWindow.id) {
+                    saveWindowBounds(newWindow.id);
+                  }
+                });
 
-              // Listen for changes in the window's size or position and save them
-              chrome.windows.onBoundsChanged.addListener((window) => {
-                if (window.id === newWindow.id) {
-                  saveWindowBounds(newWindow.id);
-                }
-              });
-
-              // Save the final window bounds when the window is closed
-              chrome.windows.onRemoved.addListener((windowId) => {
-                if (windowId === newWindow.id) {
-                 
-                  saveWindowBounds(windowId);  // Save the position/size before it’s closed
-                }
-              });
-            });
+                // Save the final window bounds when the window is closed
+                chrome.windows.onRemoved.addListener((windowId) => {
+                  if (windowId === newWindow.id) {
+                    saveWindowBounds(windowId); // Save the position/size before it’s closed
+                  }
+                });
+              }
+            );
           });
         });
       }
@@ -3940,9 +4121,8 @@ chrome.action?.onClicked?.addListener((tab) => {
   );
 });
 
-const checkGroupList = async() => {
+const checkGroupList = async () => {
   try {
-   
     const wallet = await getSaveWallet();
     const address = wallet.address0;
     const url = await createEndpoint(`/chat/active/${address}`);
@@ -3953,73 +4133,73 @@ const checkGroupList = async() => {
       },
     });
     const data = await response.json();
-    
-    const filteredGroups = data.groups?.filter(item => item?.groupId !== 0) || [];
-    const sortedGroups = filteredGroups.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-    const sortedDirects = (data?.direct || []).filter(item =>
-      item?.name !== 'extension-proxy' && item?.address !== 'QSMMGSgysEuqDCuLw3S4cHrQkBrh3vP3VH'
-    ).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+    const filteredGroups =
+      data.groups?.filter((item) => item?.groupId !== 0) || [];
+    const sortedGroups = filteredGroups.sort(
+      (a, b) => (b.timestamp || 0) - (a.timestamp || 0)
+    );
+    const sortedDirects = (data?.direct || [])
+      .filter(
+        (item) =>
+          item?.name !== "extension-proxy" &&
+          item?.address !== "QSMMGSgysEuqDCuLw3S4cHrQkBrh3vP3VH"
+      )
+      .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
 
     handleActiveGroupDataFromSocket({
       groups: sortedGroups,
-      directs: sortedDirects
-    })
+      directs: sortedDirects,
+    });
   } catch (error) {
-    console.error(error)
+    console.error(error);
   } finally {
   }
-}
+};
 
-const checkActiveChatsForNotifications = async ()=> {
+const checkActiveChatsForNotifications = async () => {
   try {
- 
-
     const popupUrl = chrome.runtime.getURL("index.html?main=true");
 
     chrome.windows.getAll(
       { populate: true, windowTypes: ["popup"] },
       (windows) => {
         // Attempt to find an existing popup window that has a tab with the correct URL
-        const existingPopup = windows.find(
-          (w) => {
-          
-            return w.tabs && w.tabs.some((tab) => tab.url && tab.url.startsWith(popupUrl));
-          }
-        );
-  
+        const existingPopup = windows.find((w) => {
+          return (
+            w.tabs &&
+            w.tabs.some((tab) => tab.url && tab.url.startsWith(popupUrl))
+          );
+        });
+
         if (existingPopup) {
-          
         } else {
-          checkGroupList()
-         
+          checkGroupList();
         }
-  
-     
       }
     );
-  } catch (error) {
-    
-  }
-}
-chrome.notifications?.onClicked?.addListener( (notificationId) => {
- 
+  } catch (error) {}
+};
+chrome.notifications?.onClicked?.addListener((notificationId) => {
   const popupUrl = chrome.runtime.getURL("index.html?main=true");
-  const isDirect = notificationId.includes('_type=direct_');
-  const isGroup = notificationId.includes('_type=group_');
-  const isGroupAnnouncement = notificationId.includes('_type=group-announcement_');
-  const isNewThreadPost = notificationId.includes('_type=thread-post_');
+  const isDirect = notificationId.includes("_type=direct_");
+  const isGroup = notificationId.includes("_type=group_");
+  const isGroupAnnouncement = notificationId.includes(
+    "_type=group-announcement_"
+  );
+  const isNewThreadPost = notificationId.includes("_type=thread-post_");
 
-  let isExisting = false
+  let isExisting = false;
   chrome.windows.getAll(
     { populate: true, windowTypes: ["popup"] },
     async (windows) => {
       // Attempt to find an existing popup window that has a tab with the correct URL
-      const existingPopup = windows.find(
-        (w) => {
-  
-          return w.tabs && w.tabs.some((tab) => tab.url && tab.url.startsWith(popupUrl));
-        }
-      );
+      const existingPopup = windows.find((w) => {
+        return (
+          w.tabs &&
+          w.tabs.some((tab) => tab.url && tab.url.startsWith(popupUrl))
+        );
+      });
 
       if (existingPopup) {
         // If the popup exists but is minimized or not focused, focus it
@@ -4027,7 +4207,7 @@ chrome.notifications?.onClicked?.addListener( (notificationId) => {
           focused: true,
           state: "normal",
         });
-        isExisting = true
+        isExisting = true;
       } else {
         // No existing popup found, restore saved bounds or create a new one
         restoreWindowBounds((savedBounds) => {
@@ -4038,84 +4218,91 @@ chrome.notifications?.onClicked?.addListener( (notificationId) => {
             const screenHeight = primaryDisplay.bounds.height;
 
             // Create a new window that takes up the full screen or uses saved bounds
-            chrome.windows.create({
-              url: chrome.runtime.getURL("index.html?main=true"),
-              type: "popup",
-              width: savedBounds ? savedBounds.width : screenWidth,
-              height: savedBounds ? savedBounds.height : screenHeight,
-              left: savedBounds ? savedBounds.left : 0,
-              top: savedBounds ? savedBounds.top : 0,
-            }, (newWindow) => {
-             
+            chrome.windows.create(
+              {
+                url: chrome.runtime.getURL("index.html?main=true"),
+                type: "popup",
+                width: savedBounds ? savedBounds.width : screenWidth,
+                height: savedBounds ? savedBounds.height : screenHeight,
+                left: savedBounds ? savedBounds.left : 0,
+                top: savedBounds ? savedBounds.top : 0,
+              },
+              (newWindow) => {
+                // Listen for changes in the window's size or position and save them
+                chrome.windows.onBoundsChanged.addListener((window) => {
+                  if (window.id === newWindow.id) {
+                    saveWindowBounds(newWindow.id);
+                  }
+                });
 
-              // Listen for changes in the window's size or position and save them
-              chrome.windows.onBoundsChanged.addListener((window) => {
-                if (window.id === newWindow.id) {
-                  saveWindowBounds(newWindow.id);
-                }
-              });
-
-              // Save the final window bounds when the window is closed
-              chrome.windows.onRemoved.addListener((windowId) => {
-                if (windowId === newWindow.id) {
-            
-                  saveWindowBounds(windowId);  // Save the position/size before it’s closed
-                }
-              });
-            });
+                // Save the final window bounds when the window is closed
+                chrome.windows.onRemoved.addListener((windowId) => {
+                  if (windowId === newWindow.id) {
+                    saveWindowBounds(windowId); // Save the position/size before it’s closed
+                  }
+                });
+              }
+            );
           });
         });
       }
-      const activeData = await getStoredData('active-groups-directs') || { groups: [], directs: [] };
-      setTimeout(() => {
-     
-
-        chrome.runtime.sendMessage({
-          action: "SET_GROUPS",
-          payload: activeData?.groups || [],
-        });
-        chrome.runtime.sendMessage({
-          action: "SET_DIRECTS",
-          payload: activeData?.directs || [],
-        });
-      }, isExisting ? 100 : 1000);
+      const activeData = (await getStoredData("active-groups-directs")) || {
+        groups: [],
+        directs: [],
+      };
+      setTimeout(
+        () => {
+          chrome.runtime.sendMessage({
+            action: "SET_GROUPS",
+            payload: activeData?.groups || [],
+          });
+          chrome.runtime.sendMessage({
+            action: "SET_DIRECTS",
+            payload: activeData?.directs || [],
+          });
+        },
+        isExisting ? 100 : 1000
+      );
       const interactionId = Date.now().toString(); // Simple example; consider a better unique ID
 
-      setTimeout(() => {
-        chrome.runtime.sendMessage({
-          action: "INITIATE_MAIN",
-          payload: {},
-        });
+      setTimeout(
+        () => {
+          chrome.runtime.sendMessage({
+            action: "INITIATE_MAIN",
+            payload: {},
+          });
 
-        // Handle different types of notifications
-        if (isDirect) {
-          const fromValue = notificationId.split('_from=')[1];
-          chrome.runtime.sendMessage({
-            action: "NOTIFICATION_OPEN_DIRECT",
-            payload: { from: fromValue },
-          });
-        } else if (isGroup) {
-          const fromValue = notificationId.split('_from=')[1];
-          chrome.runtime.sendMessage({
-            action: "NOTIFICATION_OPEN_GROUP",
-            payload: { from: fromValue },
-          });
-        } else if (isGroupAnnouncement) {
-          const fromValue = notificationId.split('_from=')[1];
-          chrome.runtime.sendMessage({
-            action: "NOTIFICATION_OPEN_ANNOUNCEMENT_GROUP",
-            payload: { from: fromValue },
-          });
-        } else if (isNewThreadPost) {
-          const dataValue = notificationId.split('_data=')[1];
-          const dataParsed = JSON.parse(dataValue);
-        
-          chrome.runtime.sendMessage({
-            action: "NOTIFICATION_OPEN_THREAD_NEW_POST",
-            payload: { data: dataParsed },
-          });
-        }
-      }, isExisting ? 400 : 3000);
+          // Handle different types of notifications
+          if (isDirect) {
+            const fromValue = notificationId.split("_from=")[1];
+            chrome.runtime.sendMessage({
+              action: "NOTIFICATION_OPEN_DIRECT",
+              payload: { from: fromValue },
+            });
+          } else if (isGroup) {
+            const fromValue = notificationId.split("_from=")[1];
+            chrome.runtime.sendMessage({
+              action: "NOTIFICATION_OPEN_GROUP",
+              payload: { from: fromValue },
+            });
+          } else if (isGroupAnnouncement) {
+            const fromValue = notificationId.split("_from=")[1];
+            chrome.runtime.sendMessage({
+              action: "NOTIFICATION_OPEN_ANNOUNCEMENT_GROUP",
+              payload: { from: fromValue },
+            });
+          } else if (isNewThreadPost) {
+            const dataValue = notificationId.split("_data=")[1];
+            const dataParsed = JSON.parse(dataValue);
+
+            chrome.runtime.sendMessage({
+              action: "NOTIFICATION_OPEN_THREAD_NEW_POST",
+              payload: { data: dataParsed },
+            });
+          }
+        },
+        isExisting ? 400 : 3000
+      );
 
       // Store sendResponse callback with the interaction ID
       pendingResponses.set(interactionId, sendResponse);
@@ -4133,14 +4320,16 @@ chrome.runtime?.onStartup.addListener(() => {
 
 chrome.runtime?.onInstalled.addListener((details) => {
   if (details.reason === chrome.runtime.OnInstalledReason.INSTALL) {
-    console.log('Extension Installed');
+    console.log("Extension Installed");
     // Perform tasks that should only happen on extension installation
     // Example: Initialize WebSocket, set default settings, etc.
   } else if (details.reason === chrome.runtime.OnInstalledReason.UPDATE) {
-    console.log('Extension Updated');
+    console.log("Extension Updated");
     // Handle the update logic here (e.g., migrate settings)
-  } else if (details.reason === chrome.runtime.OnInstalledReason.CHROME_UPDATE) {
-    console.log('Chrome updated');
+  } else if (
+    details.reason === chrome.runtime.OnInstalledReason.CHROME_UPDATE
+  ) {
+    console.log("Chrome updated");
     // Optional: Handle Chrome-specific updates if necessary
   }
 
@@ -4159,20 +4348,15 @@ chrome.alarms?.get("checkForNotifications", (existingAlarm) => {
 });
 
 chrome.alarms?.onAlarm.addListener(async (alarm) => {
- try {
-
-  if (alarm.name === "checkForNotifications") {
+  try {
+    if (alarm.name === "checkForNotifications") {
       // initWebsocketMessageGroup(address);
       const wallet = await getSaveWallet();
       const address = wallet.address0;
-      if(!address) return
-      checkActiveChatsForNotifications()
-      checkNewMessages()
-      checkThreads()
-     
-  }
- } catch (error) {
-
- }
+      if (!address) return;
+      checkActiveChatsForNotifications();
+      checkNewMessages();
+      checkThreads();
+    }
+  } catch (error) {}
 });
-

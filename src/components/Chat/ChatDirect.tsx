@@ -326,7 +326,7 @@ const clearEditorContent = () => {
       }
     }
 
-console.log('isFocusedParent', isFocusedParent)
+
     
   return (
     <div style={{

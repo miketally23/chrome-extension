@@ -223,6 +223,24 @@ export const getBaseApiReact = (customApi?: string) => {
     return groupApi;
   }
 };
+// export const getArbitraryEndpointReact = () => {
+  
+
+//   if (globalApiKey) {
+//     return `/arbitrary/resources/search`;
+//   } else {
+//     return `/arbitrary/resources/searchsimple`;
+//   }
+// };
+export const getArbitraryEndpointReact = () => {
+  
+
+  if (globalApiKey) {
+    return `/arbitrary/resources/searchsimple`;
+  } else {
+    return `/arbitrary/resources/searchsimple`;
+  }
+};
 export const getBaseApiReactSocket = (customApi?: string) => {
   
   if (customApi) {

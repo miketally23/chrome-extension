@@ -24,7 +24,7 @@ import ReturnSVG from '../../../assets/svgs/Return.svg'
 import { NewThread } from './NewThread'
 import { decryptPublishes } from '../../Chat/GroupAnnouncements'
 import { getBaseApi } from '../../../background'
-import { getBaseApiReact } from '../../../App'
+import { getArbitraryEndpointReact, getBaseApiReact } from '../../../App'
 interface ThreadProps {
   currentThread: any
   groupInfo: any
@@ -91,7 +91,7 @@ export const Thread = ({
       
         const offset = messages.length
         const identifier = `thmsg-${threadId}`
-        const url = `${getBaseApiReact()}/arbitrary/resources/search?mode=ALL&service=${threadIdentifier}&identifier=${identifier}&limit=20&includemetadata=false&offset=${offset}&reverse=true&prefix=true`
+        const url = `${getBaseApiReact()}${getArbitraryEndpointReact()}?mode=ALL&service=${threadIdentifier}&identifier=${identifier}&limit=20&includemetadata=false&offset=${offset}&reverse=true&prefix=true`
         const response = await fetch(url, {
           method: 'GET',
           headers: {
@@ -180,7 +180,7 @@ export const Thread = ({
         let threadId = groupInfo.threadId
       
         const identifier = `thmsg-${threadId}`
-        const url = `${getBaseApiReact()}/arbitrary/resources/search?mode=ALL&service=${threadIdentifier}&identifier=${identifier}&limit=20&includemetadata=false&offset=${0}&reverse=true&prefix=true`
+        const url = `${getBaseApiReact()}${getArbitraryEndpointReact()}?mode=ALL&service=${threadIdentifier}&identifier=${identifier}&limit=20&includemetadata=false&offset=${0}&reverse=true&prefix=true`
         const response = await fetch(url, {
           method: 'GET',
           headers: {

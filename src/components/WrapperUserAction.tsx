@@ -75,7 +75,7 @@ export const WrapperUserAction = ({ children, address, name, disabled }) => {
                 name,
               });
               handleClose();
-              console.log('Message clicked');
+            
             }}
             sx={{
                 color: 'white'
@@ -93,7 +93,7 @@ export const WrapperUserAction = ({ children, address, name, disabled }) => {
                     name,
             });
               handleClose();
-              console.log('Send QORT clicked');
+             
             }}
             sx={{
                 color: 'white'

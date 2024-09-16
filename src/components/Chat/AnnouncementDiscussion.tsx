@@ -10,7 +10,7 @@ import { decryptPublishes, getTempPublish, saveTempPublish } from "./GroupAnnoun
 import { AnnouncementList } from "./AnnouncementList";
 import { Spacer } from "../../common/Spacer";
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import { getBaseApiReact, isMobile, pauseAllQueues, resumeAllQueues } from "../../App";
+import { getArbitraryEndpointReact, getBaseApiReact, isMobile, pauseAllQueues, resumeAllQueues } from "../../App";
 
 const tempKey = 'accouncement-comment'
 
@@ -55,6 +55,7 @@ export const AnnouncementDiscussion = ({
       const res = await fetch(
         `${getBaseApiReact()}/arbitrary/DOCUMENT/${name}/${identifier}?encoding=base64`
       );
+      if(!res?.ok) return
       const data = await res.text();
       const response = await decryptPublishes([{ data }], secretKey);
     
@@ -179,7 +180,7 @@ export const AnnouncementDiscussion = ({
 
         // dispatch(setIsLoadingGlobal(true))
         const identifier = `cm-${selectedAnnouncement.identifier}`;
-        const url = `${getBaseApiReact()}/arbitrary/resources/search?mode=ALL&service=DOCUMENT&identifier=${identifier}&limit=20&includemetadata=false&offset=${offset}&reverse=true`;
+        const url = `${getBaseApiReact()}${getArbitraryEndpointReact()}?mode=ALL&service=DOCUMENT&identifier=${identifier}&limit=20&includemetadata=false&offset=${offset}&reverse=true&prefix=true`;
         const response = await fetch(url, {
           method: "GET",
           headers: {
@@ -209,7 +210,7 @@ export const AnnouncementDiscussion = ({
 
       const offset = comments.length
       const identifier = `cm-${selectedAnnouncement.identifier}`;
-        const url = `${getBaseApiReact()}/arbitrary/resources/search?mode=ALL&service=DOCUMENT&identifier=${identifier}&limit=20&includemetadata=false&offset=${offset}&reverse=true&prefix=true`;
+        const url = `${getBaseApiReact()}${getArbitraryEndpointReact()}?mode=ALL&service=DOCUMENT&identifier=${identifier}&limit=20&includemetadata=false&offset=${offset}&reverse=true&prefix=true`;
         const response = await fetch(url, {
           method: "GET",
           headers: {

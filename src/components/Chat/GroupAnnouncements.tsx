@@ -28,7 +28,7 @@ const uid = new ShortUniqueId({ length: 8 });
 import CampaignIcon from '@mui/icons-material/Campaign';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { AnnouncementDiscussion } from "./AnnouncementDiscussion";
-import { MyContext, getBaseApiReact, isMobile, pauseAllQueues, resumeAllQueues } from "../../App";
+import { MyContext, getArbitraryEndpointReact, getBaseApiReact, isMobile, pauseAllQueues, resumeAllQueues } from "../../App";
 import { RequestQueueWithPromise } from "../../utils/queue/queue";
 import { CustomizedSnackbars } from "../Snackbar/Snackbar";
 import {  addDataPublishesFunc, getDataPublishesFunc } from "../Group/Group";
@@ -168,6 +168,7 @@ export const GroupAnnouncements = ({
             `${getBaseApiReact()}/arbitrary/DOCUMENT/${name}/${identifier}?encoding=base64`
           );
         }) 
+        if(!res?.ok) return
          data = await res.text();
          await addDataPublishesFunc({...resource, data}, selectedGroup, 'anc')
       } else {
@@ -339,7 +340,7 @@ export const GroupAnnouncements = ({
 
         // dispatch(setIsLoadingGlobal(true))
         const identifier = `grp-${selectedGroup}-anc-`;
-        const url = `${getBaseApiReact()}/arbitrary/resources/search?mode=ALL&service=DOCUMENT&identifier=${identifier}&limit=20&includemetadata=false&offset=${offset}&reverse=true&prefix=true`;
+        const url = `${getBaseApiReact()}${getArbitraryEndpointReact()}?mode=ALL&service=DOCUMENT&identifier=${identifier}&limit=20&includemetadata=false&offset=${offset}&reverse=true&prefix=true`;
         const response = await fetch(url, {
           method: "GET",
           headers: {
@@ -376,7 +377,7 @@ export const GroupAnnouncements = ({
 
       const offset = announcements.length
     const identifier = `grp-${selectedGroup}-anc-`;
-        const url = `${getBaseApiReact()}/arbitrary/resources/search?mode=ALL&service=DOCUMENT&identifier=${identifier}&limit=20&includemetadata=false&offset=${offset}&reverse=true&prefix=true`;
+        const url = `${getBaseApiReact()}${getArbitraryEndpointReact()}?mode=ALL&service=DOCUMENT&identifier=${identifier}&limit=20&includemetadata=false&offset=${offset}&reverse=true&prefix=true`;
         const response = await fetch(url, {
           method: "GET",
           headers: {
@@ -403,7 +404,7 @@ export const GroupAnnouncements = ({
       try {
       
         const identifier = `grp-${selectedGroup}-anc-`;
-        const url = `${getBaseApiReact()}/arbitrary/resources/search?mode=ALL&service=DOCUMENT&identifier=${identifier}&limit=20&includemetadata=false&offset=${0}&reverse=true&prefix=true`;
+        const url = `${getBaseApiReact()}${getArbitraryEndpointReact()}?mode=ALL&service=DOCUMENT&identifier=${identifier}&limit=20&includemetadata=false&offset=${0}&reverse=true&prefix=true`;
         const response = await fetch(url, {
           method: 'GET',
           headers: {

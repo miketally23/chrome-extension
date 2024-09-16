@@ -9,7 +9,7 @@ import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import { getBaseApi } from "../../background";
 import { requestQueueCommentCount } from "./GroupAnnouncements";
 import { CustomLoader } from "../../common/CustomLoader";
-import { getBaseApiReact } from "../../App";
+import { getArbitraryEndpointReact, getBaseApiReact } from "../../App";
 import { WrapperUserAction } from "../WrapperUserAction";
 export const AnnouncementItem = ({ message, messageData, setSelectedAnnouncement, disableComment, myName }) => {
 
@@ -21,7 +21,7 @@ export const AnnouncementItem = ({ message, messageData, setSelectedAnnouncement
 
         // dispatch(setIsLoadingGlobal(true))
         const identifier = `cm-${message.identifier}`;
-        const url = `${getBaseApiReact()}/arbitrary/resources/search?mode=ALL&service=DOCUMENT&identifier=${identifier}&limit=0&includemetadata=false&offset=${offset}&reverse=true&prefix=true`;
+        const url = `${getBaseApiReact()}${getArbitraryEndpointReact()}?mode=ALL&service=DOCUMENT&identifier=${identifier}&limit=0&includemetadata=false&offset=${offset}&reverse=true&prefix=true`;
        
         const response =  await requestQueueCommentCount.enqueue(() => { 
           return fetch(url, {
