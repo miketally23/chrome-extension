@@ -244,7 +244,7 @@ async function checkWebviewFocus() {
 }
 
 function playNotificationSound() {
-  chrome.runtime.sendMessage({ action: "PLAY_NOTIFICATION_SOUND" });
+  // chrome.runtime.sendMessage({ action: "PLAY_NOTIFICATION_SOUND" });
 }
 
 const handleNotificationDirect = async (directs) => {
