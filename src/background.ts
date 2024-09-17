@@ -25,6 +25,7 @@ import PhraseWallet from "./utils/generateWallet/phrase-wallet";
 import { RequestQueueWithPromise } from "./utils/queue/queue";
 import { validateAddress } from "./utils/validateAddress";
 import { Sha256 } from "asmcrypto.js";
+import { TradeBotRespondMultipleRequest } from "./transactions/TradeBotRespondMultipleRequest";
 
 let lastGroupNotification;
 export const groupApi = "https://ext-node.qortal.link";
@@ -112,7 +113,7 @@ const getApiKeyFromStorage = async () => {
 const getArbitraryEndpoint = async () => {
   const apiKey = await getApiKeyFromStorage(); // Retrieve apiKey asynchronously
   if (apiKey) {
-    return `/arbitrary/resources/searchsimple`;
+    return `/arbitrary/resources/search`;
   } else {
     return `/arbitrary/resources/searchsimple`;
   }
@@ -963,6 +964,13 @@ async function getTradeInfo(qortalAtAddress) {
   const data = await response.json();
   return data;
 }
+async function getTradesInfo(qortalAtAddresses) {
+  // Use Promise.all to fetch data for all addresses concurrently
+  const trades = await Promise.all(
+    qortalAtAddresses.map((address) => getTradeInfo(address))
+  );
+  return trades; // Return the array of trade info objects
+}
 
 async function getBalanceInfo() {
   const wallet = await getSaveWallet();
@@ -1467,7 +1475,7 @@ async function sendChat({ qortAddress, recipientPublicKey, message }) {
   const hasEnoughBalance = +balance < 4 ? false : true;
   const difficulty = 8;
   const jsonData = {
-    atAddress: message.atAddress,
+    addresses: message.addresses,
     foreignKey: message.foreignKey,
     receivingAddress: message.receivingAddress,
   };
@@ -1714,15 +1722,80 @@ async function decryptDirectFunc({ messages, involvingAddress }) {
   return holdMessages;
 }
 
-async function createBuyOrderTx({ crosschainAtInfo }) {
+async function createBuyOrderTx({ crosschainAtInfo, useLocal }) {
   try {
+    if(useLocal){
+      const wallet = await getSaveWallet();
+
+      const address = wallet.address0;
+
+      const resKeyPair = await getKeyPair();
+      const parsedData = JSON.parse(resKeyPair);
+      const message = {
+        addresses: crosschainAtInfo.map((order)=> order.qortalAtAddress),
+        foreignKey: parsedData.ltcPrivateKey,
+        receivingAddress: address,
+      };
+      let responseVar 
+      const txn = new TradeBotRespondMultipleRequest().createTransaction(message)
+      const apiKey = await getApiKeyFromStorage();
+      const responseFetch = await fetch(`http://127.0.0.1:12391/crosschain/tradebot/respondmultiple?apiKey=${apiKey}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(txn),
+  });
+
+  const res = await responseFetch.json();
+
+      if(res === false){
+        responseVar = { response: "Unable to execute buy order", success: false };
+      } else {
+        responseVar = { response: res, success: true };
+      }
+      const { response, success } = responseVar
+      let responseMessage;
+      if (success) {
+          responseMessage = {
+              callResponse: response,
+              extra: {
+                  message: 'Transaction processed successfully!',
+                  atAddresses: crosschainAtInfo.map((order)=> order.qortalAtAddress),
+                  
+              }
+          };
+      } else {
+          responseMessage = {
+              callResponse: 'ERROR',
+              extra: {
+                  message: response,
+                  atAddresses: crosschainAtInfo.map((order)=> order.qortalAtAddress),
+               
+              }
+          };
+      }
+
+      setTimeout(() => {
+        chrome.tabs.query({}, function (tabs) {
+          tabs.forEach((tab) => {
+            chrome.tabs.sendMessage(tab.id, {
+              type: "RESPONSE_FOR_TRADES",
+              message: responseMessage,
+            });
+          });
+        });
+      }, 5000);
+
+      return
+    }
     const wallet = await getSaveWallet();
     const address = wallet.address0;
 
     const resKeyPair = await getKeyPair();
     const parsedData = JSON.parse(resKeyPair);
     const message = {
-      atAddress: crosschainAtInfo.qortalAtAddress,
+      addresses: crosschainAtInfo.map((order)=> order.qortalAtAddress),
       foreignKey: parsedData.ltcPrivateKey,
       receivingAddress: address,
     };
@@ -1740,7 +1813,7 @@ async function createBuyOrderTx({ crosschainAtInfo }) {
       });
       if (res?.encryptedMessageToBase58) {
         return {
-          atAddress: crosschainAtInfo.qortalAtAddress,
+          atAddresses: crosschainAtInfo.map((order)=> order.qortalAtAddress),
           encryptedMessageToBase58: res?.encryptedMessageToBase58,
           node: buyTradeNodeBaseUrl,
           qortAddress: address,
@@ -1751,7 +1824,7 @@ async function createBuyOrderTx({ crosschainAtInfo }) {
         };
       }
       return {
-        atAddress: crosschainAtInfo.qortalAtAddress,
+        atAddresses: crosschainAtInfo.map((order)=> order.qortalAtAddress),
         chatSignature: res?.signature,
         node: buyTradeNodeBaseUrl,
         qortAddress: address,
@@ -2237,6 +2310,7 @@ async function fetchMessagesForBuyOrders(apiCall, signature, senderPublicKey) {
       try {
         const response = await fetch(apiCall);
         let data = await response.json();
+
         data = data.filter(
           (item) => !triedChatMessage.includes(item.signature)
         );
@@ -2250,7 +2324,7 @@ async function fetchMessagesForBuyOrders(apiCall, signature, senderPublicKey) {
             privateKey: uint8PrivateKey,
             publicKey: uint8PublicKey,
           };
-
+          
           const decodedMessage = decryptChatMessage(
             encodedMessageObj.data,
             keyPair.privateKey,
@@ -2425,6 +2499,12 @@ async function setChatHeads(data) {
       }
     });
   });
+}
+
+async function checkLocalFunc(){
+  const apiKey = await getApiKeyFromStorage()
+  return !!apiKey
+
 }
 
 async function getTempPublish() {
@@ -3349,8 +3429,8 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
         break;
       case "buyOrder":
         {
-          const { qortalAtAddress, hostname } = request.payload;
-          getTradeInfo(qortalAtAddress)
+          const { qortalAtAddresses, hostname, useLocal } = request.payload;
+          getTradesInfo(qortalAtAddresses)
             .then((crosschainAtInfo) => {
               const popupUrl = chrome.runtime.getURL(
                 "index.html?secondary=true"
@@ -3420,6 +3500,7 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
                         hostname,
                         crosschainAtInfo,
                         interactionId,
+                        useLocal
                       },
                     });
                   }, 500);
@@ -3665,7 +3746,7 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
         break;
       case "buyOrderConfirmation":
         {
-          const { crosschainAtInfo, isDecline } = request.payload;
+          const { crosschainAtInfo, isDecline, useLocal } = request.payload;
           const interactionId2 = request.payload.interactionId;
           // Retrieve the stored sendResponse callback
           const originalSendResponse = pendingResponses.get(interactionId2);
@@ -3677,7 +3758,7 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
               pendingResponses.delete(interactionId2);
               return;
             }
-            createBuyOrderTx({ crosschainAtInfo })
+            createBuyOrderTx({ crosschainAtInfo, useLocal })
               .then((res) => {
                 sendResponse(true);
                 originalSendResponse(res);
@@ -3838,6 +3919,19 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
       case "resumeAllQueues": {
         resumeAllQueues();
         sendResponse(true);
+
+        break;
+      }
+      case "checkLocal": {
+        checkLocalFunc()
+        .then((res) => {
+          sendResponse(res);
+        })
+        .catch((error) => {
+          console.error(error.message);
+          sendResponse({ error: error.message });
+        });
+     
 
         break;
       }
@@ -4037,7 +4131,6 @@ chrome.action?.onClicked?.addListener((tab) => {
   chrome.windows.getAll(
     { populate: true, windowTypes: ["popup"] },
     (windows) => {
-      console.log("windows", windows);
       // Attempt to find an existing popup window that has a tab with the correct URL
       const existingPopup = windows.find((w) => {
         return (
@@ -4046,7 +4139,6 @@ chrome.action?.onClicked?.addListener((tab) => {
         );
       });
       if (existingPopup) {
-        console.log("Focusing existing popup window", existingPopup.id);
         // If the popup exists but is minimized or not focused, focus it
 
         if (isMobile) {
@@ -4067,7 +4159,6 @@ chrome.action?.onClicked?.addListener((tab) => {
           });
         }
       } else {
-        console.log("No existing popup, creating new window...");
         // No existing popup found, restore the saved bounds or create a new one
         restoreWindowBounds((savedBounds) => {
           chrome.system.display.getInfo((displays) => {

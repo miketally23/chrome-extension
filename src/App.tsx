@@ -236,7 +236,7 @@ export const getArbitraryEndpointReact = () => {
   
 
   if (globalApiKey) {
-    return `/arbitrary/resources/searchsimple`;
+    return `/arbitrary/resources/search`;
   } else {
     return `/arbitrary/resources/searchsimple`;
   }
@@ -688,6 +688,7 @@ function App() {
             crosschainAtInfo: requestBuyOrder?.crosschainAtInfo,
             interactionId: requestBuyOrder?.interactionId,
             isDecline: true,
+            useLocal: requestBuyOrder?.useLocal
           },
         },
         (response) => {
@@ -705,6 +706,7 @@ function App() {
           crosschainAtInfo: requestBuyOrder?.crosschainAtInfo,
           interactionId: requestBuyOrder?.interactionId,
           isDecline: false,
+          useLocal: requestBuyOrder?.useLocal
         },
       },
       (response) => {
@@ -958,6 +960,11 @@ function App() {
     setTxList([])
     setMemberGroups([])
   };
+
+  function roundUpToDecimals(number, decimals = 8) {
+    const factor = Math.pow(10, decimals); // Create a factor based on the number of decimals
+    return Math.ceil(+number * factor) / factor;
+  }
 
   const authenticateWallet = async () => {
     try {
@@ -1595,7 +1602,7 @@ function App() {
       {/* {extState !== "not-authenticated" && (
         <button onClick={logoutFunc}>logout</button>
       )} */}
-      {extState === "authenticated"  && (
+      {extState === "authenticated"  && isMainWindow && (
         <MyContext.Provider
           value={{
             txList,
@@ -1775,7 +1782,7 @@ function App() {
           >
             The Application <br></br>{" "}
             <TextItalic>{requestBuyOrder?.hostname}</TextItalic> <br></br>
-            <TextSpan>is requesting a buy order</TextSpan>
+            <TextSpan>is requesting {requestBuyOrder?.crosschainAtInfo?.length}  {`buy order${requestBuyOrder?.crosschainAtInfo.length === 1 ? '' : 's'}`}</TextSpan>
           </TextP>
           <Spacer height="10px" />
           <TextP
@@ -1786,7 +1793,9 @@ function App() {
               fontWeight: 700,
             }}
           >
-            {+requestBuyOrder?.crosschainAtInfo?.qortAmount} QORT
+            {requestBuyOrder?.crosschainAtInfo?.reduce((latest, cur)=> {
+              return latest + +cur?.qortAmount
+            }, 0)} QORT
           </TextP>
           <Spacer height="15px" />
           <TextP
@@ -1807,8 +1816,10 @@ function App() {
               fontWeight: 700,
             }}
           >
-            {requestBuyOrder?.crosschainAtInfo?.expectedForeignAmount}{" "}
-            {requestBuyOrder?.crosschainAtInfo?.foreignBlockchain}
+             {roundUpToDecimals(requestBuyOrder?.crosschainAtInfo?.reduce((latest, cur)=> {
+              return latest + +cur?.expectedForeignAmount
+            }, 0))}
+            {` ${requestBuyOrder?.crosschainAtInfo?.[0]?.foreignBlockchain}`}
           </TextP>
           {/* <Spacer height="29px" />
 

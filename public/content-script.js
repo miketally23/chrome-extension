@@ -49,7 +49,6 @@ document.addEventListener('qortalExtensionRequests', async (event) => {
       }
     });
   } else if (type === 'REQUEST_CONNECTION') {
-    console.log('REQUEST_CONNECTION')
     const hostname = window.location.hostname
     chrome?.runtime?.sendMessage({ action: "connection", payload: {
       hostname
@@ -106,8 +105,9 @@ document.addEventListener('qortalExtensionRequests', async (event) => {
     }
 
     chrome?.runtime?.sendMessage({ action: "buyOrder", payload: {
-      qortalAtAddress: payload.qortalAtAddress,
-      hostname
+      qortalAtAddresses: payload.qortalAtAddresses,
+      hostname,
+      useLocal: payload?.useLocal
       
     }, timeout}, (response) => {
       if (response.error) {
@@ -150,6 +150,36 @@ document.addEventListener('qortalExtensionRequests', async (event) => {
         // Include the requestId in the detail when dispatching the response
         document.dispatchEvent(new CustomEvent('qortalExtensionResponses', {
           detail: { type: "LTC_BALANCE", data: response, requestId }
+        }));
+      }
+    });
+  } else if(type === 'CHECK_IF_LOCAL'){
+   
+    
+    const hostname = window.location.hostname
+    const res = await connection(hostname)
+    if(!res){
+      document.dispatchEvent(new CustomEvent('qortalExtensionResponses', {
+        detail: { type: "USER_INFO", data: {
+          error: "Not authorized"
+        }, requestId }
+      }));
+      return
+    }
+    chrome?.runtime?.sendMessage({ action: "checkLocal", payload: {
+      hostname
+    },  timeout }, (response) => {
+      
+      if (response.error) {
+        document.dispatchEvent(new CustomEvent('qortalExtensionResponses', {
+          detail: { type: "CHECK_IF_LOCAL", data: {
+            error: response.error
+          }, requestId }
+        }));
+      } else {
+        // Include the requestId in the detail when dispatching the response
+        document.dispatchEvent(new CustomEvent('qortalExtensionResponses', {
+          detail: { type: "CHECK_IF_LOCAL", data: response, requestId }
         }));
       }
     });
