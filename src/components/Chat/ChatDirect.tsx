@@ -16,12 +16,14 @@ import { getPublicKey } from '../../background';
 import { useMessageQueue } from '../../MessageQueueContext';
 import { executeEvent, subscribeToEvent, unsubscribeFromEvent } from '../../utils/events';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import ShortUniqueId from "short-unique-id";
 
 
+const uid = new ShortUniqueId({ length: 5 });
 
 
 export const ChatDirect = ({ myAddress, isNewChat, selectedDirect, setSelectedDirect, setNewChat, getTimestampEnterChat, myName, balance, close}) => {
-  const { queueChats, addToQueue, } = useMessageQueue();
+  const { queueChats, addToQueue, processWithNewMessages} = useMessageQueue();
     const [isFocusedParent, setIsFocusedParent] = useState(false);
 
   const [messages, setMessages] = useState([])
@@ -79,6 +81,9 @@ export const ChatDirect = ({ myAddress, isNewChat, selectedDirect, setSelectedDi
         }}, (response) => {
         
             if (!response?.error) {
+             
+                processWithNewMessages(response, selectedDirect?.address)
+             
               res(response)
               if(hasInitialized.current){
           
@@ -210,14 +215,14 @@ export const ChatDirect = ({ myAddress, isNewChat, selectedDirect, setSelectedDi
 
 
 
-const sendChatDirect = async ({ chatReference = undefined, messageText}: any, address, publicKeyOfRecipient, isNewChatVar)=> {
+const sendChatDirect = async ({ chatReference = undefined, messageText, otherData}: any, address, publicKeyOfRecipient, isNewChatVar)=> {
   try {
     const directTo = isNewChatVar ? directToValue : address
  
     if(!directTo) return
     return new Promise((res, rej)=> {
       chrome?.runtime?.sendMessage({ action: "sendChatDirect", payload: {
-        directTo,  chatReference, messageText, publicKeyOfRecipient, address: directTo
+        directTo,  chatReference, messageText, otherData, publicKeyOfRecipient, address: directTo
     }}, async (response) => {
     
         if (!response?.error) {
@@ -290,8 +295,11 @@ const clearEditorContent = () => {
           await sendChatDirect({ messageText: htmlContent}, null, null, true)
           return
         }
+        const otherData = {
+          specialId: uid.rnd()
+        }
         const sendMessageFunc = async () => {
-          await sendChatDirect({ messageText: htmlContent}, selectedDirect?.address, publicKeyOfRecipient, false)
+          await sendChatDirect({ messageText: htmlContent, otherData}, selectedDirect?.address, publicKeyOfRecipient, false)
         };
   
         // Add the function to the queue
@@ -300,7 +308,8 @@ const clearEditorContent = () => {
             text: htmlContent,
             timestamp: Date.now(),
           senderName: myName,
-          sender: myAddress
+          sender: myAddress,
+          ...(otherData || {})
           },
          
         }

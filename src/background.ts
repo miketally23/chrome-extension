@@ -1583,6 +1583,7 @@ async function sendChatDirect({
   chatReference,
   messageText,
   publicKeyOfRecipient,
+  otherData
 }) {
   let recipientPublicKey;
   let recipientAddress = address;
@@ -1618,6 +1619,7 @@ async function sendChatDirect({
   const finalJson = {
     message: messageText,
     version: 2,
+    ...(otherData || {})
   };
   const messageStringified = JSON.stringify(finalJson);
   const tx = await createTransaction(18, keyPair, {
@@ -1667,7 +1669,7 @@ async function decryptSingleFunc({
 
       const decryptToUnit8Array = base64ToUint8Array(res);
       const responseData = uint8ArrayToObject(decryptToUnit8Array);
-      holdMessages.push({ ...message, text: responseData });
+      holdMessages.push({ ...message, decryptedData: responseData });
     } catch (error) {}
   }
   return holdMessages;
@@ -3996,6 +3998,7 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
           messageText,
           publicKeyOfRecipient,
           address,
+          otherData
         } = request.payload;
 
         sendChatDirect({
@@ -4005,6 +4008,7 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
           typeMessage,
           publicKeyOfRecipient,
           address,
+          otherData
         })
           .then((res) => {
             sendResponse(res);

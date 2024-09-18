@@ -16,6 +16,10 @@ import { PUBLIC_NOTIFICATION_CODE_FIRST_SECRET_KEY } from '../../constants/codes
 import { useMessageQueue } from '../../MessageQueueContext'
 import { executeEvent } from '../../utils/events'
 import { Box } from '@mui/material'
+import ShortUniqueId from "short-unique-id";
+
+
+const uid = new ShortUniqueId({ length: 5 });
 
 
 
@@ -36,7 +40,7 @@ export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey,
   const timeoutIdRef = useRef(null); // Timeout ID reference
   const groupSocketTimeoutRef = useRef(null); // Group Socket Timeout reference
   const editorRef = useRef(null);
-  const { queueChats, addToQueue, } = useMessageQueue();
+  const { queueChats, addToQueue, processWithNewMessages } = useMessageQueue();
  
   const setEditorRef = (editorInstance) => {
     editorRef.current = editorInstance;
@@ -92,8 +96,13 @@ export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey,
             data: encryptedMessages,
             secretKeyObject: secretKey
         }}, (response) => {
-        
             if (!response?.error) {
+              processWithNewMessages(response?.map((item)=> {
+                return {
+                  ...item,
+                  ...(item?.decryptedData || {})
+                }
+              }), selectedGroup)
               res(response)
               if(hasInitialized.current){
                
@@ -101,7 +110,7 @@ export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey,
                   return {
                     ...item,
                     id: item.signature,
-                    text: item.text,
+                    text: item?.decryptedData?.message || "",
                     unread: item?.sender === myAddress ? false : true
                   }
                 } )
@@ -111,7 +120,7 @@ export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey,
                   return {
                     ...item,
                     id: item.signature,
-                    text: item.text,
+                    text: item?.decryptedData?.message || "",
                     unread:  false
                   }
                 } )
@@ -296,11 +305,18 @@ const clearEditorContent = () => {
           setIsSending(true)
         const message = htmlContent
         const secretKeyObject = await getSecretKey(false, true)
-        const message64: any = await objectToBase64(message)
+        const otherData = {
+          specialId: uid.rnd()
+        }
+        const objectMessage = {
+          message,
+          ...(otherData || {})
+        }
+        const message64: any = await objectToBase64(objectMessage)
      
         const encryptSingle = await encryptChatMessage(message64, secretKeyObject)
         // const res = await sendChatGroup({groupId: selectedGroup,messageText: encryptSingle})
-   
+       
         const sendMessageFunc = async () => {
           await sendChatGroup({groupId: selectedGroup,messageText: encryptSingle})
         };
@@ -311,7 +327,8 @@ const clearEditorContent = () => {
             text: message,
             timestamp: Date.now(),
           senderName: myName,
-          sender: myAddress
+          sender: myAddress,
+             ...(otherData || {})
           },
          
         }
