@@ -269,7 +269,9 @@ export const AnnouncementDiscussion = ({
         flexShrink: 0,
       }}>
 
-<AuthenticatedContainerInnerTop>
+<AuthenticatedContainerInnerTop sx={{
+  height: '20px'
+}}>
       <ArrowBackIcon onClick={()=> setSelectedAnnouncement(null)} sx={{
         cursor: 'pointer'
       }} />

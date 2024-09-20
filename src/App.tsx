@@ -129,7 +129,7 @@ const defaultValues: MyContextInterface = {
     message: "",
   },
 };
-export let isMobile = false
+export let isMobile = true
 
 const isMobileDevice = () => {
   const userAgent = navigator.userAgent || navigator.vendor || window.opera;
@@ -1192,7 +1192,7 @@ function App() {
 
   const renderProfile = ()=> {
     return (
-      <AuthenticatedContainer sx={{ width:"350px", display:  'flex' }}>
+      <AuthenticatedContainer sx={{ width: isMobile ? '100vw' : "350px", display:  'flex', backgroundColor: 'var(--bg-2)' }}>
       {isMobile && (
              <Box sx={{
               padding: '10px',
@@ -1349,7 +1349,7 @@ function App() {
           textDecoration: "underline",
         }}
         onClick={() => {
-          chrome.tabs.create({ url: "https://www.qort.trade" });
+          chrome.tabs.create({ url: "https://www.qort.trade", active: true  });
         }}
       >
         Get QORT at qort.trade
@@ -1367,7 +1367,9 @@ function App() {
           cursor: "pointer",
         }}
       />
-      <Spacer height="20px" />
+      {!isMobile && (
+        <>
+         <Spacer height="20px" />
       <img
         src={Logout}
         onClick={()=> {
@@ -1378,6 +1380,9 @@ function App() {
           cursor: "pointer",
         }}
       />
+        </>
+      )}
+     
       <Spacer height="20px" />
       {authenticatedMode === "qort" && (
         <img
@@ -1621,10 +1626,12 @@ function App() {
               width: "100vw",
               height: isMobile ? '100%' : "100vh",
               display: "flex",
-              flexDirection: isMobile ? 'column' : 'row'
+              flexDirection: isMobile ? 'column' : 'row',
+              overflow: isMobile && 'hidden'
             }}
           >
             <Group
+            logoutFunc={logoutFunc}
               balance={balance}
               userInfo={userInfo}
               myAddress={address}

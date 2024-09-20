@@ -32,6 +32,7 @@ import { MyContext, getArbitraryEndpointReact, getBaseApiReact, isMobile, pauseA
 import { RequestQueueWithPromise } from "../../utils/queue/queue";
 import { CustomizedSnackbars } from "../Snackbar/Snackbar";
 import {  addDataPublishesFunc, getDataPublishesFunc } from "../Group/Group";
+import { getRootHeight } from "../../utils/mobile/mobileUtils";
 
 export const requestQueueCommentCount = new RequestQueueWithPromise(3)
 export const requestQueuePublishedAccouncements = new RequestQueueWithPromise(3)
@@ -489,7 +490,7 @@ export const GroupAnnouncements = ({
     return (
       <div
       style={{
-        height: isMobile ? '100%' : "100vh",
+        height: isMobile ? `calc(${getRootHeight()} - 83px` : "100vh",
         display: "flex",
         flexDirection: "column",
         width: "100%",
@@ -508,7 +509,7 @@ export const GroupAnnouncements = ({
   return (
     <div
       style={{
-        height: isMobile ? '100%' :  "100vh",
+        height: isMobile ? `calc(${getRootHeight()} - 83px` :  "100vh",
         display: "flex",
         flexDirection: "column",
         width: "100%",
@@ -524,23 +525,26 @@ export const GroupAnnouncements = ({
         flexDirection: "column",
         flexShrink: 0,
       }}>
-      <Box
-        sx={{
-          width: "100%",
-          display: "flex",
-          justifyContent: "center",
-          padding: isMobile ? '8px' : "25px",
-          fontSize: isMobile ? '16px' : "20px",
-          gap: '20px',
-          alignItems: 'center'
-        }}
-      >
-        <CampaignIcon sx={{
-          fontSize: isMobile ? '16px' : '30px'
-        }} />
-        Group Announcements
-      </Box>
-      <Spacer height={isMobile ? "10px" : "25px"} />
+      {!isMobile && (
+         <Box
+         sx={{
+           width: "100%",
+           display: "flex",
+           justifyContent: "center",
+           padding: isMobile ? '8px' : "25px",
+           fontSize: isMobile ? '16px' : "20px",
+           gap: '20px',
+           alignItems: 'center'
+         }}
+       >
+         <CampaignIcon sx={{
+           fontSize: isMobile ? '16px' : '30px'
+         }} />
+         Group Announcements
+       </Box>
+      )}
+     
+      <Spacer height={isMobile ? "0px" : "25px"} />
 
       </div>
       {!isLoading && combinedListTempAndReal?.length === 0 && (

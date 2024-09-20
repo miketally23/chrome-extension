@@ -29,6 +29,10 @@
   --color-instance-popover-bg: #222222;
   --Mail-Background: rgba(49, 51, 56, 1);
   --new-message-text: black;
+
+  --bg-primary : rgba(31, 32, 35, 1);
+  --bg-2: #27282c;
+  --bg-3: rgba(0, 0, 0, 0.1);
 }
 
 body {
