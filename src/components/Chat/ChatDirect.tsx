@@ -344,8 +344,32 @@ const clearEditorContent = () => {
       height: isMobile ? '100%' : '100vh',
       display: 'flex',
       flexDirection: 'column',
-      width: '100%'
+      width: '100%',
+      background: !isMobile && 'var(--bg-2)'
     }}>
+      {!isMobile && (
+         <Box onClick={close} sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '5px',
+          cursor: 'pointer',
+          padding: '4px 6px',
+          width: 'fit-content',
+          borderRadius: '3px',
+          background: 'rgb(35, 36, 40)',
+          margin: '10px 0px',
+          alignSelf: 'center'
+        }}>
+          <ArrowBackIcon sx={{
+            color: 'white',
+            fontSize: isMobile ? '20px' : '20px'
+          }}/>
+          <Typography sx={{
+            color: 'white',
+            fontSize: isMobile ? '14px' : '14px'
+          }}>Close Direct Chat</Typography>
+        </Box>
+      )}
        {isMobile && (
          <Box
          sx={{

@@ -2202,59 +2202,61 @@ export const Group = ({
           {mobileViewModeKeepOpen === "messaging" && renderDirects()}
           {newChat && (
             <>
-                <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  width: "100%",
-                  marginTop: "14px",
-                  justifyContent: "center",
-                  height: "15px",
-                }}
-              >
-                <Box
+                {isMobile && (
+                  <Box
                   sx={{
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "space-between",
-                    width: "320px",
+                    width: "100%",
+                    marginTop: "14px",
+                    justifyContent: "center",
+                    height: "15px",
                   }}
                 >
                   <Box
                     sx={{
                       display: "flex",
                       alignItems: "center",
-                      width: "50px",
+                      justifyContent: "space-between",
+                      width: "320px",
                     }}
                   >
-                    <ButtonBase
-                      onClick={() => {
-                        close()
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        width: "50px",
                       }}
                     >
-                      <ReturnIcon />
-                    </ButtonBase>
-                  </Box>
-                 
-                  <Box
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      width: "50px",
-                      justifyContent: "flex-end",
-                    }}
-                  >
                       <ButtonBase
-                      onClick={() => {
-                        setSelectedDirect(null)
-                        setMobileViewModeKeepOpen('')
+                        onClick={() => {
+                          close()
+                        }}
+                      >
+                        <ReturnIcon />
+                      </ButtonBase>
+                    </Box>
+                   
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        width: "50px",
+                        justifyContent: "flex-end",
                       }}
                     >
-                    <ExitIcon />
-                    </ButtonBase>
+                        <ButtonBase
+                        onClick={() => {
+                          setSelectedDirect(null)
+                          setMobileViewModeKeepOpen('')
+                        }}
+                      >
+                      <ExitIcon />
+                      </ButtonBase>
+                    </Box>
                   </Box>
                 </Box>
-              </Box>
+                )}
               <Box
                 sx={{
                   position: "absolute",
