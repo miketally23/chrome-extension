@@ -63,7 +63,7 @@ const ListOfMembers = ({
 
       setIsLoadingKick(true);
       new Promise((res, rej) => {
-        chrome.runtime.sendMessage(
+        chrome?.runtime?.sendMessage(
           {
             action: "kickFromGroup",
             payload: {
@@ -107,7 +107,7 @@ const ListOfMembers = ({
       });
       setIsLoadingBan(true);
       await new Promise((res, rej) => {
-        chrome.runtime.sendMessage(
+        chrome?.runtime?.sendMessage(
           {
             action: "banFromGroup",
             payload: {
@@ -153,7 +153,7 @@ const ListOfMembers = ({
       });
       setIsLoadingMakeAdmin(true);
       await new Promise((res, rej) => {
-        chrome.runtime.sendMessage(
+        chrome?.runtime?.sendMessage(
           {
             action: "makeAdmin",
             payload: {
@@ -198,7 +198,7 @@ const ListOfMembers = ({
       });
       setIsLoadingRemoveAdmin(true);
       await new Promise((res, rej) => {
-        chrome.runtime.sendMessage(
+        chrome?.runtime?.sendMessage(
           {
             action: "removeAdmin",
             payload: {
@@ -357,7 +357,7 @@ const ListOfMembers = ({
         style={{
           position: "relative",
           height: "500px",
-          width: "600px",
+          width: "100%",
           display: "flex",
           flexDirection: "column",
           flexShrink: 1,

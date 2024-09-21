@@ -53,7 +53,9 @@ import ArrowDownSVG from "../../../assets/svgs/ArrowDown.svg";
 import { LoadingSnackbar } from "../../Snackbar/LoadingSnackbar";
 import { executeEvent, subscribeToEvent, unsubscribeFromEvent } from "../../../utils/events";
 import RefreshIcon from '@mui/icons-material/Refresh';
-import { getBaseApiReact } from "../../../App";
+import { getArbitraryEndpointReact, getBaseApiReact } from "../../../App";
+import { WrapperUserAction } from "../../WrapperUserAction";
+import { addDataPublishesFunc, getDataPublishesFunc } from "../Group";
 const filterOptions = ["Recently active", "Newest", "Oldest"];
 
 export const threadIdentifier = "DOCUMENT";
@@ -63,7 +65,8 @@ export const GroupMail = ({
   getSecretKey,
   secretKey,
   defaultThread, 
-  setDefaultThread
+  setDefaultThread,
+  hide
 }) => {
   const [viewedThreads, setViewedThreads] = React.useState<any>({});
   const [filterMode, setFilterMode] = useState<string>("Recently active");
@@ -74,12 +77,21 @@ export const GroupMail = ({
   const [isOpenFilterList, setIsOpenFilterList] = useState<boolean>(false);
   const anchorElInstanceFilter = useRef<any>(null);
   const [tempPublishedList, setTempPublishedList] = useState([])
+  const dataPublishes = useRef({})
 
   const [isLoading, setIsLoading] = useState(false)
   const groupIdRef = useRef<any>(null);
   const groupId = useMemo(() => {
     return selectedGroup?.groupId;
   }, [selectedGroup]);
+
+  useEffect(()=> {
+    if(!groupId) return
+    (async ()=> {
+      const res = await getDataPublishesFunc(groupId, 'thread')
+      dataPublishes.current = res || {}
+    })()
+  }, [groupId])
 
   useEffect(() => {
     if (groupId !== groupIdRef?.current) {
@@ -108,12 +120,19 @@ export const GroupMail = ({
    
   }
 
-  const getEncryptedResource = async ({ name, identifier }) => {
-  
+  const getEncryptedResource = async ({ name, identifier, resource }) => {
+    let data = dataPublishes.current[`${name}-${identifier}`]
+    if(!data || (data?.update || data?.created !== (resource?.updated || resource?.created))){
     const res = await fetch(
       `${getBaseApiReact()}/arbitrary/DOCUMENT/${name}/${identifier}?encoding=base64`
     );
-    const data = await res.text();
+    if(!res?.ok) return
+     data = await res.text();
+     await addDataPublishesFunc({...resource, data}, groupId, 'thread')
+
+    } else {
+      data = data.data
+    }
     const response = await decryptPublishes([{ data }], secretKey);
 
     const messageData = response[0];
@@ -123,7 +142,7 @@ export const GroupMail = ({
   const updateThreadActivity = async ({threadId, qortalName, groupId, thread}) => {
     try {
       await new Promise((res, rej) => {
-        chrome.runtime.sendMessage(
+        chrome?.runtime?.sendMessage(
           {
             action: "updateThreadActivity",
             payload: {
@@ -158,7 +177,7 @@ export const GroupMail = ({
         }
         const identifier = `grp-${groupId}-thread-`;
 
-        const url = `${getBaseApiReact()}/arbitrary/resources/search?mode=ALL&service=${threadIdentifier}&identifier=${identifier}&limit=${20}&includemetadata=false&offset=${offset}&reverse=${isReverse}&prefix=true`;
+        const url = `${getBaseApiReact()}${getArbitraryEndpointReact()}?mode=ALL&service=${threadIdentifier}&identifier=${identifier}&limit=${20}&includemetadata=false&offset=${offset}&reverse=${isReverse}&prefix=true`;
         const response = await fetch(url, {
           method: "GET",
           headers: {
@@ -188,6 +207,7 @@ export const GroupMail = ({
                 getEncryptedResource({
                   name: message.name,
                   identifier: message.identifier,
+                  resource: message
                 }),
                 delay(5000),
               ]);
@@ -244,7 +264,7 @@ export const GroupMail = ({
 
         // dispatch(setIsLoadingCustom("Loading recent threads"));
         const identifier = `thmsg-grp-${groupId}-thread-`;
-        const url = `${getBaseApiReact()}/arbitrary/resources/search?mode=ALL&service=${threadIdentifier}&identifier=${identifier}&limit=100&includemetadata=false&offset=${0}&reverse=true&prefix=true`;
+        const url = `${getBaseApiReact()}${getArbitraryEndpointReact()}?mode=ALL&service=${threadIdentifier}&identifier=${identifier}&limit=100&includemetadata=false&offset=${0}&reverse=true&prefix=true`;
         const response = await fetch(url, {
           method: "GET",
           headers: {
@@ -280,7 +300,7 @@ export const GroupMail = ({
         const getMessageForThreads = newArray.map(async (message: any) => {
           try {
             const identifierQuery = message.threadId;
-            const url = `${getBaseApiReact()}/arbitrary/resources/search?mode=ALL&service=${threadIdentifier}&identifier=${identifierQuery}&limit=1&includemetadata=false&offset=${0}&reverse=true&prefix=true`;
+            const url = `${getBaseApiReact()}${getArbitraryEndpointReact()}?mode=ALL&service=${threadIdentifier}&identifier=${identifierQuery}&limit=1&includemetadata=false&offset=${0}&reverse=true&prefix=true`;
             const response = await fetch(url, {
               method: "GET",
               headers: {
@@ -307,6 +327,7 @@ export const GroupMail = ({
                   getEncryptedResource({
                     name: thread.name,
                     identifier: message.threadId,
+                    resource: thread
                   }),
                   delay(10000),
                 ]);
@@ -353,6 +374,7 @@ export const GroupMail = ({
   const filterModeRef = useRef("");
 
   useEffect(() => {
+    if(hide) return
     if (filterModeRef.current !== filterMode) {
       firstMount.current = false;
     }
@@ -368,7 +390,7 @@ export const GroupMail = ({
       setTempData()
       firstMount.current = true;
     }
-  }, [groupId, members, filterMode]);
+  }, [groupId, members, filterMode, hide]);
 
   const closeThread = useCallback(() => {
     setCurrentThread(null);
@@ -656,6 +678,11 @@ export const GroupMail = ({
               thread?.threadData?.createdAt < hasViewedRecent?.timestamp;
             return (
               <SingleThreadParent
+              sx={{
+                flexWrap: 'wrap',
+                gap: '15px',
+                height: 'auto'
+              }}
                 onClick={() => {
                   setCurrentThread(thread);
                   if(thread?.threadId && thread?.threadData?.name){
@@ -665,6 +692,7 @@ export const GroupMail = ({
                   }
                 }}
               >
+                 
                 <Avatar
                   sx={{
                     height: "50px",
@@ -675,11 +703,14 @@ export const GroupMail = ({
                 >
                   {thread?.threadData?.name?.charAt(0)}
                 </Avatar>
+               
                 <ThreadInfoColumn>
+               
                   <ThreadInfoColumnNameP>
                     <ThreadInfoColumnbyP>by </ThreadInfoColumnbyP>
                     {thread?.threadData?.name}
                   </ThreadInfoColumnNameP>
+             
                   <ThreadInfoColumnTime>
                     {formatTimestamp(thread?.threadData?.createdAt)}
                   </ThreadInfoColumnTime>

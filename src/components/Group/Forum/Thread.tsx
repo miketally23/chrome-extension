@@ -1,10 +1,21 @@
-import React, { FC, useCallback, useEffect, useMemo, useRef, useState } from "react";
-
-import { Box, Button, IconButton, Skeleton } from "@mui/material";
+import React, {
+  FC,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import {
+  Avatar,
+  Box,
+  Button,
+  ButtonBase,
+  IconButton,
+  Skeleton,
+  Typography,
+} from "@mui/material";
 import { ShowMessage } from "./ShowMessageWithoutModal";
-// import {
-//   setIsLoadingCustom,
-// } from '../../state/features/globalSlice'
 import {
   ComposeP,
   GroupContainer,
@@ -14,19 +25,38 @@ import {
   SingleThreadParent,
   ThreadContainer,
   ThreadContainerFullWidth,
+  ThreadInfoColumn,
+  ThreadInfoColumnNameP,
+  ThreadInfoColumnTime,
 } from "./Mail-styles";
 import { Spacer } from "../../../common/Spacer";
 import { threadIdentifier } from "./GroupMail";
 import LazyLoad from "../../../common/LazyLoad";
 import ReturnSVG from "../../../assets/svgs/Return.svg";
 import { NewThread } from "./NewThread";
-import { decryptPublishes, getTempPublish } from "../../Chat/GroupAnnouncements";
+import {
+  decryptPublishes,
+  getTempPublish,
+} from "../../Chat/GroupAnnouncements";
 import { LoadingSnackbar } from "../../Snackbar/LoadingSnackbar";
 import { subscribeToEvent, unsubscribeFromEvent } from "../../../utils/events";
 import RefreshIcon from "@mui/icons-material/Refresh";
-import { getBaseApi } from "../../../background";
-import { getBaseApiReact } from "../../../App";
-
+import {
+  getArbitraryEndpointReact,
+  getBaseApiReact,
+  isMobile,
+} from "../../../App";
+import {
+  ArrowDownward as ArrowDownwardIcon,
+  ArrowUpward as ArrowUpwardIcon,
+} from "@mui/icons-material";
+import { addDataPublishesFunc, getDataPublishesFunc } from "../Group";
+import { RequestQueueWithPromise } from "../../../utils/queue/queue";
+import { CustomLoader } from "../../../common/CustomLoader";
+import { WrapperUserAction } from "../../WrapperUserAction";
+import { formatTimestampForum } from "../../../utils/time";
+const requestQueueSaveToLocal = new RequestQueueWithPromise(1);
+const requestQueueDownloadPost = new RequestQueueWithPromise(3);
 interface ThreadProps {
   currentThread: any;
   groupInfo: any;
@@ -34,11 +64,41 @@ interface ThreadProps {
   members: any;
 }
 
-const getEncryptedResource = async ({ name, identifier, secretKey }) => {
-  const res = await fetch(
-    `${getBaseApiReact()}/arbitrary/DOCUMENT/${name}/${identifier}?encoding=base64`
-  );
-  const data = await res.text();
+const getEncryptedResource = async ({
+  name,
+  identifier,
+  secretKey,
+  resource,
+  groupId,
+  dataPublishes,
+}) => {
+  let data = dataPublishes[`${name}-${identifier}`];
+  if (
+    !data ||
+    data?.update ||
+    data?.created !== (resource?.updated || resource?.created)
+  ) {
+    const res = await requestQueueDownloadPost.enqueue(() => {
+      return fetch(
+        `${getBaseApiReact()}/arbitrary/DOCUMENT/${name}/${identifier}?encoding=base64`
+      );
+    });
+    if (!res.ok) {
+      const errorData = await res.json();
+
+      return {
+        error: errorData?.message,
+      };
+    }
+    data = await res.text();
+   
+    if (data?.error || typeof data !== "string") return;
+    await requestQueueSaveToLocal.enqueue(() => {
+      return addDataPublishesFunc({ ...resource, data }, groupId, "thmsg");
+    });
+  } else {
+    data = data.data;
+  }
   const response = await decryptPublishes([{ data }], secretKey);
 
   const messageData = response[0];
@@ -53,10 +113,9 @@ export const Thread = ({
   userInfo,
   secretKey,
   getSecretKey,
-  updateThreadActivityCurrentThread
+  updateThreadActivityCurrentThread,
 }: ThreadProps) => {
-  const [tempPublishedList, setTempPublishedList] = useState([])
-
+  const [tempPublishedList, setTempPublishedList] = useState([]);
   const [messages, setMessages] = useState<any[]>([]);
   const [hashMapMailMessages, setHashMapMailMessages] = useState({});
   const [hasFirstPage, setHasFirstPage] = useState(false);
@@ -66,9 +125,28 @@ export const Thread = ({
   const [postReply, setPostReply] = useState(null);
   const [hasLastPage, setHasLastPage] = useState(false);
 
+  // Update: Use a new ref for the scrollable container
+  const threadContainerRef = useRef(null);
+  const threadBeginningRef = useRef(null)
+  // New state variables
+  const [showScrollButton, setShowScrollButton] = useState(false);
+  const [isAtBottom, setIsAtBottom] = useState(false);
+
   const secretKeyRef = useRef(null);
   const currentThreadRef = useRef(null);
   const containerRef = useRef(null);
+  const dataPublishes = useRef({});
+
+  const getSavedData = useCallback(async (groupId) => {
+    const res = await getDataPublishesFunc(groupId, "thmsg");
+    dataPublishes.current = res || {};
+  }, []);
+
+  useEffect(() => {
+    if (!groupInfo?.groupId) return;
+    getSavedData(groupInfo?.groupId);
+  }, [groupInfo?.groupId]);
+
   useEffect(() => {
     currentThreadRef.current = currentThread;
   }, [currentThread]);
@@ -83,8 +161,25 @@ export const Thread = ({
         identifier: message.identifier,
         name: message.name,
         secretKey,
+        resource: message,
+        groupId: groupInfo?.groupId,
+        dataPublishes: dataPublishes.current,
       });
-     
+
+      if (responseDataMessage?.error) {
+        const fullObject = {
+          ...message,
+          error: responseDataMessage?.error,
+          id: message.identifier,
+        };
+        setHashMapMailMessages((prev) => {
+          return {
+            ...prev,
+            [message.identifier]: fullObject,
+          };
+        });
+        return;
+      }
 
       const fullObject = {
         ...message,
@@ -100,46 +195,40 @@ export const Thread = ({
     } catch (error) {}
   };
 
-  const setTempData = async ()=> {
+  const setTempData = async () => {
     try {
       let threadId = currentThread.threadId;
-      
-      const keyTemp = 'thread-post'
-      const getTempAnnouncements = await getTempPublish()
-  
-  if(getTempAnnouncements?.[keyTemp]){
-   
-    let tempData = []
-    Object.keys(getTempAnnouncements?.[keyTemp] || {}).map((key)=> {
-      const value = getTempAnnouncements?.[keyTemp][key]
- 
-      if(value.data?.threadId === threadId){
-        tempData.push(value.data)
-      }
-     
-    })
-    setTempPublishedList(tempData)
-  }
-    } catch (error) {
-      
-    }
-   
-  }
 
+      const keyTemp = "thread-post";
+      const getTempAnnouncements = await getTempPublish();
+
+      if (getTempAnnouncements?.[keyTemp]) {
+        let tempData = [];
+        Object.keys(getTempAnnouncements?.[keyTemp] || {}).map((key) => {
+          const value = getTempAnnouncements?.[keyTemp][key];
+
+          if (value.data?.threadId === threadId) {
+            tempData.push(value.data);
+          }
+        });
+        setTempPublishedList(tempData);
+      }
+    } catch (error) {}
+  };
 
   const getMailMessages = React.useCallback(
-    async (groupInfo: any, before, after, isReverse) => {
+    async (groupInfo: any, before, after, isReverse, groupId) => {
       try {
-        setTempPublishedList([])
+        setTempPublishedList([]);
         setIsLoading(true);
         setHasFirstPage(false);
         setHasPreviousPage(false);
         setHasLastPage(false);
         setHasNextPage(false);
         let threadId = groupInfo.threadId;
-   
+
         const identifier = `thmsg-${threadId}`;
-        let url = `${getBaseApiReact()}/arbitrary/resources/search?mode=ALL&service=${threadIdentifier}&identifier=${identifier}&limit=20&includemetadata=false&prefix=true`;
+        let url = `${getBaseApiReact()}${getArbitraryEndpointReact()}?mode=ALL&service=${threadIdentifier}&identifier=${identifier}&limit=20&includemetadata=false&prefix=true`;
         if (!isReverse) {
           url = url + "&reverse=false";
         }
@@ -160,7 +249,6 @@ export const Thread = ({
           },
         });
         const responseData = await response.json();
-      
 
         let fullArrayMsg = [...responseData];
         if (isReverse) {
@@ -175,15 +263,22 @@ export const Thread = ({
           setTimeout(() => {
             containerRef.current.scrollIntoView({ behavior: "smooth" });
           }, 300);
+        }
+        if(after || before === null && after === null && !isReverse){
+          setTimeout(() => {
+            threadBeginningRef.current.scrollIntoView();
+          }, 100);
           
         }
-   
-        if (fullArrayMsg.length === 0){
-          setTempData()
+
+        if (fullArrayMsg.length === 0) {
+          setTempData();
           return;
-        } 
+        }
         // check if there are newer posts
-        const urlNewer = `${getBaseApiReact()}/arbitrary/resources/search?mode=ALL&service=${threadIdentifier}&identifier=${identifier}&limit=1&includemetadata=false&reverse=false&prefix=true&before=${fullArrayMsg[0].created}`;
+        const urlNewer = `${getBaseApiReact()}${getArbitraryEndpointReact()}?mode=ALL&service=${threadIdentifier}&identifier=${identifier}&limit=1&includemetadata=false&reverse=false&prefix=true&before=${
+          fullArrayMsg[0].created
+        }`;
         const responseNewer = await fetch(urlNewer, {
           method: "GET",
           headers: {
@@ -199,7 +294,7 @@ export const Thread = ({
           setHasPreviousPage(false);
         }
         // check if there are older posts
-        const urlOlder = `${getBaseApiReact()}/arbitrary/resources/search?mode=ALL&service=${threadIdentifier}&identifier=${identifier}&limit=1&includemetadata=false&reverse=false&prefix=true&after=${
+        const urlOlder = `${getBaseApiReact()}${getArbitraryEndpointReact()}?mode=ALL&service=${threadIdentifier}&identifier=${identifier}&limit=1&includemetadata=false&reverse=false&prefix=true&after=${
           fullArrayMsg[fullArrayMsg.length - 1].created
         }`;
         const responseOlder = await fetch(urlOlder, {
@@ -215,22 +310,22 @@ export const Thread = ({
         } else {
           setHasLastPage(false);
           setHasNextPage(false);
-          setTempData()
-          updateThreadActivityCurrentThread()
+          setTempData();
+          updateThreadActivityCurrentThread();
         }
       } catch (error) {
+        console.log("error", error);
       } finally {
         setIsLoading(false);
-        
+        getSavedData(groupId);
       }
     },
     [messages, secretKey]
   );
   const getMessages = React.useCallback(async () => {
-  
-    if (!currentThread || !secretKey) return;
-    await getMailMessages(currentThread, null, null, false);
-  }, [getMailMessages, currentThread, secretKey]);
+    if (!currentThread || !secretKey || !groupInfo?.groupId) return;
+    await getMailMessages(currentThread, null, null, false, groupInfo?.groupId);
+  }, [getMailMessages, currentThread, secretKey, groupInfo?.groupId]);
   const firstMount = useRef(false);
 
   const saveTimestamp = useCallback((currentThread: any, username?: string) => {
@@ -287,8 +382,6 @@ export const Thread = ({
     }
     if (currentThread && secretKey && !firstMount.current) {
       getMessagesMiddleware();
-
-      // saveTimestamp(currentThread, user.name)
     }
   }, [currentThread, secretKey]);
   const messageCallback = useCallback((msg: any) => {
@@ -304,7 +397,7 @@ export const Thread = ({
         let threadId = groupInfo.threadId;
 
         const identifier = `thmsg-${threadId}`;
-        const url = `${getBaseApiReact()}/arbitrary/resources/search?mode=ALL&service=${threadIdentifier}&identifier=${identifier}&limit=20&includemetadata=false&offset=${0}&reverse=true&prefix=true`;
+        const url = `${getBaseApiReact()}${getArbitraryEndpointReact()}?mode=ALL&service=${threadIdentifier}&identifier=${identifier}&limit=20&includemetadata=false&offset=${0}&reverse=true&prefix=true`;
         const response = await fetch(url, {
           method: "GET",
           headers: {
@@ -329,6 +422,9 @@ export const Thread = ({
               identifier: message.identifier,
               name: message.name,
               secretKey: secretKeyRef.current,
+              resource: message,
+              groupId: groupInfo?.groupId,
+              dataPublishes: dataPublishes.current,
             });
 
             const fullObject = {
@@ -360,25 +456,6 @@ export const Thread = ({
     [messages]
   );
 
-  // const checkNewMessagesFunc = useCallback(() => {
-  //   let isCalling = false
-  //   interval.current = setInterval(async () => {
-  //     if (isCalling) return
-  //     isCalling = true
-  //     const res = await checkNewMessages(currentThread)
-  //     isCalling = false
-  //   }, 8000)
-  // }, [checkNewMessages,  currentThrefirstMount.current = truead])
-
-  // useEffect(() => {
-  //   checkNewMessagesFunc()
-  //   return () => {
-  //     if (interval?.current) {
-  //       clearInterval(interval.current)
-  //     }
-  //   }
-  // }, [checkNewMessagesFunc])
-
   const openNewPostWithQuote = useCallback((reply) => {
     setPostReply(reply);
   }, []);
@@ -390,7 +467,7 @@ export const Thread = ({
   const threadFetchModeFunc = (e) => {
     const mode = e.detail?.mode;
     if (mode === "last-page") {
-      getMailMessages(currentThread, null, null, true);
+      getMailMessages(currentThread, null, null, true, groupInfo?.groupId);
     }
     firstMount.current = true;
   };
@@ -406,44 +483,157 @@ export const Thread = ({
   const combinedListTempAndReal = useMemo(() => {
     // Combine the two lists
     const combined = [...tempPublishedList, ...messages];
-  
+
     // Remove duplicates based on the "identifier"
     const uniqueItems = new Map();
-    combined.forEach(item => {
-      uniqueItems.set(item.identifier, item);  // This will overwrite duplicates, keeping the last occurrence
+    combined.forEach((item) => {
+      uniqueItems.set(item.identifier, item); // This will overwrite duplicates, keeping the last occurrence
     });
-  
+
     // Convert the map back to an array and sort by "created" timestamp in descending order
-    const sortedList = Array.from(uniqueItems.values()).sort((a, b) => a.created - b.created);
-  
+    const sortedList = Array.from(uniqueItems.values()).sort(
+      (a, b) => a.created - b.created
+    );
+
     return sortedList;
   }, [tempPublishedList, messages]);
+
+  // Updated useEffect to handle scroll and overflow
+  useEffect(() => {
+    const container = threadContainerRef.current; // Updated reference
+    if (!container) return;
+
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      // Check if user is at the bottom
+      if (scrollTop + clientHeight >= scrollHeight - 5) {
+        setIsAtBottom(true);
+      } else {
+        setIsAtBottom(false);
+      }
+
+      // Initial check if content overflows
+      if (container.scrollHeight > container.clientHeight) {
+        setShowScrollButton(true);
+      } else {
+        setShowScrollButton(false);
+      }
+    };
+    setTimeout(() => {
+      handleScroll();
+    }, 400);
+
+    container.addEventListener("scroll", handleScroll);
+
+    // Cleanup
+    return () => {
+      container.removeEventListener("scroll", handleScroll);
+    };
+  }, [messages]);
+
+  // Function to scroll to the top or bottom of the container
+  const scrollToPosition = () => {
+    const container = threadContainerRef.current; // Updated reference
+    if (!container) return;
+
+    if (isAtBottom) {
+      container.scrollTo({ top: 0, behavior: "smooth" }); // Scroll to top
+    } else {
+      container.scrollTo({ top: container.scrollHeight, behavior: "smooth" }); // Scroll to bottom
+    }
+  };
 
   if (!currentThread) return null;
   return (
     <GroupContainer
       sx={{
         position: "relative",
-        overflow: "auto",
         width: "100%",
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
       }}
+      // Removed the ref from here since the scrollable area has changed
     >
-      <NewThread
-        groupInfo={groupInfo}
-        isMessage={true}
-        currentThread={currentThread}
-        messageCallback={messageCallback}
-        members={members}
-        userInfo={userInfo}
-        getSecretKey={getSecretKey}
-        closeCallback={closeCallback}
-        postReply={postReply}
-        myName={userInfo?.name}
-        publishCallback={setTempData}
-      />
-      <ThreadContainerFullWidth>
-        <ThreadContainer >
-          <Spacer height="30px" />
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexShrink: 0, // Corrected property name
+        }}
+      >
+        <NewThread
+          groupInfo={groupInfo}
+          isMessage={true}
+          currentThread={currentThread}
+          messageCallback={messageCallback}
+          members={members}
+          userInfo={userInfo}
+          getSecretKey={getSecretKey}
+          closeCallback={closeCallback}
+          postReply={postReply}
+          myName={userInfo?.name}
+          publishCallback={setTempData}
+          setPostReply={setPostReply}
+        />
+        <Box
+          sx={{
+            display: "flex",
+            gap: isMobile ? "45px" : "35px",
+            alignItems: "center",
+            padding: isMobile && "5px",
+          }}
+        >
+          <ShowMessageReturnButton
+            sx={{
+              padding: isMobile && "5px",
+              minWidth: isMobile && "50px",
+            }}
+            onClick={() => {
+              setMessages([]);
+              closeThread();
+            }}
+          >
+            <MailIconImg src={ReturnSVG} />
+            {!isMobile && <ComposeP>Return to Threads</ComposeP>}
+          </ShowMessageReturnButton>
+          {/* Conditionally render the scroll buttons */}
+          {showScrollButton &&
+            (isAtBottom ? (
+              <ButtonBase onClick={scrollToPosition}>
+                <ArrowUpwardIcon
+                  sx={{
+                    color: "white",
+                    cursor: "pointer",
+                    fontSize: isMobile ? "28px" : "36px",
+                  }}
+                />
+              </ButtonBase>
+            ) : (
+              <ButtonBase onClick={scrollToPosition}>
+                <ArrowDownwardIcon
+                  sx={{
+                    color: "white",
+                    cursor: "pointer",
+                    fontSize: isMobile ? "28px" : "36px",
+                  }}
+                />
+              </ButtonBase>
+            ))}
+        </Box>
+      </Box>
+
+      <ThreadContainerFullWidth
+        sx={{
+          flexGrow: 1,
+          overflow: "auto",
+        }}
+        ref={threadContainerRef} // Updated ref attached here
+      >
+        <div ref={threadBeginningRef}/>
+        <ThreadContainer>
+          <Spacer height={isMobile ? "10px" : "30px"} />
           <Box
             sx={{
               width: "100%",
@@ -452,18 +642,16 @@ export const Thread = ({
               justifyContent: "space-between",
             }}
           >
-            <GroupNameP>{currentThread?.threadData?.title}</GroupNameP>
-
-            <ShowMessageReturnButton
-              onClick={() => {
-                setMessages([]);
-                closeThread();
+            <GroupNameP
+              sx={{
+                fontSize: isMobile && "18px",
               }}
             >
-              <MailIconImg src={ReturnSVG} />
-              <ComposeP>Return to Threads</ComposeP>
-            </ShowMessageReturnButton>
+              {currentThread?.threadData?.title}
+            </GroupNameP>
           </Box>
+          <Spacer height={"15px"} />
+
           <Box
             sx={{
               width: "100%",
@@ -474,90 +662,272 @@ export const Thread = ({
             }}
           >
             <Button
+              sx={{
+                padding: isMobile && "5px",
+                fontSize: isMobile && "14px",
+                textTransformation: "capitalize",
+              }}
               onClick={() => {
-                getMailMessages(currentThread, null, null, false);
+                getMailMessages(
+                  currentThread,
+                  null,
+                  null,
+                  false,
+                  groupInfo?.groupId
+                );
               }}
               disabled={!hasFirstPage}
               variant="contained"
             >
-              First Page
+              First
             </Button>
             <Button
+              sx={{
+                padding: isMobile && "5px",
+                fontSize: isMobile && "14px",
+                textTransformation: "capitalize",
+              }}
               onClick={() => {
                 getMailMessages(
                   currentThread,
                   messages[0].created,
                   null,
-                  false
+                  false,
+                  groupInfo?.groupId
                 );
               }}
               disabled={!hasPreviousPage}
               variant="contained"
             >
-              Previous Page
+              Previous
             </Button>
             <Button
+              sx={{
+                padding: isMobile && "5px",
+                fontSize: isMobile && "14px",
+                textTransformation: "capitalize",
+              }}
               onClick={() => {
                 getMailMessages(
                   currentThread,
                   null,
                   messages[messages.length - 1].created,
-                  false
+                  false,
+                  groupInfo?.groupId
                 );
               }}
               disabled={!hasNextPage}
               variant="contained"
             >
-              Next page
+              Next
             </Button>
             <Button
+              sx={{
+                padding: isMobile && "5px",
+                fontSize: isMobile && "14px",
+                textTransformation: "capitalize",
+              }}
               onClick={() => {
-                getMailMessages(currentThread, null, null, true);
+                getMailMessages(
+                  currentThread,
+                  null,
+                  null,
+                  true,
+                  groupInfo?.groupId
+                );
               }}
               disabled={!hasLastPage}
               variant="contained"
             >
-              Last page
+              Last
             </Button>
           </Box>
-          <Spacer height="60px" />
-          {combinedListTempAndReal.map((message) => {
-            let fullMessage =  message;
+          <Spacer height={isMobile ? "10px" : "30px"} />
+          {combinedListTempAndReal.map((message, index, list) => {
+            let fullMessage = message;
 
             if (hashMapMailMessages[message?.identifier]) {
               fullMessage = hashMapMailMessages[message.identifier];
+             
+
+              if (fullMessage?.error) {
+                return (
+                  <SingleThreadParent
+                    sx={{
+                      height: "auto",
+                    }}
+                  >
+                    <Box
+                      style={{
+                        width: "100%",
+                        borderRadius: "8px",
+                        overflow: "hidden",
+                        position: "relative",
+                        flexDirection: "column",
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          display: "flex",
+                          alignItems: "flex-start",
+                          gap: "10px",
+                        }}
+                      >
+                        <WrapperUserAction
+                          disabled={userInfo?.name === message?.name}
+                          address={undefined}
+                          name={message?.name}
+                        >
+                          <Avatar
+                            sx={{
+                              height: "50px",
+                              width: "50px",
+                            }}
+                            src={`${getBaseApiReact()}/arbitrary/THUMBNAIL/${
+                              message?.name
+                            }/qortal_avatar?async=true`}
+                            alt={message?.name}
+                          >
+                            {message?.name?.charAt(0)}
+                          </Avatar>
+                        </WrapperUserAction>
+                        <ThreadInfoColumn>
+                          <WrapperUserAction
+                            disabled={userInfo?.name === message?.name}
+                            address={undefined}
+                            name={message?.name}
+                          >
+                            <ThreadInfoColumnNameP>
+                              {message?.name}
+                            </ThreadInfoColumnNameP>
+                          </WrapperUserAction>
+                          <ThreadInfoColumnTime>
+                            {formatTimestampForum(message?.created)}
+                          </ThreadInfoColumnTime>
+                        </ThreadInfoColumn>
+                      </Box>
+                      <Box
+                        sx={{
+                          width: "100%",
+                          display: "flex",
+                          justifyContent: "center",
+                          alignItems: "center",
+                          flexDirection: "column",
+                        }}
+                      >
+                        <Typography
+                          sx={{
+                            fontSize: "18px",
+                            color: "white",
+                          }}
+                        >
+                          {fullMessage?.error}
+                        </Typography>
+                      </Box>
+                    
+                    </Box>
+                  </SingleThreadParent>
+                );
+              }
               return (
                 <ShowMessage
                   key={message?.identifier}
                   message={fullMessage}
                   openNewPostWithQuote={openNewPostWithQuote}
+                  myName={userInfo?.name}
                 />
               );
-            } else if(message?.tempData){
+            } else if (message?.tempData) {
               return (
                 <ShowMessage
                   key={message?.identifier}
                   message={message?.tempData}
                   openNewPostWithQuote={openNewPostWithQuote}
+                  myName={userInfo?.name}
                 />
               );
             }
 
             return (
-              <SingleThreadParent>
-                <Skeleton
-                  variant="rectangular"
+              <SingleThreadParent
+                sx={{
+                  height: "auto",
+                }}
+              >
+                <Box
                   style={{
                     width: "100%",
-                    height: 60,
                     borderRadius: "8px",
                     overflow: "hidden",
+                    position: "relative",
+                    flexDirection: "column",
                   }}
-                />
+                >
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "flex-start",
+                      gap: "10px",
+                    }}
+                  >
+                    <WrapperUserAction
+                      disabled={userInfo?.name === message?.name}
+                      address={undefined}
+                      name={message?.name}
+                    >
+                      <Avatar
+                        sx={{
+                          height: "50px",
+                          width: "50px",
+                        }}
+                        src={`${getBaseApiReact()}/arbitrary/THUMBNAIL/${
+                          message?.name
+                        }/qortal_avatar?async=true`}
+                        alt={message?.name}
+                      >
+                        {message?.name?.charAt(0)}
+                      </Avatar>
+                    </WrapperUserAction>
+                    <ThreadInfoColumn>
+                      <WrapperUserAction
+                        disabled={userInfo?.name === message?.name}
+                        address={undefined}
+                        name={message?.name}
+                      >
+                        <ThreadInfoColumnNameP>
+                          {message?.name}
+                        </ThreadInfoColumnNameP>
+                      </WrapperUserAction>
+                      <ThreadInfoColumnTime>
+                        {formatTimestampForum(message?.created)}
+                      </ThreadInfoColumnTime>
+                    </ThreadInfoColumn>
+                  </Box>
+                  <Box
+                    sx={{
+                      width: "100%",
+                      display: "flex",
+                      justifyContent: "center",
+                      alignItems: "center",
+                      flexDirection: "column",
+                    }}
+                  >
+                    <CustomLoader />
+                    <Typography
+                      sx={{
+                        fontSize: "18px",
+                        color: "white",
+                      }}
+                    >
+                      Downloading from QDN
+                    </Typography>
+                  </Box>
+                  
+                </Box>
               </SingleThreadParent>
             );
           })}
-          <div ref={containerRef} />
+         
           {!hasLastPage && !isLoading && (
             <>
               <Spacer height="20px" />
@@ -572,7 +942,13 @@ export const Thread = ({
                   variant="outlined"
                   startIcon={<RefreshIcon />}
                   onClick={() => {
-                    getMailMessages(currentThread, null, null, true);
+                    getMailMessages(
+                      currentThread,
+                      null,
+                      null,
+                      true,
+                      groupInfo?.groupId
+                    );
                   }}
                   sx={{
                     color: "white",
@@ -584,8 +960,11 @@ export const Thread = ({
             </>
           )}
 
-          {messages?.length > 4 && (
-            <>
+       
+            <Box sx={{
+              width: '100%',
+              visibility: messages?.length > 4 ? 'visible' : 'hidden'
+            }}>
               <Spacer height="30px" />
               <Box
                 sx={{
@@ -597,61 +976,92 @@ export const Thread = ({
                 }}
               >
                 <Button
+                  sx={{
+                    padding: isMobile && "5px",
+                    fontSize: isMobile && "14px",
+                    textTransformation: "capitalize",
+                  }}
                   onClick={() => {
-                    getMailMessages(currentThread, null, null, false);
+                    getMailMessages(
+                      currentThread,
+                      null,
+                      null,
+                      false,
+                      groupInfo?.groupId
+                    );
                   }}
                   disabled={!hasFirstPage}
                   variant="contained"
                 >
-                  First Page
+                  First
                 </Button>
                 <Button
+                  sx={{
+                    padding: isMobile && "5px",
+                    fontSize: isMobile && "14px",
+                    textTransformation: "capitalize",
+                  }}
                   onClick={() => {
                     getMailMessages(
                       currentThread,
                       messages[0].created,
                       null,
-                      false
+                      false,
+                      groupInfo?.groupId
                     );
                   }}
                   disabled={!hasPreviousPage}
                   variant="contained"
                 >
-                  Previous Page
+                  Previous
                 </Button>
                 <Button
+                  sx={{
+                    padding: isMobile && "5px",
+                    fontSize: isMobile && "14px",
+                    textTransformation: "capitalize",
+                  }}
                   onClick={() => {
                     getMailMessages(
                       currentThread,
                       null,
                       messages[messages.length - 1].created,
-                      false
+                      false,
+                      groupInfo?.groupId
                     );
                   }}
                   disabled={!hasNextPage}
                   variant="contained"
                 >
-                  Next page
+                  Next
                 </Button>
                 <Button
+                  sx={{
+                    padding: isMobile && "5px",
+                    fontSize: isMobile && "14px",
+                    textTransformation: "capitalize",
+                  }}
                   onClick={() => {
-                    getMailMessages(currentThread, null, null, true);
+                    getMailMessages(
+                      currentThread,
+                      null,
+                      null,
+                      true,
+                      groupInfo?.groupId
+                    );
                   }}
                   disabled={!hasLastPage}
                   variant="contained"
                 >
-                  Last page
+                  Last
                 </Button>
               </Box>
               <Spacer height="30px" />
-            </>
-          )}
+            </Box>
+       
+           <div ref={containerRef} />
         </ThreadContainer>
       </ThreadContainerFullWidth>
-      {/* {messages.length >= 20 && (
-              <LazyLoad onLoadMore={()=> getMailMessages(currentThread, false, true)}></LazyLoad>
-
-      )} */}
       <LoadingSnackbar
         open={isLoading}
         info={{

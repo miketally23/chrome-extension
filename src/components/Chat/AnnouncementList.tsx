@@ -20,7 +20,8 @@ export const AnnouncementList = ({
   setSelectedAnnouncement,
   disableComment,
   showLoadMore,
-  loadMore
+  loadMore,
+  myName
 }) => {
  
   const listRef = useRef();
@@ -55,6 +56,7 @@ export const AnnouncementList = ({
         return (
         
             <div
+              key={message?.identifier}
               style={{
                 marginBottom: "10px",
                 width: "100%",
@@ -63,7 +65,7 @@ export const AnnouncementList = ({
                 alignItems: "center",
               }}
             >
-              <AnnouncementItem disableComment={disableComment} setSelectedAnnouncement={setSelectedAnnouncement} message={message} messageData={messageData} />
+              <AnnouncementItem myName={myName} disableComment={disableComment} setSelectedAnnouncement={setSelectedAnnouncement} message={message} messageData={messageData} />
             </div>
 
         );

@@ -14,7 +14,7 @@ export const Loader = () => {
         left:'0px',
         right: '0px',
         bottom: '0px',
-        zIndex: 2,
+        zIndex: 10,
         background: 'rgba(0, 0, 0, 0.4)'
     }}>
          <CircularProgress color="success" size={25} />

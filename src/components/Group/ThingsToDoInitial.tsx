@@ -10,157 +10,226 @@ import CommentIcon from "@mui/icons-material/Comment";
 import InfoIcon from "@mui/icons-material/Info";
 import { Box, Typography } from "@mui/material";
 import { Spacer } from "../../common/Spacer";
+import { isMobile } from "../../App";
 
 export const ThingsToDoInitial = ({ myAddress, name, hasGroups, balance }) => {
   const [checked1, setChecked1] = React.useState(false);
   const [checked2, setChecked2] = React.useState(false);
   const [checked3, setChecked3] = React.useState(false);
 
-//   const getAddressInfo = async (address) => {
-//     const response = await fetch(getBaseApiReact() + "/addresses/" + address);
-//     const data = await response.json();
-//     if (data.error && data.error === 124) {
-//       setChecked1(false);
-//     } else if (data.address) {
-//       setChecked1(true);
-//     }
-//   };
+  //   const getAddressInfo = async (address) => {
+  //     const response = await fetch(getBaseApiReact() + "/addresses/" + address);
+  //     const data = await response.json();
+  //     if (data.error && data.error === 124) {
+  //       setChecked1(false);
+  //     } else if (data.address) {
+  //       setChecked1(true);
+  //     }
+  //   };
 
-//   const checkInfo = async () => {
-//     try {
-//       getAddressInfo(myAddress);
-//     } catch (error) {}
-//   };
-
-    
+  //   const checkInfo = async () => {
+  //     try {
+  //       getAddressInfo(myAddress);
+  //     } catch (error) {}
+  //   };
 
   React.useEffect(() => {
     if (balance && +balance >= 6) {
-      setChecked1(true)
+      setChecked1(true);
     }
   }, [balance]);
 
-  React.useEffect(()=> {
-    if(hasGroups) setChecked3(true)
-  }, [hasGroups])
+  React.useEffect(() => {
+    if (hasGroups) setChecked3(true);
+  }, [hasGroups]);
 
-  React.useEffect(()=> {
-    if(name) setChecked2(true)
-  }, [name])
+  React.useEffect(() => {
+    if (name) setChecked2(true);
+  }, [name]);
 
   return (
-    <Box sx={{
-      width: '360px',
-      display: 'flex',
-      flexDirection: 'column',
-      bgcolor: "background.paper",
-      padding: '20px'
-    }}>
-    <Typography sx={{
-      fontSize: '14px'
-    }}>Suggestion: Complete the following</Typography>
-    <Spacer height="10px" />
-    <List sx={{ width: "100%", maxWidth: 360 }}>
-      <ListItem
-        // secondaryAction={
-        //   <IconButton edge="end" aria-label="comments">
-        //     <InfoIcon
-        //       sx={{
-        //         color: "white",
-        //       }}
-        //     />
-        //   </IconButton>
-        // }
-        disablePadding
+    <Box
+      sx={{
+        width: "100%",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+      }}
+    >
+      <Box
+        sx={{
+          width: "322px",
+          display: "flex",
+          flexDirection: "column",
+          padding: "0px 20px",
+        }}
       >
-        <ListItemButton disableRipple role={undefined} dense>
-          <ListItemIcon>
-            <Checkbox
-              edge="start"
-              checked={checked1}
-              tabIndex={-1}
-              disableRipple
-              disabled={true}
-              sx={{
-                "&.Mui-checked": {
-                  color: "white", // Customize the color when checked
-                },
-                "& .MuiSvgIcon-root": {
-                  color: "white",
-                },
-              }}
-            />
-          </ListItemIcon>
-          <ListItemText primary={`Have at least 6 QORT in your wallet`} />
-        </ListItemButton>
-      </ListItem>
-      <ListItem
-        //  secondaryAction={
-        //     <IconButton edge="end" aria-label="comments">
-        //       <InfoIcon
-        //         sx={{
-        //           color: "white",
-        //         }}
-        //       />
-        //     </IconButton>
-        //   }
-        disablePadding
+        <Typography
+          sx={{
+            fontSize: "13px",
+            fontWeight: 600,
+          }}
+        >
+          Getting Started:
+        </Typography>
+        <Spacer height="10px" />
+      </Box>
+
+      <Box
+        sx={{
+          width: "322px",
+          height: isMobile ? "165px" : "250px",
+          display: "flex",
+          flexDirection: "column",
+          bgcolor: "background.paper",
+          padding: "20px",
+          borderRadius: "19px",
+        }}
       >
-        <ListItemButton disableRipple role={undefined} dense>
-          <ListItemIcon>
-            <Checkbox
-              edge="start"
-              checked={checked2}
-              tabIndex={-1}
-              disableRipple
-              disabled={true}
+        <List sx={{ width: "100%", maxWidth: 360 }}>
+          <ListItem
+            // secondaryAction={
+            //   <IconButton edge="end" aria-label="comments">
+            //     <InfoIcon
+            //       sx={{
+            //         color: "white",
+            //       }}
+            //     />
+            //   </IconButton>
+            // }
+            disablePadding
+            sx={{
+              marginBottom: '20px'
+            }}
+          >
+            <ListItemButton
               sx={{
-                "&.Mui-checked": {
-                  color: "white", // Customize the color when checked
-                },
-                "& .MuiSvgIcon-root": {
-                  color: "white",
-                },
+                padding: "0px",
               }}
-            />
-          </ListItemIcon>
-          <ListItemText primary={`Register a name`} />
-        </ListItemButton>
-      </ListItem>
-      <ListItem
-        //  secondaryAction={
-        //     <IconButton edge="end" aria-label="comments">
-        //       <InfoIcon
-        //         sx={{
-        //           color: "white",
-        //         }}
-        //       />
-        //     </IconButton>
-        //   }
-        disablePadding
-      >
-        <ListItemButton disableRipple role={undefined} dense>
-          <ListItemIcon>
-            <Checkbox
-              edge="start"
-              checked={checked3}
-              tabIndex={-1}
               disableRipple
-              disabled={true}
-              sx={{
-                "&.Mui-checked": {
-                  color: "white", // Customize the color when checked
-                },
-                "& .MuiSvgIcon-root": {
-                  color: "white",
-                },
-              }}
-            />
-          </ListItemIcon>
-          <ListItemText primary={`Join a group`} />
-        </ListItemButton>
-      </ListItem>
-    </List>
+              role={undefined}
+              dense
+            >
+              <ListItemText
+                sx={{
+                  "& .MuiTypography-root": {
+                    fontSize: "13px",
+                    fontWeight: 400,
+                  },
+                }}
+                primary={`Have at least 6 QORT in your wallet`}
+              />
+              <ListItemIcon
+                sx={{
+                  justifyContent: "flex-end",
+                }}
+              >
+                <Box
+                  sx={{
+                    height: "18px",
+                    width: "18px",
+                    borderRadius: "50%",
+                    backgroundColor: checked1 ? "rgba(9, 182, 232, 1)" : "transparent",
+                    outline: "1px solid rgba(9, 182, 232, 1)",
+                  }}
+                />
+                {/* <Checkbox
+                  edge="start"
+                  checked={checked1}
+                  tabIndex={-1}
+                  disableRipple
+                  disabled={true}
+                  sx={{
+                    "&.Mui-checked": {
+                      color: "white", // Customize the color when checked
+                    },
+                    "& .MuiSvgIcon-root": {
+                      color: "white",
+                    },
+                  }}
+                /> */}
+              </ListItemIcon>
+            </ListItemButton>
+          </ListItem>
+          <ListItem
+          sx={{
+            marginBottom: '20px'
+          }}
+            //  secondaryAction={
+            //     <IconButton edge="end" aria-label="comments">
+            //       <InfoIcon
+            //         sx={{
+            //           color: "white",
+            //         }}
+            //       />
+            //     </IconButton>
+            //   }
+            disablePadding
+          >
+            <ListItemButton sx={{
+                padding: "0px",
+              }} disableRipple role={undefined} dense>
+              
+              <ListItemText   sx={{
+                  "& .MuiTypography-root": {
+                    fontSize: "13px",
+                    fontWeight: 400,
+                  },
+                }} primary={`Register a name`} />
+              <ListItemIcon   sx={{
+                  justifyContent: "flex-end",
+                }}>
+                <Box
+                  sx={{
+                    height: "18px",
+                    width: "18px",
+                    borderRadius: "50%",
+                    backgroundColor: checked2 ? "rgba(9, 182, 232, 1)" : "transparent",
+                    outline: "1px solid rgba(9, 182, 232, 1)",
+                  }}
+                />
+              </ListItemIcon>
+            </ListItemButton>
+          </ListItem>
+          <ListItem
+            //  secondaryAction={
+            //     <IconButton edge="end" aria-label="comments">
+            //       <InfoIcon
+            //         sx={{
+            //           color: "white",
+            //         }}
+            //       />
+            //     </IconButton>
+            //   }
+            disablePadding
+          >
+            <ListItemButton sx={{
+                padding: "0px",
+              }} disableRipple role={undefined} dense>
+              
+              <ListItemText sx={{
+                  "& .MuiTypography-root": {
+                    fontSize: "13px",
+                    fontWeight: 400,
+                  },
+                }} primary={`Join a group hub`} />
+              <ListItemIcon sx={{
+                  justifyContent: "flex-end",
+                }}>
+              <Box
+                  sx={{
+                    height: "18px",
+                    width: "18px",
+                    borderRadius: "50%",
+                    backgroundColor: checked3 ? "rgba(9, 182, 232, 1)" : "transparent",
+                    outline: "1px solid rgba(9, 182, 232, 1)",
+                  }}
+                />
+              </ListItemIcon>
+            </ListItemButton>
+          </ListItem>
+        </List>
+      </Box>
     </Box>
   );
 };

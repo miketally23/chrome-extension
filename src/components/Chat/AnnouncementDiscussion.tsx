@@ -10,7 +10,7 @@ import { decryptPublishes, getTempPublish, saveTempPublish } from "./GroupAnnoun
 import { AnnouncementList } from "./AnnouncementList";
 import { Spacer } from "../../common/Spacer";
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import { getBaseApiReact, pauseAllQueues, resumeAllQueues } from "../../App";
+import { getArbitraryEndpointReact, getBaseApiReact, isMobile, pauseAllQueues, resumeAllQueues } from "../../App";
 
 const tempKey = 'accouncement-comment'
 
@@ -26,6 +26,8 @@ export const AnnouncementDiscussion = ({
 }) => {
   const [isSending, setIsSending] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isFocusedParent, setIsFocusedParent] = useState(false);
+
   const [comments, setComments] = useState([])
   const [tempPublishedList, setTempPublishedList] = useState([])
   const firstMountRef = useRef(false)
@@ -38,6 +40,12 @@ export const AnnouncementDiscussion = ({
   const clearEditorContent = () => {
     if (editorRef.current) {
       editorRef.current.chain().focus().clearContent().run();
+      if(isMobile){
+        setTimeout(() => {
+          editorRef.current?.chain().blur().run(); 
+          setIsFocusedParent(false)
+        }, 200);
+      }
     }
   };
 
@@ -47,6 +55,7 @@ export const AnnouncementDiscussion = ({
       const res = await fetch(
         `${getBaseApiReact()}/arbitrary/DOCUMENT/${name}/${identifier}?encoding=base64`
       );
+      if(!res?.ok) return
       const data = await res.text();
       const response = await decryptPublishes([{ data }], secretKey);
     
@@ -66,7 +75,7 @@ export const AnnouncementDiscussion = ({
       if (!selectedAnnouncement) return;
     
       return new Promise((res, rej) => {
-        chrome.runtime.sendMessage(
+        chrome?.runtime?.sendMessage(
           {
             action: "publishGroupEncryptedResource",
             payload: {
@@ -78,6 +87,7 @@ export const AnnouncementDiscussion = ({
          
             if (!response?.error) {
               res(response);
+              return
             }
             rej(response.error);
           }
@@ -170,7 +180,7 @@ export const AnnouncementDiscussion = ({
 
         // dispatch(setIsLoadingGlobal(true))
         const identifier = `cm-${selectedAnnouncement.identifier}`;
-        const url = `${getBaseApiReact()}/arbitrary/resources/search?mode=ALL&service=DOCUMENT&identifier=${identifier}&limit=20&includemetadata=false&offset=${offset}&reverse=true`;
+        const url = `${getBaseApiReact()}${getArbitraryEndpointReact()}?mode=ALL&service=DOCUMENT&identifier=${identifier}&limit=20&includemetadata=false&offset=${offset}&reverse=true&prefix=true`;
         const response = await fetch(url, {
           method: "GET",
           headers: {
@@ -200,7 +210,7 @@ export const AnnouncementDiscussion = ({
 
       const offset = comments.length
       const identifier = `cm-${selectedAnnouncement.identifier}`;
-        const url = `${getBaseApiReact()}/arbitrary/resources/search?mode=ALL&service=DOCUMENT&identifier=${identifier}&limit=20&includemetadata=false&offset=${offset}&reverse=true&prefix=true`;
+        const url = `${getBaseApiReact()}${getArbitraryEndpointReact()}?mode=ALL&service=DOCUMENT&identifier=${identifier}&limit=20&includemetadata=false&offset=${offset}&reverse=true&prefix=true`;
         const response = await fetch(url, {
           method: "GET",
           headers: {
@@ -245,7 +255,7 @@ export const AnnouncementDiscussion = ({
   return (
     <div
       style={{
-        height: "100vh",
+        height: isMobile ? '100%' : "100vh",
         display: "flex",
         flexDirection: "column",
         width: "100%",
@@ -259,7 +269,9 @@ export const AnnouncementDiscussion = ({
         flexShrink: 0,
       }}>
 
-<AuthenticatedContainerInnerTop>
+<AuthenticatedContainerInnerTop sx={{
+  height: '20px'
+}}>
       <ArrowBackIcon onClick={()=> setSelectedAnnouncement(null)} sx={{
         cursor: 'pointer'
       }} />
@@ -274,6 +286,7 @@ export const AnnouncementDiscussion = ({
         disableComment
         showLoadMore={comments.length > 0 && comments.length % 20 === 0}
         loadMore={loadMore}
+        myName={myName}
         
       />
       <div
@@ -281,14 +294,18 @@ export const AnnouncementDiscussion = ({
           // position: 'fixed',
           // bottom: '0px',
           backgroundColor: "#232428",
-          minHeight: "150px",
-          maxHeight: "400px",
+          minHeight: isMobile ? "0px" : "150px",
+          maxHeight: isMobile ? "auto" : "400px",
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
           width: "100%",
           boxSizing: "border-box",
-          padding: "20px",
+          padding: isMobile ? "10px":  "20px",
+          position: isFocusedParent ? 'fixed' : 'relative',
+          bottom: isFocusedParent ? '0px' : 'unset',
+          top: isFocusedParent ? '0px' : 'unset',
+          zIndex: isFocusedParent ? 5 : 'unset',
           flexShrink:0,
         }}
       >
@@ -297,6 +314,7 @@ export const AnnouncementDiscussion = ({
             display: "flex",
             flexDirection: "column",
             // height: '100%',
+            flexGrow: isMobile && 1,
             overflow: "auto",
           }}
         >
@@ -304,8 +322,42 @@ export const AnnouncementDiscussion = ({
             setEditorRef={setEditorRef}
             onEnter={publishComment}
             disableEnter
+            maxHeightOffset="60px"
+            isFocusedParent={isFocusedParent} setIsFocusedParent={setIsFocusedParent}
+            
           />
         </div>
+        <Box sx={{
+        display: 'flex',
+        width: '100&',
+        gap: '10px',
+        justifyContent: 'center',
+        flexShrink: 0,
+        position: 'relative',
+      }}>
+          {isFocusedParent && (
+               <CustomButton
+               onClick={()=> {
+                 if(isSending) return
+                 setIsFocusedParent(false)
+                 clearEditorContent()
+                 // Unfocus the editor
+               }}
+               style={{
+                 marginTop: 'auto',
+                 alignSelf: 'center',
+                 cursor: isSending ? 'default' : 'pointer',
+                 flexShrink: 0,
+                 padding: isMobile && '5px',
+                 fontSize: isMobile && '14px',
+                 background: 'red',
+               }}
+             >
+               
+               {` Close`}
+             </CustomButton>
+           
+            )}
         <CustomButton
           onClick={() => {
             if (isSending) return;
@@ -317,6 +369,8 @@ export const AnnouncementDiscussion = ({
             cursor: isSending ? "default" : "pointer",
             background: isSending && "rgba(0, 0, 0, 0.8)",
             flexShrink: 0,
+            padding: isMobile && '5px',
+            fontSize: isMobile && '14px'
           }}
         >
           {isSending && (
@@ -334,6 +388,8 @@ export const AnnouncementDiscussion = ({
           )}
           {` Publish Comment`}
         </CustomButton>
+      
+              </Box>
       </div>
    
       <LoadingSnackbar

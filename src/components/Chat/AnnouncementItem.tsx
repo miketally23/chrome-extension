@@ -9,8 +9,9 @@ import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import { getBaseApi } from "../../background";
 import { requestQueueCommentCount } from "./GroupAnnouncements";
 import { CustomLoader } from "../../common/CustomLoader";
-import { getBaseApiReact } from "../../App";
-export const AnnouncementItem = ({ message, messageData, setSelectedAnnouncement, disableComment }) => {
+import { getArbitraryEndpointReact, getBaseApiReact } from "../../App";
+import { WrapperUserAction } from "../WrapperUserAction";
+export const AnnouncementItem = ({ message, messageData, setSelectedAnnouncement, disableComment, myName }) => {
 
   const [commentLength, setCommentLength] = useState(0)
   const getNumberOfComments = React.useCallback(
@@ -20,7 +21,7 @@ export const AnnouncementItem = ({ message, messageData, setSelectedAnnouncement
 
         // dispatch(setIsLoadingGlobal(true))
         const identifier = `cm-${message.identifier}`;
-        const url = `${getBaseApiReact()}/arbitrary/resources/search?mode=ALL&service=DOCUMENT&identifier=${identifier}&limit=0&includemetadata=false&offset=${offset}&reverse=true`;
+        const url = `${getBaseApiReact()}${getArbitraryEndpointReact()}?mode=ALL&service=DOCUMENT&identifier=${identifier}&limit=0&includemetadata=false&offset=${offset}&reverse=true&prefix=true`;
        
         const response =  await requestQueueCommentCount.enqueue(() => { 
           return fetch(url, {
@@ -60,8 +61,10 @@ export const AnnouncementItem = ({ message, messageData, setSelectedAnnouncement
       <Box sx={{
          display: "flex",
          gap: '7px',
-         width: '100%'
+         width: '100%',
+         wordBreak: 'break-word'
       }}>
+        <WrapperUserAction disabled={myName === message?.name} address={undefined} name={message?.name}>
          <Avatar
       sx={{
         backgroundColor: '#27282c',
@@ -72,6 +75,7 @@ export const AnnouncementItem = ({ message, messageData, setSelectedAnnouncement
       >
         {message?.name?.charAt(0)}
       </Avatar>
+      </WrapperUserAction>
       <Box
         sx={{
           display: "flex",
@@ -80,6 +84,7 @@ export const AnnouncementItem = ({ message, messageData, setSelectedAnnouncement
           width: '100%'
         }}
       >
+        <WrapperUserAction disabled={myName === message?.name} address={undefined} name={message?.name}>
         <Typography
           sx={{
             fontWight: 600,
@@ -89,6 +94,7 @@ export const AnnouncementItem = ({ message, messageData, setSelectedAnnouncement
         >
           {message?.name}
         </Typography>
+        </WrapperUserAction>
         {!messageData?.decryptedData && (
           <Box sx={{
             width: '100%',

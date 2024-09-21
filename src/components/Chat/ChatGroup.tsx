@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { CreateCommonSecret } from './CreateCommonSecret'
 import { reusableGet } from '../../qdn/publish/pubish'
 import { uint8ArrayToObject } from '../../backgroundFunctions/encryption'
@@ -10,17 +10,24 @@ import Tiptap from './TipTap'
 import { CustomButton } from '../../App-styles'
 import CircularProgress from '@mui/material/CircularProgress';
 import { LoadingSnackbar } from '../Snackbar/LoadingSnackbar'
-import { getBaseApiReactSocket, pauseAllQueues, resumeAllQueues } from '../../App'
+import { getBaseApiReactSocket, isMobile, pauseAllQueues, resumeAllQueues } from '../../App'
 import { CustomizedSnackbars } from '../Snackbar/Snackbar'
 import { PUBLIC_NOTIFICATION_CODE_FIRST_SECRET_KEY } from '../../constants/codes'
 import { useMessageQueue } from '../../MessageQueueContext'
 import { executeEvent } from '../../utils/events'
+import { Box, ButtonBase } from '@mui/material'
+import ShortUniqueId from "short-unique-id";
+import { ReplyPreview } from './MessageItem'
+import { ExitIcon } from '../../assets/Icons/ExitIcon'
+
+
+const uid = new ShortUniqueId({ length: 5 });
 
 
 
 
 
-export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey, myAddress, handleNewEncryptionNotification, hide, handleSecretKeyCreationInProgress, triedToFetchSecretKey, myName}) => {
+export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey, myAddress, handleNewEncryptionNotification, hide, handleSecretKeyCreationInProgress, triedToFetchSecretKey, myName, balance}) => {
   const [messages, setMessages] = useState([])
   const [isSending, setIsSending] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -28,13 +35,20 @@ export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey,
   const [openSnack, setOpenSnack] = React.useState(false);
   const [infoSnack, setInfoSnack] = React.useState(null);
   const hasInitialized = useRef(false)
+  const [isFocusedParent, setIsFocusedParent] = useState(false);
+  const [replyMessage, setReplyMessage] = useState(null)
+
   const hasInitializedWebsocket = useRef(false)
   const socketRef = useRef(null); // WebSocket reference
   const timeoutIdRef = useRef(null); // Timeout ID reference
   const groupSocketTimeoutRef = useRef(null); // Group Socket Timeout reference
   const editorRef = useRef(null);
-  const { queueChats, addToQueue, } = useMessageQueue();
- 
+  const { queueChats, addToQueue, processWithNewMessages } = useMessageQueue();
+  const [, forceUpdate] = useReducer((x) => x + 1, 0);
+
+  const triggerRerender = () => {
+    forceUpdate(); // Trigger re-render by updating the state
+  };
   const setEditorRef = (editorInstance) => {
     editorRef.current = editorInstance;
   };
@@ -85,12 +99,17 @@ export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey,
           return
         }
         return new Promise((res, rej)=> {
-          chrome.runtime.sendMessage({ action: "decryptSingle", payload: {
+          chrome?.runtime?.sendMessage({ action: "decryptSingle", payload: {
             data: encryptedMessages,
             secretKeyObject: secretKey
         }}, (response) => {
-        
             if (!response?.error) {
+              processWithNewMessages(response?.map((item)=> {
+                return {
+                  ...item,
+                  ...(item?.decryptedData || {})
+                }
+              }), selectedGroup)
               res(response)
               if(hasInitialized.current){
                
@@ -98,7 +117,8 @@ export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey,
                   return {
                     ...item,
                     id: item.signature,
-                    text: item.text,
+                    text: item?.decryptedData?.message || "",
+                    repliedTo: item?.decryptedData?.repliedTo,
                     unread: item?.sender === myAddress ? false : true
                   }
                 } )
@@ -108,7 +128,8 @@ export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey,
                   return {
                     ...item,
                     id: item.signature,
-                    text: item.text,
+                    text: item?.decryptedData?.message || "",
+                    repliedTo: item?.decryptedData?.repliedTo,
                     unread:  false
                   }
                 } )
@@ -233,7 +254,7 @@ export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey,
   const encryptChatMessage = async (data: string, secretKeyObject: any)=> {
     try {
       return new Promise((res, rej)=> {
-        chrome.runtime.sendMessage({ action: "encryptSingle", payload: {
+        chrome?.runtime?.sendMessage({ action: "encryptSingle", payload: {
           data,
           secretKeyObject
       }}, (response) => {
@@ -252,7 +273,7 @@ export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey,
 const sendChatGroup = async ({groupId, typeMessage = undefined, chatReference = undefined, messageText}: any)=> {
   try {
     return new Promise((res, rej)=> {
-      chrome.runtime.sendMessage({ action: "sendChatGroup", payload: {
+      chrome?.runtime?.sendMessage({ action: "sendChatGroup", payload: {
         groupId, typeMessage, chatReference, messageText
     }}, (response) => {
     
@@ -270,6 +291,16 @@ const sendChatGroup = async ({groupId, typeMessage = undefined, chatReference = 
 const clearEditorContent = () => {
   if (editorRef.current) {
     editorRef.current.chain().focus().clearContent().run();
+    if(isMobile){
+      setTimeout(() => {
+        editorRef.current?.chain().blur().run(); 
+        setIsFocusedParent(false)
+        executeEvent("sent-new-message-group", {})
+        setTimeout(() => {
+          triggerRerender();
+         }, 300);
+      }, 200);
+    }
   }
 };
 
@@ -277,6 +308,7 @@ const clearEditorContent = () => {
     const sendMessage = async ()=> {
       try {
         if(isSending) return
+        if(+balance < 4) throw new Error('You need at least 4 QORT to send a message')
         pauseAllQueues()
         if (editorRef.current) {
           const htmlContent = editorRef.current.getHTML();
@@ -285,11 +317,25 @@ const clearEditorContent = () => {
           setIsSending(true)
         const message = htmlContent
         const secretKeyObject = await getSecretKey(false, true)
-        const message64: any = await objectToBase64(message)
+
+        let repliedTo = replyMessage?.signature
+
+				if (replyMessage?.chatReference) {
+					repliedTo = replyMessage?.chatReference
+				}
+        const otherData = {
+          specialId: uid.rnd(),
+          repliedTo
+        }
+        const objectMessage = {
+          message,
+          ...(otherData || {})
+        }
+        const message64: any = await objectToBase64(objectMessage)
      
         const encryptSingle = await encryptChatMessage(message64, secretKeyObject)
         // const res = await sendChatGroup({groupId: selectedGroup,messageText: encryptSingle})
-   
+       
         const sendMessageFunc = async () => {
           await sendChatGroup({groupId: selectedGroup,messageText: encryptSingle})
         };
@@ -300,7 +346,8 @@ const clearEditorContent = () => {
             text: message,
             timestamp: Date.now(),
           senderName: myName,
-          sender: myAddress
+          sender: myAddress,
+             ...(otherData || {})
           },
          
         }
@@ -310,12 +357,14 @@ const clearEditorContent = () => {
           executeEvent("sent-new-message-group", {})
         }, 150);
         clearEditorContent()
+        setReplyMessage(null)
         }
         // send chat message
       } catch (error) {
+        const errorMsg = error?.message || error
         setInfoSnack({
           type: "error",
-          message: error,
+          message: errorMsg,
         });
         setOpenSnack(true);
         console.error(error)
@@ -333,10 +382,13 @@ const clearEditorContent = () => {
     }
   }, [hide]);
     
+  const onReply = useCallback((message)=> {
+    setReplyMessage(message)
+  }, [])
   
   return (
     <div style={{
-      height: '100vh',
+      height: isMobile ? '100%' : '100%',
       display: 'flex',
       flexDirection: 'column',
       width: '100%',
@@ -345,32 +397,84 @@ const clearEditorContent = () => {
     left: hide && '-100000px',
     }}>
  
-              <ChatList initialMessages={messages} myAddress={myAddress} tempMessages={tempMessages}/>
+              <ChatList onReply={onReply} chatId={selectedGroup} initialMessages={messages} myAddress={myAddress} tempMessages={tempMessages}/>
 
    
       <div style={{
         // position: 'fixed',
         // bottom: '0px',
         backgroundColor: "#232428",
-        minHeight: '150px',
-        maxHeight: '400px',
+        minHeight: isMobile ? '0px' : '150px',
+        maxHeight: isMobile ? 'auto' : '400px',
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
         width: '100%',
         boxSizing: 'border-box',
-        padding: '20px'
+        padding: isMobile ? '10px' : '20px',
+        position: isFocusedParent ? 'fixed' : 'relative',
+        bottom: isFocusedParent ? '0px' : 'unset',
+        top: isFocusedParent ? '0px' : 'unset',
+        zIndex: isFocusedParent ? 5 : 'unset'
       }}>
       <div style={{
             display: 'flex',
             flexDirection: 'column',
-            // height: '100%',
-            overflow: 'auto'
+            flexGrow: isMobile && 1,
+            overflow: !isMobile &&  "auto",
       }}>
+        {replyMessage && (
+        <Box sx={{
+          display: 'flex',
+          gap: '5px',
+          alignItems: 'flex-start',
+          width: '100%'
+        }}>
+                  <ReplyPreview message={replyMessage} />
 
+           <ButtonBase
+               onClick={() => {
+                setReplyMessage(null)
+               }}
+             >
+             <ExitIcon />
+             </ButtonBase>
+        </Box>
+      )}
      
-      <Tiptap setEditorRef={setEditorRef} onEnter={sendMessage} isChat />
+     
+      <Tiptap setEditorRef={setEditorRef} onEnter={sendMessage} isChat disableEnter={isMobile ? true : false} isFocusedParent={isFocusedParent} setIsFocusedParent={setIsFocusedParent} />
       </div>
+      <Box sx={{
+        display: 'flex',
+        width: '100&',
+        gap: '10px',
+        justifyContent: 'center',
+        flexShrink: 0,
+        position: 'relative',
+      }}>
+         {isFocusedParent && (
+               <CustomButton
+               onClick={()=> {
+                 if(isSending) return
+                 setIsFocusedParent(false)
+                 clearEditorContent()
+                 // Unfocus the editor
+               }}
+               style={{
+                 marginTop: 'auto',
+                 alignSelf: 'center',
+                 cursor: isSending ? 'default' : 'pointer',
+                 background: 'red',
+                 flexShrink: 0,
+                 padding: isMobile && '5px'
+               }}
+             >
+               
+               {` Close`}
+             </CustomButton>
+           
+            )}
       <CustomButton
               onClick={()=> {
                 if(isSending) return
@@ -381,7 +485,9 @@ const clearEditorContent = () => {
                 alignSelf: 'center',
                 cursor: isSending ? 'default' : 'pointer',
                 background: isSending && 'rgba(0, 0, 0, 0.8)',
-                flexShrink: 0
+                flexShrink: 0,
+                padding: isMobile && '5px',
+                
               }}
             >
               {isSending && (
@@ -399,6 +505,8 @@ const clearEditorContent = () => {
               )}
               {` Send`}
             </CustomButton>
+           
+              </Box>
       {/* <button onClick={sendMessage}>send</button> */}
       </div>
       {/* <ChatContainerComp messages={formatMessages} /> */}

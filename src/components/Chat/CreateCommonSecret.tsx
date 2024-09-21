@@ -2,13 +2,13 @@ import { Box, Button, Typography } from '@mui/material'
 import React, { useContext } from 'react'
 import { CustomizedSnackbars } from '../Snackbar/Snackbar';
 import { LoadingButton } from '@mui/lab';
-import { MyContext, getBaseApiReact, pauseAllQueues } from '../../App';
+import { MyContext, getArbitraryEndpointReact, getBaseApiReact, pauseAllQueues } from '../../App';
 import { getFee } from '../../background';
 import { decryptResource, getGroupAdimns, validateSecretKey } from '../Group/Group';
 import { base64ToUint8Array } from '../../qdn/encryption/group-encryption';
 import { uint8ArrayToObject } from '../../backgroundFunctions/encryption';
 
-export const CreateCommonSecret = ({groupId, secretKey, isOwner,  myAddress, secretKeyDetails, userInfo, noSecretKey}) => {
+export const CreateCommonSecret = ({groupId, secretKey, isOwner,  myAddress, secretKeyDetails, userInfo, noSecretKey, setHideCommonKeyPopup}) => {
   const { show, setTxList } = useContext(MyContext);
 
   const [openSnack, setOpenSnack] = React.useState(false);
@@ -18,9 +18,9 @@ export const CreateCommonSecret = ({groupId, secretKey, isOwner,  myAddress, sec
   const getPublishesFromAdmins = async (admins: string[]) => {
     // const validApi = await findUsableApi();
     const queryString = admins.map((name) => `name=${name}`).join("&");
-    const url = `${getBaseApiReact()}/arbitrary/resources/search?mode=ALL&service=DOCUMENT_PRIVATE&identifier=symmetric-qchat-group-${
+    const url = `${getBaseApiReact()}${getArbitraryEndpointReact()}?mode=ALL&service=DOCUMENT_PRIVATE&identifier=symmetric-qchat-group-${
       groupId
-    }&exactmatchnames=true&limit=0&reverse=true&${queryString}`;
+    }&exactmatchnames=true&limit=0&reverse=true&${queryString}&prefix=true`;
     const response = await fetch(url);
     if(!response.ok){
       throw new Error('network error')
@@ -51,11 +51,11 @@ export const CreateCommonSecret = ({groupId, secretKey, isOwner,  myAddress, sec
       
      
      
-      const groupAdmins = await getGroupAdimns(groupId);
-      if(!groupAdmins.length){
+      const {names} = await getGroupAdimns(groupId);
+      if(!names.length){
         throw new Error('Network error')
       }
-      const publish = await getPublishesFromAdmins(groupAdmins);
+      const publish = await getPublishesFromAdmins(names);
    
      
       if (publish === false) {
@@ -107,7 +107,7 @@ export const CreateCommonSecret = ({groupId, secretKey, isOwner,  myAddress, sec
           const secretKeyToSend = !secretKey2 ? null : secretKey2
        
  
-            chrome.runtime.sendMessage({ action: "encryptAndPublishSymmetricKeyGroupChat", payload: {
+            chrome?.runtime?.sendMessage({ action: "encryptAndPublishSymmetricKeyGroupChat", payload: {
                 groupId: groupId,
                 previousData: secretKeyToSend
             } }, (response) => {
@@ -142,7 +142,7 @@ export const CreateCommonSecret = ({groupId, secretKey, isOwner,  myAddress, sec
       flexDirection: 'column',
       gap: '25px',
       maxWidth: '350px',
-      background: '#4444'
+      background: '#444444'
     }}>
       <LoadingButton loading={isLoading} loadingPosition="start" color="warning" variant='contained' onClick={createCommonSecret}>Re-encyrpt key</LoadingButton>
       {noSecretKey ? (
@@ -158,6 +158,15 @@ export const CreateCommonSecret = ({groupId, secretKey, isOwner,  myAddress, sec
         <Typography>The group member list has changed. Please re-encrypt the secret key.</Typography>
       </Box>
       )}
+      <Box sx={{
+        display: 'flex',
+        width: '100%',
+        justifyContent: 'flex-end'
+      }}>
+        <Button onClick={()=> {
+          setHideCommonKeyPopup(true)
+        }} size='small'>Hide</Button>
+      </Box>
         <CustomizedSnackbars open={openSnack} setOpen={setOpenSnack} info={infoSnack} setInfo={setInfoSnack}  />
     </Box>
     

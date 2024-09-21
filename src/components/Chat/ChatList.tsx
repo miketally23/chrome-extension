@@ -3,19 +3,21 @@ import { List, AutoSizer, CellMeasurerCache, CellMeasurer } from 'react-virtuali
 import { MessageItem } from './MessageItem';
 import { subscribeToEvent, unsubscribeFromEvent } from '../../utils/events';
 
-const cache = new CellMeasurerCache({
-  fixedWidth: true,
-  defaultHeight: 50,
-});
+// const cache = new CellMeasurerCache({
+//   fixedWidth: true,
+//   defaultHeight: 50,
+// });
 
-export const ChatList = ({ initialMessages, myAddress, tempMessages }) => {
+export const ChatList = ({ initialMessages, myAddress, tempMessages, chatId, onReply }) => {
  
   const hasLoadedInitialRef = useRef(false);
   const listRef = useRef();
   const [messages, setMessages] = useState(initialMessages);
   const [showScrollButton, setShowScrollButton] = useState(false);
- 
-  
+  const cache = useMemo(() => new CellMeasurerCache({
+    fixedWidth: true,
+    defaultHeight: 50,
+  }), [chatId]); // Recreate cache when chatId changes
   useEffect(() => {
     cache.clearAll();
   }, []);
@@ -65,6 +67,10 @@ export const ChatList = ({ initialMessages, myAddress, tempMessages }) => {
     }
   };
 
+  const scrollToItem = useCallback((index) => {
+    listRef.current.scrollToRow(index); // This scrolls to the specific index
+  }, []);
+
   const recomputeListHeights = () => {
     if (listRef.current) {
       listRef.current.recomputeRowHeights();
@@ -90,7 +96,18 @@ export const ChatList = ({ initialMessages, myAddress, tempMessages }) => {
     let message = messages[index];
     const isLargeMessage = message.text?.length > 200; // Adjust based on your message size threshold
 
+    // const reply = message?.repliedTo ? messages.find((msg)=> msg?.signature === message?.repliedTo) : undefined
+    let replyIndex = messages.findIndex((msg)=> msg?.signature === message?.repliedTo)
+    let reply
+    if(message?.repliedTo && replyIndex !== -1){
+      reply = messages[replyIndex]
+    }
     if(message?.message && message?.groupDirectId){
+       replyIndex = messages.findIndex((msg)=> msg?.signature === message?.message?.repliedTo)
+     reply
+    if(message?.message?.repliedTo && replyIndex !== -1){
+      reply = messages[replyIndex]
+    }
       message = {
         ...(message?.message || {}),
         isTemp: true,
@@ -126,6 +143,11 @@ export const ChatList = ({ initialMessages, myAddress, tempMessages }) => {
                 message={message}
                 onSeen={handleMessageSeen}
                 isTemp={!!message?.isTemp}
+                myAddress={myAddress}
+              onReply={onReply}
+              reply={reply}
+              scrollToItem={scrollToItem}
+              replyIndex={replyIndex}
               />
             </div>
           </div>
@@ -174,7 +196,7 @@ let uniqueInitialMessages = Array.from(uniqueInitialMessagesMap.values()).sort((
   // }, [messages, myAddress]);
 
   return (
-    <div style={{ position: 'relative', flexGrow: 1, width: '100%', display: 'flex', flexDirection: 'column', flexShrink: 1 }}>
+    <div style={{ position: 'relative', marginTop: '14px', flexGrow: 1, width: '100%', display: 'flex', flexDirection: 'column', flexShrink: 1 }}>
       <AutoSizer>
         {({ height, width }) => (
           <List

@@ -74,7 +74,7 @@ export const ListOfJoinRequests = ({ groupId, setInfoSnack, setOpenSnack, show }
       })
       setIsLoadingAccept(true)
       await new Promise((res, rej)=> {
-          chrome.runtime.sendMessage({ action: "inviteToGroup", payload: {
+          chrome?.runtime?.sendMessage({ action: "inviteToGroup", payload: {
             groupId,
             qortalAddress: address,
             inviteTime: 10800,
@@ -169,7 +169,7 @@ export const ListOfJoinRequests = ({ groupId, setInfoSnack, setOpenSnack, show }
   return (
     <div>
       <p>Join request list</p>
-      <div style={{ position: 'relative', height: '500px', width: '600px', display: 'flex', flexDirection: 'column', flexShrink: 1 }}>
+      <div style={{ position: 'relative', height: '500px', width: '100%', display: 'flex', flexDirection: 'column', flexShrink: 1 }}>
         <AutoSizer>
           {({ height, width }) => (
             <List

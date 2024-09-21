@@ -108,7 +108,7 @@ export const AddGroupList = ({ setInfoSnack, setOpenSnack }) => {
           })
       setIsLoading(true);
       await new Promise((res, rej) => {
-        chrome.runtime.sendMessage(
+        chrome?.runtime?.sendMessage(
           {
             action: "joinGroup",
             payload: {
@@ -247,7 +247,7 @@ export const AddGroupList = ({ setInfoSnack, setOpenSnack }) => {
         style={{
           position: "relative",
           height: "500px",
-          width: "600px",
+          width: "100%",
           display: "flex",
           flexDirection: "column",
           flexShrink: 1,
