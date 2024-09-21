@@ -18,7 +18,6 @@ export const ChatList = ({ initialMessages, myAddress, tempMessages, chatId, onR
     fixedWidth: true,
     defaultHeight: 50,
   }), [chatId]); // Recreate cache when chatId changes
-  console.log('messages2', messages)
   useEffect(() => {
     cache.clearAll();
   }, []);

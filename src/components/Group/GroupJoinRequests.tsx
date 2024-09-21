@@ -92,7 +92,6 @@ export const GroupJoinRequests = ({ myAddress, groups, setOpenManageMembers, get
     }
   }, [myAddress, groups]);
 
-  console.log('groupsWithJoinRequests', groupsWithJoinRequests)
 
   return (
     <Box sx={{

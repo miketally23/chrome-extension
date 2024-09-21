@@ -813,7 +813,6 @@ export const Group = ({
     getGroupOwner(selectedGroup?.groupId);
   }, [selectedGroup])
 
-  console.log('groupOwner', groupOwner)
 
   useEffect(() => {
     if (selectedGroup && groupOwner && groupOwner?.isOpen === false) {

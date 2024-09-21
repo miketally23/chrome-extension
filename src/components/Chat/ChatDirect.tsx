@@ -52,7 +52,6 @@ export const ChatDirect = ({ myAddress, isNewChat, selectedDirect, setSelectedDi
     forceUpdate(); // Trigger re-render by updating the state
   };
   const publicKeyOfRecipientRef = useRef(null)
-   console.log({messages})
   const getPublicKeyFunc = async (address)=> {
     try {
       const publicKey = await getPublicKey(address)
@@ -225,7 +224,6 @@ export const ChatDirect = ({ myAddress, isNewChat, selectedDirect, setSelectedDi
 
 const sendChatDirect = async ({ chatReference = undefined, messageText, otherData}: any, address, publicKeyOfRecipient, isNewChatVar)=> {
   try {
-    console.log('chatReferencedirect', chatReference)
     const directTo = isNewChatVar ? directToValue : address
  
     if(!directTo) return
