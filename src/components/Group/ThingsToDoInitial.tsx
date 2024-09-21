@@ -10,6 +10,7 @@ import CommentIcon from "@mui/icons-material/Comment";
 import InfoIcon from "@mui/icons-material/Info";
 import { Box, Typography } from "@mui/material";
 import { Spacer } from "../../common/Spacer";
+import { isMobile } from "../../App";
 
 export const ThingsToDoInitial = ({ myAddress, name, hasGroups, balance }) => {
   const [checked1, setChecked1] = React.useState(false);
@@ -77,7 +78,7 @@ export const ThingsToDoInitial = ({ myAddress, name, hasGroups, balance }) => {
       <Box
         sx={{
           width: "322px",
-          height: "165px",
+          height: isMobile ? "165px" : "250px",
           display: "flex",
           flexDirection: "column",
           bgcolor: "background.paper",

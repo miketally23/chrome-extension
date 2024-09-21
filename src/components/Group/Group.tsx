@@ -85,6 +85,8 @@ import { GroupMenu } from "./GroupMenu";
 import { getRootHeight } from "../../utils/mobile/mobileUtils";
 import { ReturnIcon } from "../../assets/Icons/ReturnIcon";
 import { ExitIcon } from "../../assets/Icons/ExitIcon";
+import { HomeDesktop } from "./HomeDesktop";
+import { DesktopFooter } from "../Desktop/DesktopFooter";
 
 // let touchStartY = 0;
 // let disablePullToRefresh = false;
@@ -418,7 +420,7 @@ export const Group = ({
   const [mutedGroups, setMutedGroups] = useState([]);
   const [mobileViewMode, setMobileViewMode] = useState("home");
   const [mobileViewModeKeepOpen, setMobileViewModeKeepOpen] = useState("");
-
+  const [desktopSideView, setDesktopSideView] = useState('groups')
   const isFocusedRef = useRef(true);
   const selectedGroupRef = useRef(null);
   const selectedDirectRef = useRef(null);
@@ -1547,10 +1549,12 @@ export const Group = ({
       <div
         style={{
           display: "flex",
-          width: isMobile ? "100%" : "300px",
+          width: isMobile ? "100%" : "380px",
           flexDirection: "column",
           alignItems: "flex-start",
           height: isMobile ? `calc(${getRootHeight()} - 45px)` : "100%",
+          background: !isMobile && 'var(--bg-primary)',
+          borderRadius: !isMobile && '0px 15px 15px 0px'
         }}
       >
         {isMobile && (
@@ -1752,10 +1756,12 @@ export const Group = ({
       <div
         style={{
           display: "flex",
-          width: isMobile ? "100%" : "300px",
+          width: isMobile ? "100%" : "380px",
           flexDirection: "column",
           alignItems: "flex-start",
           height: isMobile ? "calc(100% - 45px)" : "100%",
+          background: !isMobile && 'var(--bg-primary)',
+          borderRadius: !isMobile && '0px 15px 15px 0px'
         }}
       >
         {/* <div
@@ -2147,21 +2153,24 @@ export const Group = ({
         info={infoSnack}
         setInfo={setInfoSnack}
       />
-      <Header
-        setMobileViewModeKeepOpen={setMobileViewModeKeepOpen}
-        isThin={
-          mobileViewMode === "groups" ||
-          mobileViewMode === "group" ||
-          mobileViewModeKeepOpen === "messaging"
-        }
-        logoutFunc={logoutFunc}
-        goToHome={goToHome}
-        setIsOpenDrawerProfile={setIsOpenDrawerProfile}
-        hasUnreadGroups={groupChatHasUnread ||
-          groupsAnnHasUnread}
-        hasUnreadDirects={directChatHasUnread}
-        setMobileViewMode={setMobileViewMode}
-      />
+      {isMobile && (
+         <Header
+         setMobileViewModeKeepOpen={setMobileViewModeKeepOpen}
+         isThin={
+           mobileViewMode === "groups" ||
+           mobileViewMode === "group" ||
+           mobileViewModeKeepOpen === "messaging"
+         }
+         logoutFunc={logoutFunc}
+         goToHome={goToHome}
+         setIsOpenDrawerProfile={setIsOpenDrawerProfile}
+         hasUnreadGroups={groupChatHasUnread ||
+           groupsAnnHasUnread}
+         hasUnreadDirects={directChatHasUnread}
+         setMobileViewMode={setMobileViewMode}
+       />
+      )}
+     
 
       <div
         style={{
@@ -2172,7 +2181,9 @@ export const Group = ({
           alignItems: "flex-start",
         }}
       >
-        {!isMobile && renderGroups()}
+        {!isMobile && desktopSideView === 'groups' && renderGroups()}
+        {!isMobile && desktopSideView === 'directs' && renderDirects()}
+
         <Box
           sx={{
             width: "100%",
@@ -2277,60 +2288,63 @@ export const Group = ({
           )}
           {selectedGroup && (
             <>
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  width: "100%",
-                  marginTop: "14px",
-                  justifyContent: "center",
-                  height: "15px",
-                }}
-              >
-                <Box
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    width: "320px",
-                  }}
-                >
-                  <Box
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      width: "50px",
-                    }}
-                  >
-                    <ButtonBase
-                      onClick={() => {
-                        setMobileViewMode("groups");
-                      }}
-                    >
-                      <ReturnIcon />
-                    </ButtonBase>
-                  </Box>
-                  <Typography
-                    sx={{
-                      fontSize: "14px",
-                      fontWeight: 600,
-                    }}
-                  >
-                    {selectedGroup?.groupName}
-                  </Typography>
-                  <Box
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      width: "50px",
-                      justifyContent: "flex-end",
-                    }}
-                  >
-                    {/* <ExitIcon /> */}
-                  </Box>
-                </Box>
-              </Box>
-              {mobileViewMode === "group" && (
+            {isMobile && (
+               <Box
+               sx={{
+                 display: "flex",
+                 alignItems: "center",
+                 width: "100%",
+                 marginTop: "14px",
+                 justifyContent: "center",
+                 height: "15px",
+               }}
+             >
+               <Box
+                 sx={{
+                   display: "flex",
+                   alignItems: "center",
+                   justifyContent: "space-between",
+                   width: "320px",
+                 }}
+               >
+                 <Box
+                   sx={{
+                     display: "flex",
+                     alignItems: "center",
+                     width: "50px",
+                   }}
+                 >
+                   <ButtonBase
+                     onClick={() => {
+                       setMobileViewMode("groups");
+                     }}
+                   >
+                     <ReturnIcon />
+                   </ButtonBase>
+                 </Box>
+                 <Typography
+                   sx={{
+                     fontSize: "14px",
+                     fontWeight: 600,
+                   }}
+                 >
+                   {selectedGroup?.groupName}
+                 </Typography>
+                 <Box
+                   sx={{
+                     display: "flex",
+                     alignItems: "center",
+                     width: "50px",
+                     justifyContent: "flex-end",
+                   }}
+                 >
+                   {/* <ExitIcon /> */}
+                 </Box>
+               </Box>
+             </Box>
+            )}
+             
+              {isMobile && mobileViewMode === "group" && (
                 <>
                   <GroupMenu
                     setGroupSection={setGroupSection}
@@ -2556,8 +2570,37 @@ export const Group = ({
               </Box>
             </>
           )}
-
-          {mobileViewMode === "home" && (
+           {!isMobile && (
+        <DesktopFooter 
+        selectedGroup={selectedGroup}
+        groupSection={groupSection}
+        isUnread={isUnread}
+        goToAnnouncements={goToAnnouncements}
+        isUnreadChat={isUnreadChat}
+        goToChat={goToChat}
+        goToThreads={goToThreads}
+        setOpenManageMembers={setOpenManageMembers}
+        groupChatHasUnread={groupChatHasUnread}
+        groupsAnnHasUnread={groupsAnnHasUnread}
+        directChatHasUnread={directChatHasUnread}
+        chatMode={chatMode}
+        openDrawerGroups={openDrawerGroups}
+        goToHome={goToHome}
+        setIsOpenDrawerProfile={setIsOpenDrawerProfile}
+        mobileViewMode={mobileViewMode}
+        setMobileViewMode={setMobileViewMode}
+        setMobileViewModeKeepOpen={setMobileViewModeKeepOpen}
+        hasUnreadGroups={groupChatHasUnread ||
+          groupsAnnHasUnread}
+        hasUnreadDirects={directChatHasUnread}
+        myName={userInfo?.name || null}
+        isHome={groupSection === "home"}
+        isGroups={desktopSideView === 'groups'}
+        isDirects={desktopSideView === 'directs'}
+        setDesktopSideView={setDesktopSideView}
+        />
+      )}
+          {isMobile && mobileViewMode === "home" && (
             <Home
               refreshHomeDataFunc={refreshHomeDataFunc}
               myAddress={myAddress}
@@ -2573,11 +2616,11 @@ export const Group = ({
               setMobileViewMode={setMobileViewMode}
             />
           )}
-          {/* {
-          !selectedGroup &&
+          {
+          !isMobile && !selectedGroup &&
           groupSection === "home" && (
            
-<Home
+<HomeDesktop
   refreshHomeDataFunc={refreshHomeDataFunc}
   myAddress={myAddress}
   isLoadingGroups={isLoadingGroups}
@@ -2589,8 +2632,9 @@ export const Group = ({
   getTimestampEnterChat={getTimestampEnterChat}
   setOpenManageMembers={setOpenManageMembers}
   setOpenAddGroup={setOpenAddGroup}
+  setMobileViewMode={setMobileViewMode}
 />
-          )} */}
+          )}
         </Box>
         <AuthenticatedContainerInnerRight
           sx={{
@@ -2796,7 +2840,8 @@ export const Group = ({
           }}
         />
       </div>
-      {mobileViewMode === "home" && !mobileViewModeKeepOpen && (
+     
+      {isMobile && mobileViewMode === "home" && !mobileViewModeKeepOpen && (
         <>
           <div
             style={{

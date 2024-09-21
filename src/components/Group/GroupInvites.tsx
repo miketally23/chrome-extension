@@ -14,7 +14,7 @@ import { Box, Typography } from "@mui/material";
 import { Spacer } from "../../common/Spacer";
 import { getGroupNames } from "./UserListOfInvites";
 import { CustomLoader } from "../../common/CustomLoader";
-import { getBaseApiReact } from "../../App";
+import { getBaseApiReact, isMobile } from "../../App";
 
 export const GroupInvites = ({ myAddress, setOpenAddGroup }) => {
   const [groupsWithJoinRequests, setGroupsWithJoinRequests] = React.useState(
@@ -75,7 +75,8 @@ export const GroupInvites = ({ myAddress, setOpenAddGroup }) => {
       <Box
         sx={{
           width: "322px",
-          height: "165px",
+          height: isMobile ? "165px" : "250px",
+
           display: "flex",
           flexDirection: "column",
           bgcolor: "background.paper",

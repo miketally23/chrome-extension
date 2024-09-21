@@ -15,7 +15,7 @@ import { Box, Typography } from "@mui/material";
 import { Spacer } from "../../common/Spacer";
 import { CustomLoader } from "../../common/CustomLoader";
 import { getBaseApi } from "../../background";
-import { getBaseApiReact } from "../../App";
+import { getBaseApiReact, isMobile } from "../../App";
 export const requestQueueGroupJoinRequests = new RequestQueueWithPromise(2)
 
 export const GroupJoinRequests = ({ myAddress, groups, setOpenManageMembers, getTimestampEnterChat, setSelectedGroup, setGroupSection, setMobileViewMode }) => {
@@ -124,7 +124,8 @@ export const GroupJoinRequests = ({ myAddress, groups, setOpenManageMembers, get
       <Box
         sx={{
           width: "322px",
-          height: '165px',
+          height: isMobile ? "165px" : "250px",
+
           display: "flex",
           flexDirection: "column",
           bgcolor: "background.paper",

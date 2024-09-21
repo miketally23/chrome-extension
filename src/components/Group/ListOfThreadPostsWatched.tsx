@@ -15,6 +15,7 @@ import { Spacer } from "../../common/Spacer";
 import { getGroupNames } from "./UserListOfInvites";
 import { CustomLoader } from "../../common/CustomLoader";
 import VisibilityIcon from "@mui/icons-material/Visibility";
+import { isMobile } from "../../App";
 
 export const ListOfThreadPostsWatched = () => {
   const [posts, setPosts] = React.useState([]);
@@ -92,7 +93,7 @@ export const ListOfThreadPostsWatched = () => {
       <Box
         sx={{
           width: "322px",
-          height: '165px',
+          height: isMobile ? "165px" : "250px",
           display: "flex",
           flexDirection: "column",
           bgcolor: "background.paper",
