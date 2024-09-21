@@ -6,7 +6,7 @@ import "@chatscope/chat-ui-kit-styles/dist/default/styles.min.css";
 import Tiptap from './TipTap'
 import { CustomButton } from '../../App-styles'
 import CircularProgress from '@mui/material/CircularProgress';
-import { Box, Input, Typography } from '@mui/material';
+import { Box, ButtonBase, Input, Typography } from '@mui/material';
 import { LoadingSnackbar } from '../Snackbar/LoadingSnackbar';
 import { getNameInfo } from '../Group/Group';
 import { Spacer } from '../../common/Spacer';
@@ -17,12 +17,14 @@ import { useMessageQueue } from '../../MessageQueueContext';
 import { executeEvent, subscribeToEvent, unsubscribeFromEvent } from '../../utils/events';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ShortUniqueId from "short-unique-id";
+import { ReturnIcon } from '../../assets/Icons/ReturnIcon';
+import { ExitIcon } from '../../assets/Icons/ExitIcon';
 
 
 const uid = new ShortUniqueId({ length: 5 });
 
 
-export const ChatDirect = ({ myAddress, isNewChat, selectedDirect, setSelectedDirect, setNewChat, getTimestampEnterChat, myName, balance, close}) => {
+export const ChatDirect = ({ myAddress, isNewChat, selectedDirect, setSelectedDirect, setNewChat, getTimestampEnterChat, myName, balance, close, setMobileViewModeKeepOpen}) => {
   const { queueChats, addToQueue, processWithNewMessages} = useMessageQueue();
     const [isFocusedParent, setIsFocusedParent] = useState(false);
 
@@ -344,27 +346,69 @@ const clearEditorContent = () => {
       flexDirection: 'column',
       width: '100%'
     }}>
-        <Box onClick={close} sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '5px',
-              cursor: 'pointer',
-              padding: '4px 6px',
-              width: 'fit-content',
-              borderRadius: '3px',
-              background: 'rgb(35, 36, 40)',
-              margin: '10px 0px',
-              alignSelf: 'center'
-            }}>
-              <ArrowBackIcon sx={{
-                color: 'white',
-                fontSize: isMobile ? '20px' : '20px'
-              }}/>
-              <Typography sx={{
-                color: 'white',
-                fontSize: isMobile ? '14px' : '14px'
-              }}>Close Direct Chat</Typography>
-            </Box>
+       {isMobile && (
+         <Box
+         sx={{
+           display: "flex",
+           alignItems: "center",
+           width: "100%",
+           marginTop: "14px",
+           justifyContent: "center",
+           height: "15px",
+         }}
+       >
+         <Box
+           sx={{
+             display: "flex",
+             alignItems: "center",
+             justifyContent: "space-between",
+             width: "320px",
+           }}
+         >
+           <Box
+             sx={{
+               display: "flex",
+               alignItems: "center",
+               width: "50px",
+             }}
+           >
+             <ButtonBase
+               onClick={() => {
+                 close()
+               }}
+             >
+               <ReturnIcon />
+             </ButtonBase>
+           </Box>
+           <Typography
+             sx={{
+               fontSize: "14px",
+               fontWeight: 600,
+             }}
+           >
+             {isNewChat ? '' : selectedDirect?.name || (selectedDirect?.address?.slice(0,10) + '...')}
+           </Typography>
+           <Box
+             sx={{
+               display: "flex",
+               alignItems: "center",
+               width: "50px",
+               justifyContent: "flex-end",
+             }}
+           >
+               <ButtonBase
+               onClick={() => {
+                 setSelectedDirect(null)
+                 setMobileViewModeKeepOpen('')
+                 setNewChat(false)
+               }}
+             >
+             <ExitIcon />
+             </ButtonBase>
+           </Box>
+         </Box>
+       </Box>
+       )}
       {isNewChat && (
         <>
         <Spacer height="30px" />
@@ -376,7 +420,7 @@ const clearEditorContent = () => {
         </>
       )}
       
-              <ChatList initialMessages={messages} myAddress={myAddress} tempMessages={tempMessages}/>
+              <ChatList chatId={selectedDirect?.address} initialMessages={messages} myAddress={myAddress} tempMessages={tempMessages}/>
 
    
       <div style={{

@@ -445,7 +445,7 @@ export const NewThread = ({
           sx={{
             backgroundColor: "#434448",
             padding: isMobile ? '5px' : "20px 42px",
-            height: "calc(100% - 150px)",
+            height: "calc(100% - 165px)",
             flexShrink: 0,
           }}
         >

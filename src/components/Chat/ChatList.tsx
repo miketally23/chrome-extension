@@ -3,18 +3,21 @@ import { List, AutoSizer, CellMeasurerCache, CellMeasurer } from 'react-virtuali
 import { MessageItem } from './MessageItem';
 import { subscribeToEvent, unsubscribeFromEvent } from '../../utils/events';
 
-const cache = new CellMeasurerCache({
-  fixedWidth: true,
-  defaultHeight: 50,
-});
+// const cache = new CellMeasurerCache({
+//   fixedWidth: true,
+//   defaultHeight: 50,
+// });
 
-export const ChatList = ({ initialMessages, myAddress, tempMessages }) => {
+export const ChatList = ({ initialMessages, myAddress, tempMessages, chatId }) => {
  
   const hasLoadedInitialRef = useRef(false);
   const listRef = useRef();
   const [messages, setMessages] = useState(initialMessages);
   const [showScrollButton, setShowScrollButton] = useState(false);
- 
+  const cache = useMemo(() => new CellMeasurerCache({
+    fixedWidth: true,
+    defaultHeight: 50,
+  }), [chatId]); // Recreate cache when chatId changes
   
   useEffect(() => {
     cache.clearAll();
@@ -175,7 +178,7 @@ let uniqueInitialMessages = Array.from(uniqueInitialMessagesMap.values()).sort((
   // }, [messages, myAddress]);
 
   return (
-    <div style={{ position: 'relative', flexGrow: 1, width: '100%', display: 'flex', flexDirection: 'column', flexShrink: 1 }}>
+    <div style={{ position: 'relative', marginTop: '14px', flexGrow: 1, width: '100%', display: 'flex', flexDirection: 'column', flexShrink: 1 }}>
       <AutoSizer>
         {({ height, width }) => (
           <List

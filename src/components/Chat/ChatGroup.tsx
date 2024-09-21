@@ -374,7 +374,7 @@ const clearEditorContent = () => {
     left: hide && '-100000px',
     }}>
  
-              <ChatList initialMessages={messages} myAddress={myAddress} tempMessages={tempMessages}/>
+              <ChatList chatId={selectedGroup} initialMessages={messages} myAddress={myAddress} tempMessages={tempMessages}/>
 
    
       <div style={{

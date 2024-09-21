@@ -25,21 +25,28 @@ import { Spacer } from "../../common/Spacer";
 import ShortUniqueId from "short-unique-id";
 import { AnnouncementList } from "./AnnouncementList";
 const uid = new ShortUniqueId({ length: 8 });
-import CampaignIcon from '@mui/icons-material/Campaign';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import CampaignIcon from "@mui/icons-material/Campaign";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { AnnouncementDiscussion } from "./AnnouncementDiscussion";
-import { MyContext, getArbitraryEndpointReact, getBaseApiReact, isMobile, pauseAllQueues, resumeAllQueues } from "../../App";
+import {
+  MyContext,
+  getArbitraryEndpointReact,
+  getBaseApiReact,
+  isMobile,
+  pauseAllQueues,
+  resumeAllQueues,
+} from "../../App";
 import { RequestQueueWithPromise } from "../../utils/queue/queue";
 import { CustomizedSnackbars } from "../Snackbar/Snackbar";
-import {  addDataPublishesFunc, getDataPublishesFunc } from "../Group/Group";
+import { addDataPublishesFunc, getDataPublishesFunc } from "../Group/Group";
 import { getRootHeight } from "../../utils/mobile/mobileUtils";
 
-export const requestQueueCommentCount = new RequestQueueWithPromise(3)
-export const requestQueuePublishedAccouncements = new RequestQueueWithPromise(3)
+export const requestQueueCommentCount = new RequestQueueWithPromise(3);
+export const requestQueuePublishedAccouncements = new RequestQueueWithPromise(
+  3
+);
 
 export const saveTempPublish = async ({ data, key }: any) => {
-   
-      
   return new Promise((res, rej) => {
     chrome?.runtime?.sendMessage(
       {
@@ -50,10 +57,9 @@ export const saveTempPublish = async ({ data, key }: any) => {
         },
       },
       (response) => {
-      
         if (!response?.error) {
           res(response);
-          return
+          return;
         }
         rej(response.error);
       }
@@ -62,19 +68,16 @@ export const saveTempPublish = async ({ data, key }: any) => {
 };
 
 export const getTempPublish = async () => {
-   
-      
   return new Promise((res, rej) => {
     chrome?.runtime?.sendMessage(
       {
         action: "getTempPublish",
-        payload: {
-        },
+        payload: {},
       },
       (response) => {
         if (!response?.error) {
           res(response);
-          return
+          return;
         }
         rej(response.error);
       }
@@ -95,7 +98,6 @@ export const decryptPublishes = async (encryptedMessages: any[], secretKey) => {
           },
         },
         (response) => {
-     
           if (!response?.error) {
             res(response);
             // if(hasInitialized.current){
@@ -130,13 +132,13 @@ export const GroupAnnouncements = ({
   handleNewEncryptionNotification,
   isAdmin,
   hide,
-  myName
+  myName,
 }) => {
   const [messages, setMessages] = useState([]);
   const [isSending, setIsSending] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [announcements, setAnnouncements] = useState([]);
-  const [tempPublishedList, setTempPublishedList] = useState([])
+  const [tempPublishedList, setTempPublishedList] = useState([]);
   const [announcementData, setAnnouncementData] = useState({});
   const [selectedAnnouncement, setSelectedAnnouncement] = useState(null);
   const [isFocusedParent, setIsFocusedParent] = useState(false);
@@ -147,37 +149,45 @@ export const GroupAnnouncements = ({
   const hasInitialized = useRef(false);
   const hasInitializedWebsocket = useRef(false);
   const editorRef = useRef(null);
-  const dataPublishes = useRef({})
+  const dataPublishes = useRef({});
   const setEditorRef = (editorInstance) => {
     editorRef.current = editorInstance;
   };
+  const [, forceUpdate] = React.useReducer((x) => x + 1, 0);
 
-  useEffect(()=> {
-    if(!selectedGroup) return
-    (async ()=> {
-      const res = await getDataPublishesFunc(selectedGroup, 'anc')
-      dataPublishes.current = res || {}
-    })()
-  }, [selectedGroup])
+  const triggerRerender = () => {
+    forceUpdate(); // Trigger re-render by updating the state
+  };
+  useEffect(() => {
+    if (!selectedGroup) return;
+    (async () => {
+      const res = await getDataPublishesFunc(selectedGroup, "anc");
+      dataPublishes.current = res || {};
+    })();
+  }, [selectedGroup]);
 
   const getAnnouncementData = async ({ identifier, name, resource }) => {
     try {
-      let data = dataPublishes.current[`${name}-${identifier}`]
-      if(!data || (data?.update || data?.created !== (resource?.updated || resource?.created))){
-        const res = await requestQueuePublishedAccouncements.enqueue(()=> {
+      let data = dataPublishes.current[`${name}-${identifier}`];
+      if (
+        !data ||
+        data?.update ||
+        data?.created !== (resource?.updated || resource?.created)
+      ) {
+        const res = await requestQueuePublishedAccouncements.enqueue(() => {
           return fetch(
             `${getBaseApiReact()}/arbitrary/DOCUMENT/${name}/${identifier}?encoding=base64`
           );
-        }) 
-        if(!res?.ok) return
-         data = await res.text();
-         await addDataPublishesFunc({...resource, data}, selectedGroup, 'anc')
+        });
+        if (!res?.ok) return;
+        data = await res.text();
+        await addDataPublishesFunc({ ...resource, data }, selectedGroup, "anc");
       } else {
-        data = data.data
+        data = data.data;
       }
-    
+
       const response = await decryptPublishes([{ data }], secretKey);
-  
+
       const messageData = response[0];
       setAnnouncementData((prev) => {
         return {
@@ -185,15 +195,10 @@ export const GroupAnnouncements = ({
           [`${identifier}-${name}`]: messageData,
         };
       });
-  
     } catch (error) {
-      console.log('error', error)
+      console.log("error", error);
     }
   };
-
- 
-
-
 
   useEffect(() => {
     if (!secretKey || hasInitializedWebsocket.current) return;
@@ -226,64 +231,61 @@ export const GroupAnnouncements = ({
   };
 
   const publishAnc = async ({ encryptedData, identifier }: any) => {
-   
-      
-      return new Promise((res, rej) => {
-        chrome?.runtime?.sendMessage(
-          {
-            action: "publishGroupEncryptedResource",
-            payload: {
-              encryptedData,
-              identifier,
-            },
+    return new Promise((res, rej) => {
+      chrome?.runtime?.sendMessage(
+        {
+          action: "publishGroupEncryptedResource",
+          payload: {
+            encryptedData,
+            identifier,
           },
-          (response) => {
-            if (!response?.error) {
-              res(response);
-            }
-            rej(response.error);
+        },
+        (response) => {
+          if (!response?.error) {
+            res(response);
           }
-        );
-      });
+          rej(response.error);
+        }
+      );
+    });
   };
   const clearEditorContent = () => {
     if (editorRef.current) {
       editorRef.current.chain().focus().clearContent().run();
-      if(isMobile){
+      if (isMobile) {
         setTimeout(() => {
-          editorRef.current?.chain().blur().run(); 
-          setIsFocusedParent(false)
+          editorRef.current?.chain().blur().run();
+          setIsFocusedParent(false);
+          setTimeout(() => {
+            triggerRerender();
+           }, 300);
         }, 200);
       }
     }
   };
 
-  const setTempData = async ()=> {
+  const setTempData = async () => {
     try {
-      const getTempAnnouncements = await getTempPublish()
-  if(getTempAnnouncements?.announcement){
-    let tempData = []
-    Object.keys(getTempAnnouncements?.announcement || {}).map((key)=> {
-      const value = getTempAnnouncements?.announcement[key]
-      tempData.push(value.data)
-    })
-    setTempPublishedList(tempData)
-  }
-    } catch (error) {
-      
-    }
-   
-  }
+      const getTempAnnouncements = await getTempPublish();
+      if (getTempAnnouncements?.announcement) {
+        let tempData = [];
+        Object.keys(getTempAnnouncements?.announcement || {}).map((key) => {
+          const value = getTempAnnouncements?.announcement[key];
+          tempData.push(value.data);
+        });
+        setTempPublishedList(tempData);
+      }
+    } catch (error) {}
+  };
 
   const publishAnnouncement = async () => {
     try {
-
-      pauseAllQueues()
-      const fee = await getFee('ARBITRARY')
+      pauseAllQueues();
+      const fee = await getFee("ARBITRARY");
       await show({
-        message: "Would you like to perform a ARBITRARY transaction?" ,
-        publishFee: fee.fee + ' QORT'
-      })
+        message: "Would you like to perform a ARBITRARY transaction?",
+        publishFee: fee.fee + " QORT",
+      });
       if (isSending) return;
       if (editorRef.current) {
         const htmlContent = editorRef.current.getHTML();
@@ -292,8 +294,8 @@ export const GroupAnnouncements = ({
         const message = {
           version: 1,
           extra: {},
-          message: htmlContent
-        }
+          message: htmlContent,
+        };
         const secretKeyObject = await getSecretKey(false, true);
         const message64: any = await objectToBase64(message);
         const encryptSingle = await encryptChatMessage(
@@ -304,35 +306,36 @@ export const GroupAnnouncements = ({
         const identifier = `grp-${selectedGroup}-anc-${randomUid}`;
         const res = await publishAnc({
           encryptedData: encryptSingle,
-          identifier
+          identifier,
         });
 
         const dataToSaveToStorage = {
           name: myName,
           identifier,
-          service: 'DOCUMENT',
+          service: "DOCUMENT",
           tempData: message,
-          created: Date.now()
-        }
-        await saveTempPublish({data: dataToSaveToStorage, key: 'announcement'})
-        setTempData()
+          created: Date.now(),
+        };
+        await saveTempPublish({
+          data: dataToSaveToStorage,
+          key: "announcement",
+        });
+        setTempData();
         clearEditorContent();
       }
       // send chat message
     } catch (error) {
-      if(!error) return 
+      if (!error) return;
       setInfoSnack({
         type: "error",
         message: error,
       });
-      setOpenSnack(true)
+      setOpenSnack(true);
     } finally {
-      resumeAllQueues()
+      resumeAllQueues();
       setIsSending(false);
     }
   };
-
- 
 
   const getAnnouncements = React.useCallback(
     async (selectedGroup) => {
@@ -349,12 +352,16 @@ export const GroupAnnouncements = ({
           },
         });
         const responseData = await response.json();
-        
-        setTempData()
+
+        setTempData();
         setAnnouncements(responseData);
         setIsLoading(false);
         for (const data of responseData) {
-          getAnnouncementData({ name: data.name, identifier: data.identifier, resource: data });
+          getAnnouncementData({
+            name: data.name,
+            identifier: data.identifier,
+            resource: data,
+          });
         }
       } catch (error) {
       } finally {
@@ -363,199 +370,206 @@ export const GroupAnnouncements = ({
     },
     [secretKey]
   );
- 
+
   React.useEffect(() => {
     if (selectedGroup && secretKey && !hasInitialized.current && !hide) {
       getAnnouncements(selectedGroup);
-      hasInitialized.current = true
+      hasInitialized.current = true;
     }
   }, [selectedGroup, secretKey, hide]);
 
-
-  const loadMore = async()=> {
+  const loadMore = async () => {
     try {
       setIsLoading(true);
 
-      const offset = announcements.length
-    const identifier = `grp-${selectedGroup}-anc-`;
-        const url = `${getBaseApiReact()}${getArbitraryEndpointReact()}?mode=ALL&service=DOCUMENT&identifier=${identifier}&limit=20&includemetadata=false&offset=${offset}&reverse=true&prefix=true`;
-        const response = await fetch(url, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-        const responseData = await response.json();
+      const offset = announcements.length;
+      const identifier = `grp-${selectedGroup}-anc-`;
+      const url = `${getBaseApiReact()}${getArbitraryEndpointReact()}?mode=ALL&service=DOCUMENT&identifier=${identifier}&limit=20&includemetadata=false&offset=${offset}&reverse=true&prefix=true`;
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      const responseData = await response.json();
 
-        setAnnouncements((prev)=> [...prev, ...responseData]);
-        setIsLoading(false);
+      setAnnouncements((prev) => [...prev, ...responseData]);
+      setIsLoading(false);
+      for (const data of responseData) {
+        getAnnouncementData({ name: data.name, identifier: data.identifier });
+      }
+    } catch (error) {}
+  };
+
+  const interval = useRef<any>(null);
+
+  const checkNewMessages = React.useCallback(async () => {
+    try {
+      const identifier = `grp-${selectedGroup}-anc-`;
+      const url = `${getBaseApiReact()}${getArbitraryEndpointReact()}?mode=ALL&service=DOCUMENT&identifier=${identifier}&limit=20&includemetadata=false&offset=${0}&reverse=true&prefix=true`;
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      const responseData = await response.json();
+      const latestMessage = announcements[0];
+      if (!latestMessage) {
         for (const data of responseData) {
-          getAnnouncementData({ name: data.name, identifier: data.identifier });
-        }
-    } catch (error) {
-      
-    }
-    
-  }
-
-  const interval = useRef<any>(null)
-
-  const checkNewMessages = React.useCallback(
-    async () => {
-      try {
-      
-        const identifier = `grp-${selectedGroup}-anc-`;
-        const url = `${getBaseApiReact()}${getArbitraryEndpointReact()}?mode=ALL&service=DOCUMENT&identifier=${identifier}&limit=20&includemetadata=false&offset=${0}&reverse=true&prefix=true`;
-        const response = await fetch(url, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        })
-        const responseData = await response.json()
-        const latestMessage = announcements[0]
-        if (!latestMessage) {
-          for (const data of responseData) {
-            try {
-             
-                getAnnouncementData({ name: data.name, identifier: data.identifier });
-              
-            } catch (error) {}
-          }
-          setAnnouncements(responseData)
-          return
-        }
-        const findMessage = responseData?.findIndex(
-          (item: any) => item?.identifier === latestMessage?.identifier
-        )
-      
-        if(findMessage === -1) return
-        const newArray = responseData.slice(0, findMessage)
-        
-        for (const data of newArray) {
           try {
-           
-              getAnnouncementData({ name: data.name, identifier: data.identifier });
-            
+            getAnnouncementData({
+              name: data.name,
+              identifier: data.identifier,
+            });
           } catch (error) {}
         }
-        setAnnouncements((prev)=> [...newArray, ...prev])
-      } catch (error) {
-      } finally {
+        setAnnouncements(responseData);
+        return;
       }
-    },
-    [announcements, secretKey, selectedGroup]
-  )
+      const findMessage = responseData?.findIndex(
+        (item: any) => item?.identifier === latestMessage?.identifier
+      );
+
+      if (findMessage === -1) return;
+      const newArray = responseData.slice(0, findMessage);
+
+      for (const data of newArray) {
+        try {
+          getAnnouncementData({ name: data.name, identifier: data.identifier });
+        } catch (error) {}
+      }
+      setAnnouncements((prev) => [...newArray, ...prev]);
+    } catch (error) {
+    } finally {
+    }
+  }, [announcements, secretKey, selectedGroup]);
 
   const checkNewMessagesFunc = useCallback(() => {
-    let isCalling = false
+    let isCalling = false;
     interval.current = setInterval(async () => {
-      if (isCalling) return
-      isCalling = true
-      const res = await checkNewMessages()
-      isCalling = false
-    }, 20000)
-  }, [checkNewMessages])
+      if (isCalling) return;
+      isCalling = true;
+      const res = await checkNewMessages();
+      isCalling = false;
+    }, 20000);
+  }, [checkNewMessages]);
 
   useEffect(() => {
-    if(!secretKey || hide) return
-    checkNewMessagesFunc()
+    if (!secretKey || hide) return;
+    checkNewMessagesFunc();
     return () => {
       if (interval?.current) {
-        clearInterval(interval.current)
+        clearInterval(interval.current);
       }
-    }
-  }, [checkNewMessagesFunc, hide])
-
-
+    };
+  }, [checkNewMessagesFunc, hide]);
 
   const combinedListTempAndReal = useMemo(() => {
     // Combine the two lists
     const combined = [...tempPublishedList, ...announcements];
-  
+
     // Remove duplicates based on the "identifier"
     const uniqueItems = new Map();
-    combined.forEach(item => {
-      uniqueItems.set(item.identifier, item);  // This will overwrite duplicates, keeping the last occurrence
+    combined.forEach((item) => {
+      uniqueItems.set(item.identifier, item); // This will overwrite duplicates, keeping the last occurrence
     });
-  
+
     // Convert the map back to an array and sort by "created" timestamp in descending order
-    const sortedList = Array.from(uniqueItems.values()).sort((a, b) => b.created - a.created);
-  
+    const sortedList = Array.from(uniqueItems.values()).sort(
+      (a, b) => b.created - a.created
+    );
+
     return sortedList;
   }, [tempPublishedList, announcements]);
 
-
-  if(selectedAnnouncement){
+  if (selectedAnnouncement) {
     return (
       <div
-      style={{
-        height: isMobile ? `calc(${getRootHeight()} - 83px` : "100vh",
-        display: "flex",
-        flexDirection: "column",
-        width: "100%",
-        visibility: hide && 'hidden',
-      position: hide && 'fixed',
-      left: hide && '-1000px'
-      }}
-    >
-      <AnnouncementDiscussion myName={myName} show={show} secretKey={secretKey} selectedAnnouncement={selectedAnnouncement} setSelectedAnnouncement={setSelectedAnnouncement} encryptChatMessage={encryptChatMessage} getSecretKey={getSecretKey} />
+        style={{
+          // reference to change height
+          height: isMobile ? `calc(${getRootHeight()} - 127px` : "100vh",
+          display: "flex",
+          flexDirection: "column",
+          width: "100%",
+          visibility: hide && "hidden",
+          position: hide && "fixed",
+          left: hide && "-1000px",
+        }}
+      >
+        <AnnouncementDiscussion
+          myName={myName}
+          show={show}
+          secretKey={secretKey}
+          selectedAnnouncement={selectedAnnouncement}
+          setSelectedAnnouncement={setSelectedAnnouncement}
+          encryptChatMessage={encryptChatMessage}
+          getSecretKey={getSecretKey}
+        />
       </div>
-    )
+    );
   }
-
- 
 
   return (
     <div
       style={{
-        height: isMobile ? `calc(${getRootHeight()} - 83px` :  "100vh",
+         // reference to change height
+        height: isMobile ? `calc(${getRootHeight()} - 127px` : "100vh",
         display: "flex",
         flexDirection: "column",
         width: "100%",
-        visibility: hide && 'hidden',
-      position: hide && 'fixed',
-      left: hide && '-1000px'
+        visibility: hide && "hidden",
+        position: hide && "fixed",
+        left: hide && "-1000px",
       }}
     >
-       <div style={{
-        position: "relative",
-        width: "100%",
-        display: "flex",
-        flexDirection: "column",
-        flexShrink: 0,
-      }}>
-      {!isMobile && (
-         <Box
-         sx={{
-           width: "100%",
-           display: "flex",
-           justifyContent: "center",
-           padding: isMobile ? '8px' : "25px",
-           fontSize: isMobile ? '16px' : "20px",
-           gap: '20px',
-           alignItems: 'center'
-         }}
-       >
-         <CampaignIcon sx={{
-           fontSize: isMobile ? '16px' : '30px'
-         }} />
-         Group Announcements
-       </Box>
-      )}
-     
-      <Spacer height={isMobile ? "0px" : "25px"} />
+      <div
+        style={{
+          position: "relative",
+          width: "100%",
+          display: "flex",
+          flexDirection: "column",
+          flexShrink: 0,
+        }}
+      >
+        {!isMobile && (
+          <Box
+            sx={{
+              width: "100%",
+              display: "flex",
+              justifyContent: "center",
+              padding: isMobile ? "8px" : "25px",
+              fontSize: isMobile ? "16px" : "20px",
+              gap: "20px",
+              alignItems: "center",
+            }}
+          >
+            <CampaignIcon
+              sx={{
+                fontSize: isMobile ? "16px" : "30px",
+              }}
+            />
+            Group Announcements
+          </Box>
+        )}
 
+        <Spacer height={isMobile ? "0px" : "25px"} />
       </div>
       {!isLoading && combinedListTempAndReal?.length === 0 && (
-         <Box sx={{
-          width: '100%',
-          display: 'flex',
-          justifyContent: 'center'
-        }}>
-         <Typography sx={{
-          fontSize: '16px'
-        }}>No announcements</Typography>
+        <Box
+          sx={{
+            width: "100%",
+            display: "flex",
+            justifyContent: "center",
+          }}
+        >
+          <Typography
+            sx={{
+              fontSize: "16px",
+            }}
+          >
+            No announcements
+          </Typography>
         </Box>
       )}
       <AnnouncementList
@@ -563,118 +577,126 @@ export const GroupAnnouncements = ({
         initialMessages={combinedListTempAndReal}
         setSelectedAnnouncement={setSelectedAnnouncement}
         disableComment={false}
-        showLoadMore={announcements.length > 0 && announcements.length % 20 === 0}
+        showLoadMore={
+          announcements.length > 0 && announcements.length % 20 === 0
+        }
         loadMore={loadMore}
         myName={myName}
       />
-      
-    
-{isAdmin && (
-   <div
-   style={{
-     // position: 'fixed',
-     // bottom: '0px',
-     backgroundColor: "#232428",
-     minHeight: isMobile ? "0px" : "150px",
-     maxHeight: isMobile ? "auto" : "400px",
-     display: "flex",
-     flexDirection: "column",
-     overflow: "hidden",
-     width: "100%",
-     boxSizing: "border-box",
-     padding: isMobile ? "10px":  "20px",
-     position: isFocusedParent ? 'fixed' : 'relative',
-        bottom: isFocusedParent ? '0px' : 'unset',
-        top: isFocusedParent ? '0px' : 'unset',
-        zIndex: isFocusedParent ? 5 : 'unset',
-        flexShrink: 0
-   }}
- >
-   <div
-     style={{
-       display: "flex",
-       flexDirection: "column",
-       flexGrow: isMobile && 1,
-       overflow:  "auto",
-       // height: '100%',
-      }}
-   >
-     <Tiptap
-       setEditorRef={setEditorRef}
-       onEnter={publishAnnouncement}
-       disableEnter
-       maxHeightOffset="40px"
-       isFocusedParent={isFocusedParent} setIsFocusedParent={setIsFocusedParent}
-     />
-   </div>
-   <Box sx={{
-        display: 'flex',
-        width: '100&',
-        gap: '10px',
-        justifyContent: 'center',
-        flexShrink: 0,
-        position: 'relative',
-      }}>
-         {isFocusedParent && (
-               <CustomButton
-               onClick={()=> {
-                 if(isSending) return
-                 setIsFocusedParent(false)
-                 clearEditorContent()
-                 // Unfocus the editor
-               }}
-               style={{
-                 marginTop: 'auto',
-                 alignSelf: 'center',
-                 cursor: isSending ? 'default' : 'pointer',
-                 background: 'red',
-                 flexShrink: 0,
-                 padding: isMobile && '5px',
-                 fontSize: isMobile && '14px',
-               }}
-             >
-               
-               {` Close`}
-             </CustomButton>
-           
+
+      {isAdmin && (
+        <div
+          style={{
+            // position: 'fixed',
+            // bottom: '0px',
+            backgroundColor: "#232428",
+            minHeight: isMobile ? "0px" : "150px",
+            maxHeight: isMobile ? "auto" : "400px",
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
+            width: "100%",
+            boxSizing: "border-box",
+            padding: isMobile ? "10px" : "20px",
+            position: isFocusedParent ? "fixed" : "relative",
+            bottom: isFocusedParent ? "0px" : "unset",
+            top: isFocusedParent ? "0px" : "unset",
+            zIndex: isFocusedParent ? 5 : "unset",
+            flexShrink: 0,
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              flexGrow: isMobile && 1,
+              overflow: "auto",
+              // height: '100%',
+            }}
+          >
+            <Tiptap
+              setEditorRef={setEditorRef}
+              onEnter={publishAnnouncement}
+              disableEnter
+              maxHeightOffset="40px"
+              isFocusedParent={isFocusedParent}
+              setIsFocusedParent={setIsFocusedParent}
+            />
+          </div>
+          <Box
+            sx={{
+              display: "flex",
+              width: "100&",
+              gap: "10px",
+              justifyContent: "center",
+              flexShrink: 0,
+              position: "relative",
+            }}
+          >
+            {isFocusedParent && (
+              <CustomButton
+                onClick={() => {
+                  if (isSending) return;
+                  setIsFocusedParent(false);
+                  clearEditorContent();
+                 setTimeout(() => {
+                  triggerRerender();
+                 }, 300);
+                  // Unfocus the editor
+                }}
+                style={{
+                  marginTop: "auto",
+                  alignSelf: "center",
+                  cursor: isSending ? "default" : "pointer",
+                  background: "red",
+                  flexShrink: 0,
+                  padding: isMobile && "5px",
+                  fontSize: isMobile && "14px",
+                }}
+              >
+                {` Close`}
+              </CustomButton>
             )}
-   <CustomButton
-     onClick={() => {
-       if (isSending) return;
-       publishAnnouncement();
-     }}
-     style={{
-       marginTop: "auto",
-       alignSelf: "center",
-       cursor: isSending ? "default" : "pointer",
-       background: isSending && "rgba(0, 0, 0, 0.8)",
-       flexShrink: 0,
-      padding: isMobile && '5px',
-      fontSize: isMobile && '14px',
+            <CustomButton
+              onClick={() => {
+                if (isSending) return;
+                publishAnnouncement();
+              }}
+              style={{
+                marginTop: "auto",
+                alignSelf: "center",
+                cursor: isSending ? "default" : "pointer",
+                background: isSending && "rgba(0, 0, 0, 0.8)",
+                flexShrink: 0,
+                padding: isMobile && "5px",
+                fontSize: isMobile && "14px",
+              }}
+            >
+              {isSending && (
+                <CircularProgress
+                  size={18}
+                  sx={{
+                    position: "absolute",
+                    top: "50%",
+                    left: "50%",
+                    marginTop: "-12px",
+                    marginLeft: "-12px",
+                    color: "white",
+                  }}
+                />
+              )}
+              {` Publish Announcement`}
+            </CustomButton>
+          </Box>
+        </div>
+      )}
 
-     }}
-   >
-     {isSending && (
-       <CircularProgress
-         size={18}
-         sx={{
-           position: "absolute",
-           top: "50%",
-           left: "50%",
-           marginTop: "-12px",
-           marginLeft: "-12px",
-           color: "white",
-         }}
-       />
-     )}
-     {` Publish Announcement`}
-   </CustomButton>
-  
-              </Box>
- </div>
-)}
-
-<CustomizedSnackbars open={openSnack} setOpen={setOpenSnack} info={infoSnack} setInfo={setInfoSnack}  />
+      <CustomizedSnackbars
+        open={openSnack}
+        setOpen={setOpenSnack}
+        info={infoSnack}
+        setInfo={setInfoSnack}
+      />
 
       <LoadingSnackbar
         open={isLoading}

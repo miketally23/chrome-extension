@@ -16,7 +16,7 @@ import { ChatIcon } from "../../assets/Icons/ChatIcon";
 import { ThreadsIcon } from "../../assets/Icons/ThreadsIcon";
 import { MembersIcon } from "../../assets/Icons/MembersIcon";
 
-export const GroupMenu = ({ setGroupSection, groupSection }) => {
+export const GroupMenu = ({ setGroupSection, groupSection, setOpenManageMembers }) => {
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
 
@@ -177,7 +177,7 @@ export const GroupMenu = ({ setGroupSection, groupSection }) => {
         </MenuItem>
         <MenuItem
           onClick={() => {
-            // setGroupSection("")
+            setOpenManageMembers(true)
             handleClose();
           }}
         >

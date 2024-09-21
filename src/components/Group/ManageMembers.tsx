@@ -253,6 +253,7 @@ export const ManageMembers = ({
               sx={{
                 width: "100%",
                 padding: "25px",
+                maxWidth: '750px'
               }}
             >
               <ListOfMembers
@@ -271,6 +272,7 @@ export const ManageMembers = ({
               sx={{
                 width: "100%",
                 padding: "25px",
+                maxWidth: '750px'
               }}
             >
               <InviteMember show={show} groupId={selectedGroup?.groupId} setOpenSnack={setOpenSnack} setInfoSnack={setInfoSnack} />
@@ -281,7 +283,8 @@ export const ManageMembers = ({
             <Box
               sx={{
                 width: "100%",
-                padding: "25px",
+                 padding: "25px",
+                maxWidth: '750px'
               }}
             >
               <ListOfInvites show={show} groupId={selectedGroup?.groupId} setOpenSnack={setOpenSnack} setInfoSnack={setInfoSnack} />
@@ -293,7 +296,8 @@ export const ManageMembers = ({
             <Box
               sx={{
                 width: "100%",
-                padding: "25px",
+                 padding: "25px",
+                maxWidth: '750px'
               }}
             >
               <ListOfBans show={show} groupId={selectedGroup?.groupId} setOpenSnack={setOpenSnack} setInfoSnack={setInfoSnack} />
@@ -304,7 +308,8 @@ export const ManageMembers = ({
             <Box
               sx={{
                 width: "100%",
-                padding: "25px",
+                 padding: "25px",
+                maxWidth: '750px'
               }}
             >
               <ListOfJoinRequests show={show} setOpenSnack={setOpenSnack} setInfoSnack={setInfoSnack}  groupId={selectedGroup?.groupId} />

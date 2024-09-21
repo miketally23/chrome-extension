@@ -7,6 +7,7 @@ import React, {
 } from "react";
 import { GroupMail } from "../Group/Forum/GroupMail";
 import { isMobile } from "../../App";
+import { getRootHeight } from "../../utils/mobile/mobileUtils";
 
 
 
@@ -36,7 +37,8 @@ export const GroupForum = ({
   return (
     <div
     style={{
-      height: isMobile ? '100%' : "100vh",
+      // reference to change height
+      height: isMobile ? `calc(${getRootHeight()} - 127px` : "100vh",
       display: "flex",
       flexDirection: "column",
       width: "100%",
