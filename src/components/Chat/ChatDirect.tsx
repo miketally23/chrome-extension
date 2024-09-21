@@ -19,6 +19,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ShortUniqueId from "short-unique-id";
 import { ReturnIcon } from '../../assets/Icons/ReturnIcon';
 import { ExitIcon } from '../../assets/Icons/ExitIcon';
+import { MessageItem, ReplyPreview } from './MessageItem';
 
 
 const uid = new ShortUniqueId({ length: 5 });
@@ -41,12 +42,12 @@ export const ChatDirect = ({ myAddress, isNewChat, selectedDirect, setSelectedDi
   const socketRef = useRef(null);
   const timeoutIdRef = useRef(null);
   const groupSocketTimeoutRef = useRef(null);
-
+  const [replyMessage, setReplyMessage] = useState(null)
   const setEditorRef = (editorInstance) => {
     editorRef.current = editorInstance;
   };
   const publicKeyOfRecipientRef = useRef(null)
-   
+   console.log({messages})
   const getPublicKeyFunc = async (address)=> {
     try {
       const publicKey = await getPublicKey(address)
@@ -219,6 +220,7 @@ export const ChatDirect = ({ myAddress, isNewChat, selectedDirect, setSelectedDi
 
 const sendChatDirect = async ({ chatReference = undefined, messageText, otherData}: any, address, publicKeyOfRecipient, isNewChatVar)=> {
   try {
+    console.log('chatReferencedirect', chatReference)
     const directTo = isNewChatVar ? directToValue : address
  
     if(!directTo) return
@@ -282,6 +284,8 @@ const clearEditorContent = () => {
 
     const sendMessage = async ()=> {
       try {
+
+        
         if(+balance < 4) throw new Error('You need at least 4 QORT to send a message')
         if(isSending) return
         if (editorRef.current) {
@@ -297,12 +301,20 @@ const clearEditorContent = () => {
           await sendChatDirect({ messageText: htmlContent}, null, null, true)
           return
         }
+        let repliedTo = replyMessage?.signature
+
+				if (replyMessage?.chatReference) {
+					repliedTo = replyMessage?.chatReference
+				}
         const otherData = {
-          specialId: uid.rnd()
+          specialId: uid.rnd(),
+          repliedTo
         }
         const sendMessageFunc = async () => {
-          await sendChatDirect({ messageText: htmlContent, otherData}, selectedDirect?.address, publicKeyOfRecipient, false)
+          await sendChatDirect({ chatReference: undefined, messageText: htmlContent, otherData}, selectedDirect?.address, publicKeyOfRecipient, false)
         };
+
+        
   
         // Add the function to the queue
         const messageObj = {
@@ -321,6 +333,7 @@ const clearEditorContent = () => {
           executeEvent("sent-new-message-group", {})
         }, 150);
         clearEditorContent()
+        setReplyMessage(null)
         }
         // send chat message
       } catch (error) {
@@ -337,6 +350,9 @@ const clearEditorContent = () => {
       }
     }
 
+  const onReply = useCallback((message)=> {
+    setReplyMessage(message)
+  }, [])
 
     
   return (
@@ -444,7 +460,7 @@ const clearEditorContent = () => {
         </>
       )}
       
-              <ChatList chatId={selectedDirect?.address} initialMessages={messages} myAddress={myAddress} tempMessages={tempMessages}/>
+              <ChatList onReply={onReply} chatId={selectedDirect?.address} initialMessages={messages} myAddress={myAddress} tempMessages={tempMessages}/>
 
    
       <div style={{
@@ -470,7 +486,24 @@ const clearEditorContent = () => {
             flexGrow: isMobile && 1,
             overflow: !isMobile &&  "auto",
       }}>
+      {replyMessage && (
+        <Box sx={{
+          display: 'flex',
+          gap: '5px',
+          alignItems: 'flex-start',
+          width: '100%'
+        }}>
+                  <ReplyPreview message={replyMessage} />
 
+           <ButtonBase
+               onClick={() => {
+                setReplyMessage(null)
+               }}
+             >
+             <ExitIcon />
+             </ButtonBase>
+        </Box>
+      )}
      
       <Tiptap isFocusedParent={isFocusedParent} setEditorRef={setEditorRef} onEnter={sendMessage} isChat disableEnter={isMobile ? true : false} setIsFocusedParent={setIsFocusedParent}/>
       </div>

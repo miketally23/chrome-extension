@@ -15,8 +15,10 @@ import { CustomizedSnackbars } from '../Snackbar/Snackbar'
 import { PUBLIC_NOTIFICATION_CODE_FIRST_SECRET_KEY } from '../../constants/codes'
 import { useMessageQueue } from '../../MessageQueueContext'
 import { executeEvent } from '../../utils/events'
-import { Box } from '@mui/material'
+import { Box, ButtonBase } from '@mui/material'
 import ShortUniqueId from "short-unique-id";
+import { ReplyPreview } from './MessageItem'
+import { ExitIcon } from '../../assets/Icons/ExitIcon'
 
 
 const uid = new ShortUniqueId({ length: 5 });
@@ -34,6 +36,7 @@ export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey,
   const [infoSnack, setInfoSnack] = React.useState(null);
   const hasInitialized = useRef(false)
   const [isFocusedParent, setIsFocusedParent] = useState(false);
+  const [replyMessage, setReplyMessage] = useState(null)
 
   const hasInitializedWebsocket = useRef(false)
   const socketRef = useRef(null); // WebSocket reference
@@ -111,6 +114,7 @@ export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey,
                     ...item,
                     id: item.signature,
                     text: item?.decryptedData?.message || "",
+                    repliedTo: item?.decryptedData?.repliedTo,
                     unread: item?.sender === myAddress ? false : true
                   }
                 } )
@@ -121,6 +125,7 @@ export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey,
                     ...item,
                     id: item.signature,
                     text: item?.decryptedData?.message || "",
+                    repliedTo: item?.decryptedData?.repliedTo,
                     unread:  false
                   }
                 } )
@@ -305,8 +310,15 @@ const clearEditorContent = () => {
           setIsSending(true)
         const message = htmlContent
         const secretKeyObject = await getSecretKey(false, true)
+
+        let repliedTo = replyMessage?.signature
+
+				if (replyMessage?.chatReference) {
+					repliedTo = replyMessage?.chatReference
+				}
         const otherData = {
-          specialId: uid.rnd()
+          specialId: uid.rnd(),
+          repliedTo
         }
         const objectMessage = {
           message,
@@ -338,6 +350,7 @@ const clearEditorContent = () => {
           executeEvent("sent-new-message-group", {})
         }, 150);
         clearEditorContent()
+        setReplyMessage(null)
         }
         // send chat message
       } catch (error) {
@@ -362,6 +375,9 @@ const clearEditorContent = () => {
     }
   }, [hide]);
     
+  const onReply = useCallback((message)=> {
+    setReplyMessage(message)
+  }, [])
   
   return (
     <div style={{
@@ -374,7 +390,7 @@ const clearEditorContent = () => {
     left: hide && '-100000px',
     }}>
  
-              <ChatList chatId={selectedGroup} initialMessages={messages} myAddress={myAddress} tempMessages={tempMessages}/>
+              <ChatList onReply={onReply} chatId={selectedGroup} initialMessages={messages} myAddress={myAddress} tempMessages={tempMessages}/>
 
    
       <div style={{
@@ -400,7 +416,25 @@ const clearEditorContent = () => {
             flexGrow: isMobile && 1,
             overflow: !isMobile &&  "auto",
       }}>
+        {replyMessage && (
+        <Box sx={{
+          display: 'flex',
+          gap: '5px',
+          alignItems: 'flex-start',
+          width: '100%'
+        }}>
+                  <ReplyPreview message={replyMessage} />
 
+           <ButtonBase
+               onClick={() => {
+                setReplyMessage(null)
+               }}
+             >
+             <ExitIcon />
+             </ButtonBase>
+        </Box>
+      )}
+     
      
       <Tiptap setEditorRef={setEditorRef} onEnter={sendMessage} isChat disableEnter={isMobile ? true : false} isFocusedParent={isFocusedParent} setIsFocusedParent={setIsFocusedParent} />
       </div>

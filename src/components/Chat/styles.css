@@ -120,3 +120,6 @@
   max-width: 100%; 
 }
 
+.isReply p {
+  font-size: 12px !important;
+}

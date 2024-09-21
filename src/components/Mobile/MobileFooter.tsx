@@ -31,6 +31,7 @@ const IconWrapper = ({ children, label, color }) => {
           fontSize: "12px",
           fontWeight: 500,
           color: color,
+          wordBreak: 'normal'
         }}
       >
         {label}

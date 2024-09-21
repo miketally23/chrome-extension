@@ -129,7 +129,7 @@ const defaultValues: MyContextInterface = {
     message: "",
   },
 };
-export let isMobile = false
+export let isMobile = true
 
 const isMobileDevice = () => {
   const userAgent = navigator.userAgent || navigator.vendor || window.opera;

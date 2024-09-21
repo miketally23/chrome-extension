@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import DOMPurify from 'dompurify';
 import './styles.css'; // Ensure this CSS file is imported
 
-export const MessageDisplay = ({ htmlContent }) => {
+export const MessageDisplay = ({ htmlContent , isReply}) => {
 
   const linkify = (text) => {
     // Regular expression to find URLs starting with https://, http://, or www.
@@ -53,7 +53,7 @@ export const MessageDisplay = ({ htmlContent }) => {
   };
   return (
     <div
-      className="tiptap"
+    className={`tiptap ${isReply ? 'isReply' : ''}`}
       dangerouslySetInnerHTML={{ __html: sanitizedContent }}
       onClick={(e) => {
         // Delegate click handling to the parent div

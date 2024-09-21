@@ -1622,17 +1622,22 @@ async function sendChatDirect({
     ...(otherData || {})
   };
   const messageStringified = JSON.stringify(finalJson);
-  const tx = await createTransaction(18, keyPair, {
+  console.log('chatReferencefinal', chatReference)
+  const txBody = {
     timestamp: Date.now(),
     recipient: recipientAddress,
     recipientPublicKey: recipientPublicKey,
-    hasChatReference: 0,
+    hasChatReference: chatReference ? 1 : 0,
     message: messageStringified,
     lastReference: reference,
     proofOfWorkNonce: 0,
     isEncrypted: 1,
     isText: 1,
-  });
+  }
+  if(chatReference){
+    txBody['chatReference'] = chatReference
+  }
+  const tx = await createTransaction(18, keyPair, txBody);
 
   // if (!hasEnoughBalance) {
   //   throw new Error("Must have at least 4 QORT to send a chat message");
@@ -4000,7 +4005,7 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
           address,
           otherData
         } = request.payload;
-
+        console.log('chatReferencebg', chatReference)
         sendChatDirect({
           directTo,
           chatReference,

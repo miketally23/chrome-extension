@@ -8,7 +8,7 @@ import { subscribeToEvent, unsubscribeFromEvent } from '../../utils/events';
 //   defaultHeight: 50,
 // });
 
-export const ChatList = ({ initialMessages, myAddress, tempMessages, chatId }) => {
+export const ChatList = ({ initialMessages, myAddress, tempMessages, chatId, onReply }) => {
  
   const hasLoadedInitialRef = useRef(false);
   const listRef = useRef();
@@ -18,7 +18,7 @@ export const ChatList = ({ initialMessages, myAddress, tempMessages, chatId }) =
     fixedWidth: true,
     defaultHeight: 50,
   }), [chatId]); // Recreate cache when chatId changes
-  
+  console.log('messages2', messages)
   useEffect(() => {
     cache.clearAll();
   }, []);
@@ -68,6 +68,10 @@ export const ChatList = ({ initialMessages, myAddress, tempMessages, chatId }) =
     }
   };
 
+  const scrollToItem = useCallback((index) => {
+    listRef.current.scrollToRow(index); // This scrolls to the specific index
+  }, []);
+
   const recomputeListHeights = () => {
     if (listRef.current) {
       listRef.current.recomputeRowHeights();
@@ -93,7 +97,18 @@ export const ChatList = ({ initialMessages, myAddress, tempMessages, chatId }) =
     let message = messages[index];
     const isLargeMessage = message.text?.length > 200; // Adjust based on your message size threshold
 
+    // const reply = message?.repliedTo ? messages.find((msg)=> msg?.signature === message?.repliedTo) : undefined
+    let replyIndex = messages.findIndex((msg)=> msg?.signature === message?.repliedTo)
+    let reply
+    if(message?.repliedTo && replyIndex !== -1){
+      reply = messages[replyIndex]
+    }
     if(message?.message && message?.groupDirectId){
+       replyIndex = messages.findIndex((msg)=> msg?.signature === message?.message?.repliedTo)
+     reply
+    if(message?.message?.repliedTo && replyIndex !== -1){
+      reply = messages[replyIndex]
+    }
       message = {
         ...(message?.message || {}),
         isTemp: true,
@@ -130,6 +145,10 @@ export const ChatList = ({ initialMessages, myAddress, tempMessages, chatId }) =
                 onSeen={handleMessageSeen}
                 isTemp={!!message?.isTemp}
                 myAddress={myAddress}
+              onReply={onReply}
+              reply={reply}
+              scrollToItem={scrollToItem}
+              replyIndex={replyIndex}
               />
             </div>
           </div>
