@@ -2181,6 +2181,7 @@ export const Group = ({
            groupsAnnHasUnread}
          hasUnreadDirects={directChatHasUnread}
          setMobileViewMode={setMobileViewMode}
+         myName={userInfo?.name}
        />
       )}
      

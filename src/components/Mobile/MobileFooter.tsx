@@ -171,7 +171,7 @@ export const MobileFooter = ({
         />
         <BottomNavigationAction
           onClick={() => {
-            chrome.tabs.create({ url: "https://www.qort.trade", active: true });
+            chrome.tabs.create({ url: "https://www.qort.trade"});
           }}
           icon={
             <IconWrapper label="Trading" color="rgba(250, 250, 250, 0.5)">

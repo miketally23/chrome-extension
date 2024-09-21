@@ -1351,7 +1351,7 @@ function App() {
           textDecoration: "underline",
         }}
         onClick={() => {
-          chrome.tabs.create({ url: "https://www.qort.trade", active: true  });
+          chrome.tabs.create({ url: "https://www.qort.trade" });
         }}
       >
         Get QORT at qort.trade

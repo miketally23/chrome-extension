@@ -29,7 +29,7 @@ const Header = ({
   hasUnreadGroups,
   hasUnreadDirects,
   setMobileViewMode,
-
+  myName
   // selectedGroup,
   // onHomeClick,
   // onLogoutClick,
@@ -307,7 +307,7 @@ const Header = ({
               fontSize: "11px",
             }}
           >
-            Palmas
+            {myName}
           </Typography>
           {/* 
           <ArrowDownIcon /> */}
