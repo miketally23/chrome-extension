@@ -87,6 +87,7 @@ import { ReturnIcon } from "../../assets/Icons/ReturnIcon";
 import { ExitIcon } from "../../assets/Icons/ExitIcon";
 import { HomeDesktop } from "./HomeDesktop";
 import { DesktopFooter } from "../Desktop/DesktopFooter";
+import { DesktopHeader } from "../Desktop/DesktopHeader";
 
 // let touchStartY = 0;
 // let disablePullToRefresh = false;
@@ -807,13 +808,20 @@ export const Group = ({
     }
   };
 
+  useEffect(()=> {
+    if(!selectedGroup) return
+    getGroupOwner(selectedGroup?.groupId);
+  }, [selectedGroup])
+
+  console.log('groupOwner', groupOwner)
+
   useEffect(() => {
-    if (selectedGroup) {
+    if (selectedGroup && groupOwner && groupOwner?.isOpen === false) {
       setTriedToFetchSecretKey(false);
       getSecretKey(true);
-      getGroupOwner(selectedGroup?.groupId);
+      // getGroupOwner(selectedGroup?.groupId);
     }
-  }, [selectedGroup]);
+  }, [selectedGroup, groupOwner]);
 
   // const handleNotification = async (data)=> {
   //   try {
@@ -1320,6 +1328,7 @@ export const Group = ({
 
       setNewChat(false);
       setSecretKey(null);
+      setGroupOwner(null)
       lastFetchedSecretKey.current = null;
       setSecretKeyPublishDate(null);
       setAdmins([]);
@@ -1367,6 +1376,7 @@ export const Group = ({
       setChatMode("groups");
       setSelectedGroup(null);
       setSecretKey(null);
+      setGroupOwner(null)
       lastFetchedSecretKey.current = null;
       setSecretKeyPublishDate(null);
       setAdmins([]);
@@ -1425,6 +1435,7 @@ export const Group = ({
       setChatMode("groups");
       setSelectedGroup(null);
       setSecretKey(null);
+      setGroupOwner(null)
       lastFetchedSecretKey.current = null;
       setSecretKeyPublishDate(null);
       setAdmins([]);
@@ -1475,6 +1486,7 @@ export const Group = ({
     setNewChat(false);
     setSelectedDirect(null);
     setSecretKey(null);
+    setGroupOwner(null)
     lastFetchedSecretKey.current = null;
     setSecretKeyPublishDate(null);
     setAdmins([]);
@@ -1970,6 +1982,7 @@ export const Group = ({
                   setAdmins([]);
                   setSecretKeyDetails(null);
                   setAdminsWithNames([]);
+                  setGroupOwner(null)
                   setMembers([]);
                   setMemberCountFromSecretKeyData(null);
                   setHideCommonKeyPopup(false);
@@ -2153,6 +2166,7 @@ export const Group = ({
         info={infoSnack}
         setInfo={setInfoSnack}
       />
+      
       {isMobile && (
          <Header
          setMobileViewModeKeepOpen={setMobileViewModeKeepOpen}
@@ -2290,6 +2304,44 @@ export const Group = ({
           )}
           {selectedGroup && (
             <>
+            {!isMobile && selectedGroup && (
+        
+        <DesktopHeader
+        selectedGroup={selectedGroup}
+        groupSection={groupSection}
+        isUnread={isUnread}
+        goToAnnouncements={goToAnnouncements}
+        isUnreadChat={isUnreadChat}
+        goToChat={goToChat}
+        goToThreads={goToThreads}
+        setOpenManageMembers={setOpenManageMembers}
+        groupChatHasUnread={groupChatHasUnread}
+        groupsAnnHasUnread={groupsAnnHasUnread}
+        directChatHasUnread={directChatHasUnread}
+        chatMode={chatMode}
+        openDrawerGroups={openDrawerGroups}
+        goToHome={goToHome}
+        setIsOpenDrawerProfile={setIsOpenDrawerProfile}
+        mobileViewMode={mobileViewMode}
+        setMobileViewMode={setMobileViewMode}
+        setMobileViewModeKeepOpen={setMobileViewModeKeepOpen}
+        hasUnreadGroups={groupChatHasUnread ||
+          groupsAnnHasUnread}
+        hasUnreadDirects={directChatHasUnread}
+        myName={userInfo?.name || null}
+        isHome={groupSection === "home"}
+        isGroups={desktopSideView === 'groups'}
+        isDirects={desktopSideView === 'directs'}
+        setDesktopSideView={setDesktopSideView}
+        hasUnreadAnnouncements={isUnread}
+        isAnnouncement={groupSection === "announcement"}
+        isChat={groupSection === "chat"}
+        hasUnreadChat={isUnreadChat}
+        setGroupSection={setGroupSection}
+        isForum={groupSection === "forum"}
+        />
+   
+  )}
             {isMobile && (
                <Box
                sx={{
@@ -2361,7 +2413,7 @@ export const Group = ({
                   flexGrow: 1,
                   display: "flex",
                   // reference to change height
-                  height: isMobile ? "calc(100% - 82px)" : "100%",
+                  height: isMobile ? "calc(100% - 82px)" : "calc(100vh - 70px)",
                 }}
               >
                 {triedToFetchSecretKey && (
@@ -2572,7 +2624,7 @@ export const Group = ({
               </Box>
             </>
           )}
-           {!isMobile && (
+           {!isMobile && groupSection === "home" && (
         <DesktopFooter 
         selectedGroup={selectedGroup}
         groupSection={groupSection}
@@ -2641,13 +2693,13 @@ export const Group = ({
         <AuthenticatedContainerInnerRight
           sx={{
             marginLeft: "auto",
-            width: "135px",
-            minWidth: "135px",
+            width: "31px",
+            // minWidth: "135px",
             padding: "5px",
             display: isMobile ? "none" : "flex",
           }}
         >
-          <Spacer height="20px" />
+          {/* <Spacer height="20px" />
           <Box
             sx={{
               display: "flex",
@@ -2818,7 +2870,7 @@ export const Group = ({
               </Box>
               <Spacer height="20px" />
             </>
-          )}
+          )} */}
 
           {/* <SettingsIcon
               sx={{

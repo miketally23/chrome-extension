@@ -92,7 +92,7 @@ export const GroupJoinRequests = ({ myAddress, groups, setOpenManageMembers, get
     }
   }, [myAddress, groups]);
 
-
+  console.log('groupsWithJoinRequests', groupsWithJoinRequests)
 
   return (
     <Box sx={{
@@ -142,7 +142,7 @@ export const GroupJoinRequests = ({ myAddress, groups, setOpenManageMembers, get
       <CustomLoader />
       </Box>
     )}
-    {!loading && groupsWithJoinRequests.length === 0 && (
+    {!loading && (groupsWithJoinRequests.length === 0 || groupsWithJoinRequests?.filter((group)=> group?.data?.length > 0).length === 0) && (
     <Box
     sx={{
       width: "100%",

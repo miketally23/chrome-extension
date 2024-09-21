@@ -388,7 +388,7 @@ const clearEditorContent = () => {
   
   return (
     <div style={{
-      height: isMobile ? '100%' : '100vh',
+      height: isMobile ? '100%' : '100%',
       display: 'flex',
       flexDirection: 'column',
       width: '100%',

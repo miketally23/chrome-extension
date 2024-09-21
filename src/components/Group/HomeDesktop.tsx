@@ -59,7 +59,7 @@ export const HomeDesktop = ({
           >{`, ${userInfo?.name}`}</span>
         ) : null}
       </Typography>
-      <Spacer height="70px" />
+      <Spacer height="30px" />
       {!isLoadingGroups && (
         <Box
           sx={{

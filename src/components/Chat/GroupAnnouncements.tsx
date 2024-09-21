@@ -488,7 +488,7 @@ export const GroupAnnouncements = ({
       <div
         style={{
           // reference to change height
-          height: isMobile ? `calc(${rootHeight} - 127px` : "100vh",
+          height: isMobile ? `calc(${rootHeight} - 127px` : "calc(100vh - 70px)",
           display: "flex",
           flexDirection: "column",
           width: "100%",
@@ -514,7 +514,7 @@ export const GroupAnnouncements = ({
     <div
       style={{
          // reference to change height
-        height: isMobile ? `calc(${rootHeight} - 127px` : "100vh",
+        height: isMobile ? `calc(${rootHeight} - 127px` : "calc(100vh - 70px)",
         display: "flex",
         flexDirection: "column",
         width: "100%",
