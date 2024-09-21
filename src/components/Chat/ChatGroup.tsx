@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { CreateCommonSecret } from './CreateCommonSecret'
 import { reusableGet } from '../../qdn/publish/pubish'
 import { uint8ArrayToObject } from '../../backgroundFunctions/encryption'
@@ -44,7 +44,11 @@ export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey,
   const groupSocketTimeoutRef = useRef(null); // Group Socket Timeout reference
   const editorRef = useRef(null);
   const { queueChats, addToQueue, processWithNewMessages } = useMessageQueue();
- 
+  const [, forceUpdate] = useReducer((x) => x + 1, 0);
+
+  const triggerRerender = () => {
+    forceUpdate(); // Trigger re-render by updating the state
+  };
   const setEditorRef = (editorInstance) => {
     editorRef.current = editorInstance;
   };
@@ -292,6 +296,9 @@ const clearEditorContent = () => {
         editorRef.current?.chain().blur().run(); 
         setIsFocusedParent(false)
         executeEvent("sent-new-message-group", {})
+        setTimeout(() => {
+          triggerRerender();
+         }, 300);
       }, 200);
     }
   }

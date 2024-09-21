@@ -143,7 +143,7 @@ export const GroupAnnouncements = ({
   const [selectedAnnouncement, setSelectedAnnouncement] = useState(null);
   const [isFocusedParent, setIsFocusedParent] = useState(false);
 
-  const { show } = React.useContext(MyContext);
+  const { show, rootHeight } = React.useContext(MyContext);
   const [openSnack, setOpenSnack] = React.useState(false);
   const [infoSnack, setInfoSnack] = React.useState(null);
   const hasInitialized = useRef(false);
@@ -488,7 +488,7 @@ export const GroupAnnouncements = ({
       <div
         style={{
           // reference to change height
-          height: isMobile ? `calc(${getRootHeight()} - 127px` : "100vh",
+          height: isMobile ? `calc(${rootHeight} - 127px` : "100vh",
           display: "flex",
           flexDirection: "column",
           width: "100%",
@@ -514,7 +514,7 @@ export const GroupAnnouncements = ({
     <div
       style={{
          // reference to change height
-        height: isMobile ? `calc(${getRootHeight()} - 127px` : "100vh",
+        height: isMobile ? `calc(${rootHeight} - 127px` : "100vh",
         display: "flex",
         flexDirection: "column",
         width: "100%",

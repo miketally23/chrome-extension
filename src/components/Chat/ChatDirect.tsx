@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 
 import {  objectToBase64 } from '../../qdn/encryption/group-encryption'
 import { ChatList } from './ChatList'
@@ -45,6 +45,11 @@ export const ChatDirect = ({ myAddress, isNewChat, selectedDirect, setSelectedDi
   const [replyMessage, setReplyMessage] = useState(null)
   const setEditorRef = (editorInstance) => {
     editorRef.current = editorInstance;
+  };
+  const [, forceUpdate] = useReducer((x) => x + 1, 0);
+
+  const triggerRerender = () => {
+    forceUpdate(); // Trigger re-render by updating the state
   };
   const publicKeyOfRecipientRef = useRef(null)
    console.log({messages})
@@ -276,6 +281,9 @@ const clearEditorContent = () => {
         editorRef.current?.chain().blur().run(); 
         setIsFocusedParent(false)
         executeEvent("sent-new-message-group", {})
+        setTimeout(() => {
+          triggerRerender();
+         }, 300);
       }, 200);
     }
   }

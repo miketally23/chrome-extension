@@ -129,7 +129,7 @@ const defaultValues: MyContextInterface = {
     message: "",
   },
 };
-export let isMobile = true
+export let isMobile = false
 
 const isMobileDevice = () => {
   const userAgent = navigator.userAgent || navigator.vendor || window.opera;
@@ -313,6 +313,7 @@ function App() {
   const [apiKey, setApiKey] = useState("");
   const [isOpenSendQort, setIsOpenSendQort] = useState(false)
   const [isOpenSendQortSuccess, setIsOpenSendQortSuccess] = useState(false)
+  const [rootHeight, setRootHeight] = useState('100%')
   useEffect(() => {
     if(!isMobile) return
     // Function to set the height of the app to the viewport height
@@ -320,6 +321,7 @@ function App() {
       const height = window.visualViewport ? window.visualViewport.height : window.innerHeight;
       // Set the height to the root element (usually #root)
       document.getElementById('root').style.height = height + "px";
+      setRootHeight(height + "px")
     };
 
     // Set the initial height
@@ -1619,6 +1621,7 @@ function App() {
             onOk,
             show,
             message,
+            rootHeight
           }}
         >
           <Box

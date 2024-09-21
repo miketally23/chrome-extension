@@ -1,12 +1,13 @@
 import React, {
   useCallback,
+  useContext,
   useEffect,
   useMemo,
   useRef,
   useState,
 } from "react";
 import { GroupMail } from "../Group/Forum/GroupMail";
-import { isMobile } from "../../App";
+import { MyContext, isMobile } from "../../App";
 import { getRootHeight } from "../../utils/mobile/mobileUtils";
 
 
@@ -25,6 +26,7 @@ export const GroupForum = ({
   defaultThread, 
   setDefaultThread
 }) => {
+  const {  rootHeight } = useContext(MyContext);
   const [isMoved, setIsMoved] = useState(false);
   useEffect(() => {
     if (hide) {
@@ -38,7 +40,7 @@ export const GroupForum = ({
     <div
     style={{
       // reference to change height
-      height: isMobile ? `calc(${getRootHeight()} - 127px` : "100vh",
+      height: isMobile ? `calc(${rootHeight} - 127px` : "100vh",
       display: "flex",
       flexDirection: "column",
       width: "100%",

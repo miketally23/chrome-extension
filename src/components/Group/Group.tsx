@@ -398,7 +398,7 @@ export const Group = ({
   const [openAddGroup, setOpenAddGroup] = useState(false);
   const [isInitialGroups, setIsInitialGroups] = useState(false);
   const [openManageMembers, setOpenManageMembers] = useState(false);
-  const { setMemberGroups, memberGroups } = useContext(MyContext);
+  const { setMemberGroups, memberGroups, rootHeight } = useContext(MyContext);
   const lastGroupNotification = useRef<null | number>(null);
   const [timestampEnterData, setTimestampEnterData] = useState({});
   const [chatMode, setChatMode] = useState("groups");
@@ -1552,7 +1552,7 @@ export const Group = ({
           width: isMobile ? "100%" : "380px",
           flexDirection: "column",
           alignItems: "flex-start",
-          height: isMobile ? `calc(${getRootHeight()} - 45px)` : "100%",
+          height: isMobile ? `calc(${rootHeight} - 45px)` : "100%",
           background: !isMobile && 'var(--bg-primary)',
           borderRadius: !isMobile && '0px 15px 15px 0px'
         }}
@@ -2266,7 +2266,7 @@ export const Group = ({
                   top: "0px",
                   background: "#27282c",
                   zIndex: 5,
-                  height: isMobile && `calc(${getRootHeight()} - 45px)`,
+                  height: isMobile && `calc(${rootHeight} - 45px)`,
                 }}
               >
                 <ChatDirect
@@ -2542,7 +2542,7 @@ export const Group = ({
                   top: "0px",
                   background: "#27282c",
                   zIndex: 5,
-                  height: isMobile && `calc(${getRootHeight()} - 45px)`,
+                  height: isMobile && `calc(${rootHeight} - 45px)`,
                 }}
               >
                 <Box
