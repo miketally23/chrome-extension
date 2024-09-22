@@ -808,19 +808,16 @@ export const Group = ({
     }
   };
 
-  useEffect(()=> {
-    if(!selectedGroup) return
-    getGroupOwner(selectedGroup?.groupId);
-  }, [selectedGroup])
+
 
 
   useEffect(() => {
-    if (selectedGroup && groupOwner && groupOwner?.isOpen === false) {
+    if (selectedGroup) {
       setTriedToFetchSecretKey(false);
       getSecretKey(true);
-      // getGroupOwner(selectedGroup?.groupId);
+      getGroupOwner(selectedGroup?.groupId);
     }
-  }, [selectedGroup, groupOwner]);
+  }, [selectedGroup]);
 
   // const handleNotification = async (data)=> {
   //   try {
