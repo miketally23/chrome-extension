@@ -41,7 +41,7 @@ export const Home = ({
           padding: '10px'
         }}
       >
-        Welcome{" "}
+        Welcome
         {userInfo?.name ? (
           <span
             style={{
