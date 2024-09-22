@@ -1039,10 +1039,11 @@ function App() {
   // }, [])
 
   useEffect(() => {
-    if (!isMainWindow) return;
+    if (!isMainWindow || isMobile) return;
     const handleBeforeUnload = (e) => {
       e.preventDefault();
       e.returnValue = ""; // This is required for Chrome to display the confirmation dialog.
+      return ""; 
     };
 
     // Add the event listener when the component mounts
