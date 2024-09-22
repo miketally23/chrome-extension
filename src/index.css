@@ -74,7 +74,6 @@ body {
 ::-webkit-scrollbar {
   width: 16px;
   height: 10px;
-  background-color: #232428;
 }
 
 ::-webkit-scrollbar-thumb {

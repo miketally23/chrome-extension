@@ -86,6 +86,7 @@ import { executeEvent, subscribeToEvent, unsubscribeFromEvent } from "./utils/ev
 import { requestQueueCommentCount, requestQueuePublishedAccouncements } from "./components/Chat/GroupAnnouncements";
 import { requestQueueGroupJoinRequests } from "./components/Group/GroupJoinRequests";
 import { DrawerComponent } from "./components/Drawer/Drawer";
+import { LitecoinQRCode } from "./components/LitecoinQRCode";
 
 type extStates =
   | "not-authenticated"
@@ -1253,6 +1254,7 @@ function App() {
               />
             </Box>
           )}
+          <LitecoinQRCode ltcAddress={rawWallet?.ltcAddress} />
         </>
       ) : (
         <>

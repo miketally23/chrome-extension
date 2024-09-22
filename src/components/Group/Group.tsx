@@ -1770,7 +1770,7 @@ export const Group = ({
           width: isMobile ? "100%" : "380px",
           flexDirection: "column",
           alignItems: "flex-start",
-          height: isMobile ? "calc(100% - 45px)" : "100%",
+          height: isMobile ? `calc(${rootHeight} - 45px)` : "100%",
           background: !isMobile && 'var(--bg-primary)',
           borderRadius: !isMobile && '0px 15px 15px 0px'
         }}
@@ -2302,7 +2302,7 @@ export const Group = ({
               </Box>
             </>
           )}
-          {selectedGroup && (
+          {selectedGroup && mobileViewMode !== 'groups' && (
             <>
             {!isMobile && selectedGroup && (
         
