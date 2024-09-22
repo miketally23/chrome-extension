@@ -1133,7 +1133,12 @@ export const Group = ({
       return;
     }
     if (findDirect) {
-      setChatMode("directs");
+      if(!isMobile){
+        setDesktopSideView("directs");
+      } else {
+        setMobileViewModeKeepOpen("messaging");
+      }
+      // setChatMode("directs");
       setSelectedDirect(null);
       // setSelectedGroup(null);
 
@@ -1165,7 +1170,11 @@ export const Group = ({
     );
 
     if (findDirect) {
-      setChatMode("directs");
+      if(!isMobile){
+        setDesktopSideView("directs");
+      } else {
+        setMobileViewModeKeepOpen("messaging");
+      }
       setSelectedDirect(null);
       // setSelectedGroup(null);
 
@@ -1184,7 +1193,11 @@ export const Group = ({
         getTimestampEnterChat();
       }, 200);
     } else {
-      setChatMode("directs");
+      if(!isMobile){
+        setDesktopSideView("directs");
+      } else {
+        setMobileViewModeKeepOpen("messaging");
+      }
       setNewChat(true);
       setTimeout(() => {
         executeEvent("setDirectToValueNewChat", {
