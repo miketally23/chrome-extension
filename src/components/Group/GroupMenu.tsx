@@ -173,7 +173,7 @@ export const GroupMenu = ({ setGroupSection, groupSection, setOpenManageMembers 
                     fontSize: "12px",
                     fontWeight: 600,
                   },
-                }} primary="Forum" />
+                }} primary="Threads" />
         </MenuItem>
         <MenuItem
           onClick={() => {
