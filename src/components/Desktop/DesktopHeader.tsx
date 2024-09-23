@@ -194,7 +194,7 @@ export const DesktopHeader = ({
               height={25}
               width={20}
               color={
-                hasUnreadAnnouncements
+                isUnread
                   ? "var(--unread)"
                   : isAnnouncement
                   ? "black"
@@ -219,7 +219,7 @@ export const DesktopHeader = ({
               height={25}
               width={20}
               color={
-                hasUnreadChat
+                isUnreadChat
                   ? "var(--unread)"
                   : isChat
                   ? "black"

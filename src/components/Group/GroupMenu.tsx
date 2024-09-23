@@ -16,7 +16,7 @@ import { ChatIcon } from "../../assets/Icons/ChatIcon";
 import { ThreadsIcon } from "../../assets/Icons/ThreadsIcon";
 import { MembersIcon } from "../../assets/Icons/MembersIcon";
 
-export const GroupMenu = ({ setGroupSection, groupSection, setOpenManageMembers }) => {
+export const GroupMenu = ({ setGroupSection, groupSection, setOpenManageMembers, goToAnnouncements, goToChat, hasUnreadChat, hasUnreadAnnouncements }) => {
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
 
@@ -73,13 +73,13 @@ export const GroupMenu = ({ setGroupSection, groupSection, setOpenManageMembers 
             }}
           >
             {groupSection === "announcement" &&(
-                 <> <NotificationIcon2 /> {" Announcements"}</>
+                 <> <NotificationIcon2 color={hasUnreadAnnouncements || hasUnreadChat ? 'var(--unread)' : 'white'}  /> {" Announcements"}</>
             )}
              {groupSection === "chat" &&(
-                 <> <ChatIcon /> {" Hub Chats"}</>
+                 <> <ChatIcon color={hasUnreadAnnouncements || hasUnreadChat ? 'var(--unread)' : 'white'} /> {" Hub Chats"}</>
             )}
              {groupSection === "forum" &&(
-                 <> <ThreadsIcon /> {" Threads"}</>
+                 <> <ThreadsIcon color={hasUnreadAnnouncements || hasUnreadChat ? 'var(--unread)' : 'white'} /> {" Threads"}</>
             )}
           </Box>
           <ArrowDownIcon color="white" />
@@ -120,7 +120,7 @@ export const GroupMenu = ({ setGroupSection, groupSection, setOpenManageMembers 
       >
         <MenuItem
           onClick={() => {
-            setGroupSection("chat");
+            goToChat()
             handleClose();
           }}
         >
@@ -128,7 +128,7 @@ export const GroupMenu = ({ setGroupSection, groupSection, setOpenManageMembers 
             
             minWidth: '24px !important'
           }}>
-            <ChatIcon sx={{ color: "#fff" }} />
+            <ChatIcon sx={{ color: hasUnreadChat ? 'var(--unread)' : "#fff" }} />
           </ListItemIcon>
           <ListItemText sx={{
                   "& .MuiTypography-root": {
@@ -139,7 +139,7 @@ export const GroupMenu = ({ setGroupSection, groupSection, setOpenManageMembers 
         </MenuItem>
         <MenuItem
           onClick={() => {
-            setGroupSection("announcement");
+            goToAnnouncements()
             handleClose();
           }}
         >
@@ -147,7 +147,7 @@ export const GroupMenu = ({ setGroupSection, groupSection, setOpenManageMembers 
             
             minWidth: '24px !important'
           }}>
-          <NotificationIcon2 sx={{ color: "#fff" }} />
+          <NotificationIcon2 sx={{ color: hasUnreadAnnouncements ? 'var(--unread)' : "#fff" }} />
           </ListItemIcon>
           <ListItemText sx={{
                   "& .MuiTypography-root": {

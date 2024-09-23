@@ -2411,6 +2411,10 @@ export const Group = ({
                     setGroupSection={setGroupSection}
                     groupSection={groupSection}
                     setOpenManageMembers={setOpenManageMembers}
+                    goToAnnouncements={goToAnnouncements}
+                    goToChat={goToChat}
+                    hasUnreadAnnouncements={isUnread}
+                    hasUnreadChat={isUnreadChat}
                   />
                 </>
               )}

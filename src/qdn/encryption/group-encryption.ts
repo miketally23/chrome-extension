@@ -215,6 +215,8 @@ export const decryptSingle = async ({ data64, secretKeyObject, skipDecodeBase64 
 	  // New format: nonce is included in the message (first 32 characters)
 	  nonceBase64 = decodeForNumber.slice(10, 42); // First 32 characters for the nonce
 	  encryptedDataBase64 = decodeForNumber.slice(42); // The remaining part is the encrypted data
+	  
+
 	}
   
 	// Convert Base64 strings to Uint8Array
