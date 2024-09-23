@@ -241,7 +241,8 @@ export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey,
 
   
     useEffect(()=> {
-      const notifications = messages.filter((message)=> message?.text?.type === 'notification')
+      const notifications = messages.filter((message)=> message?.decryptedData
+      ?.type === 'notification')
       if(notifications.length === 0) return
       const latestNotification = notifications.reduce((latest, current) => {
         return current.timestamp > latest.timestamp ? current : latest;

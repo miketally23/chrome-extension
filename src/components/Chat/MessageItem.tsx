@@ -159,8 +159,8 @@ export const MessageItem = ({
                   ])}
                 />
               )}
-              {reply?.text?.type === "notification" ? (
-                <MessageDisplay htmlContent={reply.text?.data?.message} />
+              {reply?.decryptedData?.type === "notification" ? (
+                <MessageDisplay htmlContent={reply.decryptedData?.data?.message} />
               ) : (
                 <MessageDisplay isReply htmlContent={reply.text} />
               )}
@@ -176,8 +176,8 @@ export const MessageItem = ({
             ])}
           />
         )}
-        {message?.text?.type === "notification" ? (
-          <MessageDisplay htmlContent={message.text?.data?.message} />
+        {message?.decryptedData?.type === "notification" ? (
+          <MessageDisplay htmlContent={message.decryptedData?.data?.message} />
         ) : (
           <MessageDisplay htmlContent={message.text} />
         )}
@@ -265,8 +265,8 @@ export const ReplyPreview = ({message})=> {
                   ])}
                 />
               )}
-              {message?.text?.type === "notification" ? (
-                <MessageDisplay htmlContent={message.text?.data?.message} />
+              {message?.decryptedData?.type === "notification" ? (
+                <MessageDisplay htmlContent={message.decryptedData?.data?.message} />
               ) : (
                 <MessageDisplay isReply htmlContent={message.text} />
               )}

@@ -1039,7 +1039,7 @@ export const Group = ({
       return false;
     const isDiffMemberNumber =
       memberCountFromSecretKeyData !== members?.memberCount &&
-      newEncryptionNotification?.text?.data?.numberOfMembers !==
+      newEncryptionNotification?.decryptedData?.data?.numberOfMembers !==
         members?.memberCount;
 
     if (isDiffMemberNumber) return true;
