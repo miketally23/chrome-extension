@@ -165,8 +165,8 @@ export function validateSecretKey(obj) {
       return false;
     }
 
-    // Check for messageKey and nonce properties
-    if (!value.hasOwnProperty("messageKey") || !value.hasOwnProperty("nonce")) {
+    // Check for messageKey 
+    if (!value.hasOwnProperty("messageKey")) {
       return false;
     }
 
@@ -175,9 +175,6 @@ export function validateSecretKey(obj) {
       typeof value.messageKey !== "string" ||
       value.messageKey.trim() === ""
     ) {
-      return false;
-    }
-    if (typeof value.nonce !== "string" || value.nonce.trim() === "") {
       return false;
     }
   }
@@ -2162,7 +2159,7 @@ export const Group = ({
       </div>
     );
   };
-
+  
   return (
     <>
       <WebSocketActive

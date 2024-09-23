@@ -59,10 +59,9 @@ export const createSymmetricKeyAndNonce = () => {
     const messageKey = new Uint8Array(32); // 32 bytes for the symmetric key
     crypto.getRandomValues(messageKey);
 
-    const nonce = new Uint8Array(24); // 24 bytes for the nonce
-    crypto.getRandomValues(nonce);
+ 
 
-    return { messageKey: uint8ArrayToBase64(messageKey), nonce: uint8ArrayToBase64(nonce) };
+    return { messageKey: uint8ArrayToBase64(messageKey)};
 };
 
 
@@ -138,76 +137,108 @@ export const encryptDataGroup = ({ data64, publicKeys, privateKey, userPublicKey
 	}
 }
 
-export const encryptSingle = async ({ data64,secretKeyObject }: any) => {
-
-	const highestKey = Math.max(...Object.keys(secretKeyObject).filter(item=> !isNaN(+item)).map(Number));
-	
-	
+export const encryptSingle = async ({ data64, secretKeyObject }: any) => {
+	// Find the highest key in the secretKeyObject
+	const highestKey = Math.max(...Object.keys(secretKeyObject).filter(item => !isNaN(+item)).map(Number));
 	const highestKeyObject = secretKeyObject[highestKey];
-
-	const Uint8ArrayData = base64ToUint8Array(data64)
-	const nonce = base64ToUint8Array(highestKeyObject.nonce)
-	const messageKey = base64ToUint8Array(highestKeyObject.messageKey)
-	
+  
+	// Convert data and keys from base64
+	const Uint8ArrayData = base64ToUint8Array(data64);
+	const messageKey = base64ToUint8Array(highestKeyObject.messageKey);
+  
 	if (!(Uint8ArrayData instanceof Uint8Array)) {
-		throw new Error("The Uint8ArrayData you've submitted is invalid")
+	  throw new Error("The Uint8ArrayData you've submitted is invalid");
 	}
-	try {
-		const encryptedData = nacl.secretbox(Uint8ArrayData, nonce, messageKey);
-	
-		const encryptedDataBase64 = uint8ArrayToBase64(encryptedData)
-		const highestKeyStr = highestKey.toString().padStart(10, '0');  // Fixed length of 10 digits
-		const concatenatedData = highestKeyStr + encryptedDataBase64;
-		const finalEncryptedData = btoa(concatenatedData);
-
-	
-		return finalEncryptedData;
-	} catch (error) {
-		
-		throw new Error("Error in encrypting data")
+  
+	let nonce, encryptedData, encryptedDataBase64, finalEncryptedData;
+  
+	if (highestKeyObject.nonce) {
+	  // Old format: Use the nonce from secretKeyObject
+	  nonce = base64ToUint8Array(highestKeyObject.nonce);
+	  
+	  // Encrypt the data with the existing nonce and message key
+	  encryptedData = nacl.secretbox(Uint8ArrayData, nonce, messageKey);
+	  encryptedDataBase64 = uint8ArrayToBase64(encryptedData);
+	  
+	  // Concatenate the highest key with the encrypted data (old format)
+	  const highestKeyStr = highestKey.toString().padStart(10, '0');  // Fixed length of 10 digits
+	  finalEncryptedData = btoa(highestKeyStr + encryptedDataBase64);
+	} else {
+	  // New format: Generate a random nonce and embed it in the message
+	   nonce = new Uint8Array(24); // 24 bytes for the nonce
+	  crypto.getRandomValues(nonce);
+  
+  
+	  // Encrypt the data with the new nonce and message key
+	  encryptedData = nacl.secretbox(Uint8ArrayData, nonce, messageKey);
+	  encryptedDataBase64 = uint8ArrayToBase64(encryptedData);
+	  
+	  // Convert the nonce to base64
+	  const nonceBase64 = uint8ArrayToBase64(nonce);
+  
+	  // Concatenate the highest key, nonce, and encrypted data (new format)
+	  const highestKeyStr = highestKey.toString().padStart(10, '0');  // Fixed length of 10 digits
+	  finalEncryptedData = btoa(highestKeyStr + nonceBase64 + encryptedDataBase64);
 	}
-}
+  
+	return finalEncryptedData;
+  };
+  
 
-export const decryptSingle = async ({ data64,  secretKeyObject, skipDecodeBase64 }: any) => {
-	
-
+export const decryptSingle = async ({ data64, secretKeyObject, skipDecodeBase64 }: any) => {
+	// First, decode the base64-encoded input (if skipDecodeBase64 is not set)
 	const decodedData = skipDecodeBase64 ? data64 : atob(data64);
-	
-    // Extract the key (assuming it's 10 characters long)
-	const decodeForNumber = atob(decodedData)
-    const keyStr = decodeForNumber.slice(0, 10);
-	
-    // Convert the key string back to a number
-    const highestKey = parseInt(keyStr, 10);
-	
-    // Extract the remaining part as the Base64-encoded encrypted data
-    const encryptedDataBase64 = decodeForNumber.slice(10);
-	let _encryptedMessage = encryptedDataBase64
-	if(!secretKeyObject[highestKey]) throw new Error('Cannot find correct secretKey')
-	const nonce64 = secretKeyObject[highestKey].nonce
-	const messageKey64 = secretKeyObject[highestKey].messageKey
-
-	const Uint8ArrayData = base64ToUint8Array(_encryptedMessage)
-	const nonce = base64ToUint8Array(nonce64)
-	const messageKey = base64ToUint8Array(messageKey64)
-	
-	if (!(Uint8ArrayData instanceof Uint8Array)) {
-		throw new Error("The Uint8ArrayData you've submitted is invalid")
+  
+	// Then, decode it again for the specific format (if double encoding is used)
+	const decodeForNumber = atob(decodedData);
+  
+	// Extract the key (assuming it's 10 characters long)
+	const keyStr = decodeForNumber.slice(0, 10);
+  
+	// Convert the key string back to a number
+	const highestKey = parseInt(keyStr, 10);
+  
+	// Check if we have a valid secret key for the extracted highestKey
+	if (!secretKeyObject[highestKey]) {
+	  throw new Error('Cannot find correct secretKey');
 	}
-
+  
+	const secretKeyEntry = secretKeyObject[highestKey];
 	
-		// Decrypt the data using the nonce and messageKey
-		const decryptedData = nacl.secretbox.open(Uint8ArrayData, nonce, messageKey);
-	
-		// Check if decryption was successful
-		if (!decryptedData) {
-			throw new Error("Decryption failed");
-		}
-	
-		// Convert the decrypted Uint8Array back to a UTF-8 string
-		return uint8ArrayToBase64(decryptedData)
-	
-}
+	let nonceBase64, encryptedDataBase64;
+  
+	if (secretKeyEntry.nonce) {
+	  // Old format: nonce is present in the secretKeyObject
+	  nonceBase64 = secretKeyEntry.nonce;
+	  encryptedDataBase64 = decodeForNumber.slice(10); // The remaining part is the encrypted data
+	} else {
+	  // New format: nonce is included in the message (first 32 characters)
+	  nonceBase64 = decodeForNumber.slice(10, 42); // First 32 characters for the nonce
+	  encryptedDataBase64 = decodeForNumber.slice(42); // The remaining part is the encrypted data
+	}
+  
+	// Convert Base64 strings to Uint8Array
+	const Uint8ArrayData = base64ToUint8Array(encryptedDataBase64);
+	const nonce = base64ToUint8Array(nonceBase64);
+	const messageKey = base64ToUint8Array(secretKeyEntry.messageKey);
+  
+	if (!(Uint8ArrayData instanceof Uint8Array)) {
+	  throw new Error("The Uint8ArrayData you've submitted is invalid");
+	}
+  
+	// Decrypt the data using the nonce and messageKey
+	const decryptedData = nacl.secretbox.open(Uint8ArrayData, nonce, messageKey);
+  
+	// Check if decryption was successful
+	if (!decryptedData) {
+	  throw new Error("Decryption failed");
+	}
+  
+	// Convert the decrypted Uint8Array back to a Base64 string
+	return uint8ArrayToBase64(decryptedData);
+  };
+  
+  
 
 
 export function decryptGroupData(data64EncryptedData: string, privateKey: string) {
