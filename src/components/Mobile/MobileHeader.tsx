@@ -321,7 +321,7 @@ const Header = ({
             display: "flex",
             justifyContent: "center",
             alignItems: "center",
-            zIndex: 500,
+            zIndex: 6,
             width: "30px", // Adjust as needed
             height: "30px", // Adjust as needed
             backgroundColor: "#232428", // Circle background

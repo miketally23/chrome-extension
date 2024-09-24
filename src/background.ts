@@ -5,6 +5,7 @@ import {
   decryptGroupEncryption,
   encryptAndPublishSymmetricKeyGroupChat,
   publishGroupEncryptedResource,
+  publishOnQDN,
   uint8ArrayToObject,
 } from "./backgroundFunctions/encryption";
 import { PUBLIC_NOTIFICATION_CODE_FIRST_SECRET_KEY } from "./constants/codes";
@@ -3830,6 +3831,24 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
         publishGroupEncryptedResource({
           encryptedData,
           identifier,
+        })
+          .then((data) => {
+            sendResponse(data);
+          })
+          .catch((error) => {
+            console.error(error.message);
+            sendResponse({ error: error.message });
+          });
+        return true;
+        break;
+      }
+      case "publishOnQDN": {
+        const { data, identifier, service } = request.payload;
+
+        publishOnQDN({
+          data,
+          identifier,
+          service
         })
           .then((data) => {
             sendResponse(data);

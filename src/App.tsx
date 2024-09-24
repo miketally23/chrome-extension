@@ -90,6 +90,7 @@ import { requestQueueGroupJoinRequests } from "./components/Group/GroupJoinReque
 import { DrawerComponent } from "./components/Drawer/Drawer";
 import { LitecoinQRCode } from "./components/LitecoinQRCode";
 import { Settings } from "./components/Group/Settings";
+import { MainAvatar } from "./components/MainAvatar";
 
 type extStates =
   | "not-authenticated"
@@ -1263,7 +1264,7 @@ function App() {
         </>
       ) : (
         <>
-          <img src={Logo2} />
+          <MainAvatar myName={userInfo?.name} />
           <Spacer height="32px" />
           <TextP
             sx={{
