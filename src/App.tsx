@@ -13,6 +13,7 @@ import { useDropzone } from "react-dropzone";
 import {
   Box,
   Button,
+  ButtonBase,
   Checkbox,
   CircularProgress,
   Dialog,
@@ -75,6 +76,7 @@ import { useModal } from "./common/useModal";
 import { LoadingButton } from "@mui/lab";
 import { Label } from "./components/Group/AddGroup";
 import { CustomizedSnackbars } from "./components/Snackbar/Snackbar";
+import SettingsIcon from '@mui/icons-material/Settings';
 import {
   getFee,
   groupApi,
@@ -87,6 +89,7 @@ import { requestQueueCommentCount, requestQueuePublishedAccouncements } from "./
 import { requestQueueGroupJoinRequests } from "./components/Group/GroupJoinRequests";
 import { DrawerComponent } from "./components/Drawer/Drawer";
 import { LitecoinQRCode } from "./components/LitecoinQRCode";
+import { Settings } from "./components/Group/Settings";
 
 type extStates =
   | "not-authenticated"
@@ -315,6 +318,7 @@ function App() {
   const [isOpenSendQort, setIsOpenSendQort] = useState(false)
   const [isOpenSendQortSuccess, setIsOpenSendQortSuccess] = useState(false)
   const [rootHeight, setRootHeight] = useState('100%')
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   useEffect(() => {
     if(!isMobile) return
     // Function to set the height of the app to the viewport height
@@ -1387,7 +1391,15 @@ function App() {
       />
         </>
       )}
-     
+           <Spacer height="20px" />
+
+     <ButtonBase onClick={()=> {
+      setIsSettingsOpen(true)
+     }}>
+        <SettingsIcon sx={{
+          color: 'rgba(255, 255, 255, 0.5)'
+        }} />
+      </ButtonBase>
       <Spacer height="20px" />
       {authenticatedMode === "qort" && (
         <img
@@ -1415,6 +1427,7 @@ function App() {
           }}
         />
       )}
+     
     </AuthenticatedContainerInnerRight>
     </AuthenticatedContainer>
     )
@@ -2493,6 +2506,10 @@ function App() {
           </LoadingButton>
         </Box>
       </Popover>
+      {isSettingsOpen && (
+              <Settings open={isSettingsOpen} setOpen={setIsSettingsOpen} />
+
+      )}
       <CustomizedSnackbars
         open={openSnack}
         setOpen={setOpenSnack}

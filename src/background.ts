@@ -252,8 +252,10 @@ const handleNotificationDirect = async (directs) => {
   let isFocused;
   const wallet = await getSaveWallet();
   const address = wallet.address0;
+  let isDisableNotifications = await getUserSettings({key: 'disable-push-notifications'}) || false
   const dataDirects = directs.filter((direct) => direct?.sender !== address);
   try {
+    if(isDisableNotifications) return
     if (!dataDirects || dataDirects?.length === 0) return;
     isFocused = await checkWebviewFocus();
 
@@ -469,12 +471,15 @@ async function updateThreadActivity({ threadId, qortalName, groupId, thread }) {
 const handleNotification = async (groups) => {
   const wallet = await getSaveWallet();
   const address = wallet.address0;
+  let isDisableNotifications = await getUserSettings({key: 'disable-push-notifications'}) || false
+
   let mutedGroups = await getUserSettings({key: 'mutedGroups'}) || []
   if(!isArray(mutedGroups)) mutedGroups = []
 
   let isFocused;
   const data = groups.filter((group) => group?.sender !== address && !mutedGroups.includes(group.groupId));
   try {
+    if(isDisableNotifications) return
     if (!data || data?.length === 0) return;
     isFocused = await checkWebviewFocus();
 
@@ -715,23 +720,26 @@ const checkThreads = async (bringBack) => {
         Date.now() +
         "_type=thread-post" +
         `_data=${JSON.stringify(newAnnouncements[0])}`;
-
-      chrome.notifications.create(notificationId, {
-        type: "basic",
-        iconUrl: "qort.png", // Add an appropriate icon for chat notifications
-        title: `New thread post!`,
-        message: `New post in ${newAnnouncements[0]?.thread?.threadData?.title}`,
-        priority: 2, // Use the maximum priority to ensure it's noticeable
-        // buttons: [
-        //   { title: 'Go to group' }
-        // ]
-      });
-      if (!isMobile) {
-        setTimeout(() => {
-          chrome.notifications.clear(notificationId);
-        }, 7000);
+        let isDisableNotifications = await getUserSettings({key: 'disable-push-notifications'}) || false
+      if(!isDisableNotifications){
+        chrome.notifications.create(notificationId, {
+          type: "basic",
+          iconUrl: "qort.png", // Add an appropriate icon for chat notifications
+          title: `New thread post!`,
+          message: `New post in ${newAnnouncements[0]?.thread?.threadData?.title}`,
+          priority: 2, // Use the maximum priority to ensure it's noticeable
+          // buttons: [
+          //   { title: 'Go to group' }
+          // ]
+        });
+        if (!isMobile) {
+          setTimeout(() => {
+            chrome.notifications.clear(notificationId);
+          }, 7000);
+        }
+        playNotificationSound();
       }
-      playNotificationSound();
+      
     }
     const savedtimestampAfter = await getTimestampGroupAnnouncement();
     chrome.runtime.sendMessage({
@@ -804,7 +812,9 @@ const checkNewMessages = async () => {
         }
       })
     );
-    if (newAnnouncements.length > 0 && !mutedGroups.includes(newAnnouncements[0]?.groupId)) {
+    let isDisableNotifications = await getUserSettings({key: 'disable-push-notifications'}) || false
+
+    if (newAnnouncements.length > 0 && !mutedGroups.includes(newAnnouncements[0]?.groupId) && !isDisableNotifications) {
       const notificationId =
         "chat_notification_" +
         Date.now() +
