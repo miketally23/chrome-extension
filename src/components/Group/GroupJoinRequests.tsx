@@ -15,12 +15,13 @@ import { Box, Typography } from "@mui/material";
 import { Spacer } from "../../common/Spacer";
 import { CustomLoader } from "../../common/CustomLoader";
 import { getBaseApi } from "../../background";
-import { getBaseApiReact, isMobile } from "../../App";
+import { MyContext, getBaseApiReact, isMobile } from "../../App";
 export const requestQueueGroupJoinRequests = new RequestQueueWithPromise(2)
 
 export const GroupJoinRequests = ({ myAddress, groups, setOpenManageMembers, getTimestampEnterChat, setSelectedGroup, setGroupSection, setMobileViewMode }) => {
   const [groupsWithJoinRequests, setGroupsWithJoinRequests] = React.useState([])
   const [loading, setLoading] = React.useState(true)
+  const {txList, setTxList} = React.useContext(MyContext)
 
 
 
@@ -92,6 +93,22 @@ export const GroupJoinRequests = ({ myAddress, groups, setOpenManageMembers, get
     }
   }, [myAddress, groups]);
 
+  const filteredJoinRequests = React.useMemo(()=> {
+    return groupsWithJoinRequests.map((group)=> {
+      const filteredGroupRequests = group?.data?.filter((gd)=> {
+        const findJoinRequsetInTxList = txList?.find((tx)=> tx?.groupId === group?.group?.groupId && tx?.qortalAddress === gd?.joiner && tx?.type === 'join-request-accept')
+
+        if(findJoinRequsetInTxList) return false
+        return true
+      })
+      return {
+        ...group,
+        data: filteredGroupRequests
+      }
+    })
+  }, [groupsWithJoinRequests, txList])
+
+  console.log('filteredJoinRequests', filteredJoinRequests)
 
   return (
     <Box sx={{
@@ -132,7 +149,7 @@ export const GroupJoinRequests = ({ myAddress, groups, setOpenManageMembers, get
           borderRadius: '19px'
         }}
       >
-    {loading && groupsWithJoinRequests.length === 0 && (
+    {loading && filteredJoinRequests.length === 0 && (
        <Box sx={{
         width: '100%',
         display: 'flex',
@@ -141,7 +158,7 @@ export const GroupJoinRequests = ({ myAddress, groups, setOpenManageMembers, get
       <CustomLoader />
       </Box>
     )}
-    {!loading && (groupsWithJoinRequests.length === 0 || groupsWithJoinRequests?.filter((group)=> group?.data?.length > 0).length === 0) && (
+    {!loading && (filteredJoinRequests.length === 0 || filteredJoinRequests?.filter((group)=> group?.data?.length > 0).length === 0) && (
     <Box
     sx={{
       width: "100%",
@@ -164,7 +181,7 @@ export const GroupJoinRequests = ({ myAddress, groups, setOpenManageMembers, get
   </Box>
     )}
     <List sx={{ width: "100%", maxWidth: 360, bgcolor: "background.paper", maxHeight: '300px', overflow: 'auto' }}>
-      {groupsWithJoinRequests?.map((group)=> {
+      {filteredJoinRequests?.map((group)=> {
         if(group?.data?.length === 0) return null
         return (
           <ListItem

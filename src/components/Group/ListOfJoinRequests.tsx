@@ -1,10 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useContext, useEffect, useRef, useState } from 'react';
 import { Avatar, Box, Button, ListItem, ListItemAvatar, ListItemButton, ListItemText, Popover } from '@mui/material';
 import { AutoSizer, CellMeasurer, CellMeasurerCache, List } from 'react-virtualized';
 import { getNameInfo } from './Group';
 import { getBaseApi, getFee } from '../../background';
 import { LoadingButton } from '@mui/lab';
-import { getBaseApiReact } from '../../App';
+import { MyContext, getBaseApiReact } from '../../App';
 
 export const getMemberInvites = async (groupNumber) => {
   const response = await fetch(`${getBaseApiReact()}/groups/joinrequests/${groupNumber}?limit=0`);
@@ -34,6 +34,8 @@ const cache = new CellMeasurerCache({
 
 export const ListOfJoinRequests = ({ groupId, setInfoSnack, setOpenSnack, show }) => {
   const [invites, setInvites] = useState([]);
+  const {txList, setTxList} = useContext(MyContext)
+
   const [popoverAnchor, setPopoverAnchor] = useState(null); // Track which list item the popover is anchored to
   const [openPopoverIndex, setOpenPopoverIndex] = useState(null); // Track which list item has the popover open
   const listRef = useRef();
@@ -89,6 +91,16 @@ export const ListOfJoinRequests = ({ groupId, setInfoSnack, setOpenSnack, show }
               setOpenSnack(true);
               handlePopoverClose();
               res(response)
+              setTxList((prev)=> [{
+                ...response,
+                type: 'join-request-accept',
+                label: `Accepted join request: awaiting confirmation`,
+                labelDone: `User successfully joined!`,
+                done: false,
+                groupId,
+                qortalAddress: address
+             
+              }, ...prev])
               return
             }
             setInfoSnack({
@@ -108,7 +120,8 @@ export const ListOfJoinRequests = ({ groupId, setInfoSnack, setOpenSnack, show }
 
   const rowRenderer = ({ index, key, parent, style }) => {
     const member = invites[index];
-    
+    const findJoinRequsetInTxList = txList?.find((tx)=> tx?.groupId === groupId && tx?.qortalAddress === member?.joiner && tx?.type === 'join-request-accept')
+    if(findJoinRequsetInTxList) return null
     return (
       <CellMeasurer
         key={key}

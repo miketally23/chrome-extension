@@ -70,12 +70,14 @@ export const WrapperUserAction = ({ children, address, name, disabled }) => {
           <Button
             variant="text"
             onClick={() => {
-              executeEvent('openDirectMessageInternal', {
-                address,
-                name,
-              });
+             
               handleClose();
-            
+              setTimeout(() => {
+                executeEvent('openDirectMessageInternal', {
+                  address,
+                  name,
+                });
+              }, 200);
             }}
             sx={{
                 color: 'white'

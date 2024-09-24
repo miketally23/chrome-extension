@@ -124,6 +124,16 @@ export const TaskManger = ({getUserInfo}) => {
       })
       prev.forEach((tx, index)=> {
       
+        if(tx?.type === "join-request-accept" && tx?.signature && !tx.done){
+          if(intervals.current[tx.signature]) return
+
+          getStatus({signature: tx.signature})
+        }
+
+      })
+      
+      prev.forEach((tx, index)=> {
+      
         if(tx?.type === "register-name" && tx?.signature && !tx.done){
           if(intervals.current[tx.signature]) return
 
