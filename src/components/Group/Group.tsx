@@ -1031,7 +1031,7 @@ export const Group = ({
     if (
       !secretKeyPublishDate ||
       !memberCountFromSecretKeyData ||
-      members.length === 0
+      members?.length === 0
     )
       return false;
     const isDiffMemberNumber =
