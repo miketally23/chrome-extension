@@ -88,7 +88,7 @@ import { executeEvent, subscribeToEvent, unsubscribeFromEvent } from "./utils/ev
 import { requestQueueCommentCount, requestQueuePublishedAccouncements } from "./components/Chat/GroupAnnouncements";
 import { requestQueueGroupJoinRequests } from "./components/Group/GroupJoinRequests";
 import { DrawerComponent } from "./components/Drawer/Drawer";
-import { LitecoinQRCode } from "./components/LitecoinQRCode";
+import { AddressQRCode } from "./components/AddressQRCode";
 import { Settings } from "./components/Group/Settings";
 import { MainAvatar } from "./components/MainAvatar";
 
@@ -1260,7 +1260,7 @@ function App() {
               />
             </Box>
           )}
-          <LitecoinQRCode ltcAddress={rawWallet?.ltcAddress} />
+          <AddressQRCode targetAddress={rawWallet?.ltcAddress} />
         </>
       ) : (
         <>
@@ -1346,6 +1346,7 @@ function App() {
           >
             Transfer QORT
           </CustomButton>
+          <AddressQRCode targetAddress={rawWallet?.address0} />
         </>
       )}
       <TextP
