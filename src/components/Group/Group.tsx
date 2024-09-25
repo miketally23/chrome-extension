@@ -125,7 +125,7 @@ export const requestQueueAdminMemberNames = new RequestQueueWithPromise(5);
 
 const audio = new Audio(chrome.runtime?.getURL("msg-not1.wav"));
 
-export const getGroupAdimnsAddress = async (groupNumber: number) => {
+export const getGroupAdminsAddress = async (groupNumber: number) => {
   // const validApi = await findUsableApi();
 
   const response = await fetch(
@@ -271,7 +271,7 @@ export async function getNameInfo(address: string) {
   }
 }
 
-export const getGroupAdimns = async (groupNumber: number) => {
+export const getGroupAdmins = async (groupNumber: number) => {
   // const validApi = await findUsableApi();
 
   const response = await fetch(
@@ -725,7 +725,7 @@ export const Group = ({
       const prevGroupId = selectedGroupRef.current.groupId;
       // const validApi = await findUsableApi();
       const { names, addresses, both } =
-        adminsFromStorage || (await getGroupAdimns(selectedGroup?.groupId));
+        adminsFromStorage || (await getGroupAdmins(selectedGroup?.groupId));
       setAdmins(addresses);
       setAdminsWithNames(both);
       if (!names.length) {
@@ -911,7 +911,7 @@ export const Group = ({
 
   const getAdmins = async (groupId) => {
     try {
-      const res = await getGroupAdimnsAddress(groupId);
+      const res = await getGroupAdminsAddress(groupId);
       setAdmins(res);
       const adminsWithNames = await getNamesForAdmins(res);
       setAdminsWithNames(adminsWithNames);

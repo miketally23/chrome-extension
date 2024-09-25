@@ -4,7 +4,7 @@ import { CustomizedSnackbars } from '../Snackbar/Snackbar';
 import { LoadingButton } from '@mui/lab';
 import { MyContext, getArbitraryEndpointReact, getBaseApiReact, pauseAllQueues } from '../../App';
 import { getFee } from '../../background';
-import { decryptResource, getGroupAdimns, validateSecretKey } from '../Group/Group';
+import { decryptResource, getGroupAdmins, validateSecretKey } from '../Group/Group';
 import { base64ToUint8Array } from '../../qdn/encryption/group-encryption';
 import { uint8ArrayToObject } from '../../backgroundFunctions/encryption';
 
@@ -51,7 +51,7 @@ export const CreateCommonSecret = ({groupId, secretKey, isOwner,  myAddress, sec
       
      
      
-      const {names} = await getGroupAdimns(groupId);
+      const {names} = await getGroupAdmins(groupId);
       if(!names.length){
         throw new Error('Network error')
       }
