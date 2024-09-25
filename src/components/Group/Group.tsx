@@ -1336,6 +1336,7 @@ export const Group = ({
       setSecretKey(null);
       setGroupOwner(null)
       lastFetchedSecretKey.current = null;
+      initiatedGetMembers.current = false;
       setSecretKeyPublishDate(null);
       setAdmins([]);
       setSecretKeyDetails(null);
@@ -1384,6 +1385,7 @@ export const Group = ({
       setSecretKey(null);
       setGroupOwner(null)
       lastFetchedSecretKey.current = null;
+      initiatedGetMembers.current = false;
       setSecretKeyPublishDate(null);
       setAdmins([]);
       setSecretKeyDetails(null);
@@ -1443,6 +1445,7 @@ export const Group = ({
       setSecretKey(null);
       setGroupOwner(null)
       lastFetchedSecretKey.current = null;
+      initiatedGetMembers.current = false;
       setSecretKeyPublishDate(null);
       setAdmins([]);
       setSecretKeyDetails(null);
@@ -1494,6 +1497,7 @@ export const Group = ({
     setSecretKey(null);
     setGroupOwner(null)
     lastFetchedSecretKey.current = null;
+    initiatedGetMembers.current = false;
     setSecretKeyPublishDate(null);
     setAdmins([]);
     setSecretKeyDetails(null);
@@ -1977,6 +1981,7 @@ export const Group = ({
                 //   }
                 onClick={() => {
                   setMobileViewMode("group");
+                  initiatedGetMembers.current = false;
                   clearAllQueues();
                   setSelectedDirect(null);
                   setTriedToFetchSecretKey(false);
@@ -2477,10 +2482,11 @@ export const Group = ({
                         style={{
                           display: "flex",
                           width: "100%",
-                          height: "100$",
+                          height: isMobile ? `calc(${rootHeight} - 113px)` : "calc(100vh - 70px)",
                           flexDirection: "column",
                           alignItems: "flex-start",
                           padding: "20px",
+                          overflow: 'auto'
                         }}
                       >
                         {" "}

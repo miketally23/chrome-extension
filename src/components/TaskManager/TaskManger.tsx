@@ -10,7 +10,7 @@ import ExpandMore from "@mui/icons-material/ExpandMore";
 import StarBorder from "@mui/icons-material/StarBorder";
 import PendingIcon from "@mui/icons-material/Pending";
 import TaskAltIcon from "@mui/icons-material/TaskAlt";
-import { MyContext, getBaseApiReact } from "../../App";
+import { MyContext, getBaseApiReact, isMobile } from "../../App";
 import { getBaseApi } from "../../background";
 
 
@@ -145,6 +145,8 @@ export const TaskManger = ({getUserInfo}) => {
       return previousData;
     });
   }, [memberGroups, getUserInfo]);
+
+  if(isMobile) return null
 
   if (txList?.length === 0 || txList.filter((item) => !item?.done).length === 0) return null;
   return (

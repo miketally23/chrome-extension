@@ -1663,7 +1663,7 @@ function App() {
             {!isMobile && renderProfile()}
            
           </Box>
-          {!isMobile && (
+       
              <Box
              sx={{
                position: "fixed",
@@ -1675,7 +1675,7 @@ function App() {
            >
              <TaskManger getUserInfo={getUserInfo} />
            </Box>
-          )}
+          
          
         </MyContext.Provider>
       )}
