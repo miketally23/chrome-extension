@@ -1633,7 +1633,7 @@ async function sendChatDirect({
     ...(otherData || {})
   };
   const messageStringified = JSON.stringify(finalJson);
-  console.log('chatReferencefinal', chatReference)
+  
   const txBody = {
     timestamp: Date.now(),
     recipient: recipientAddress,
@@ -4034,7 +4034,7 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
           address,
           otherData
         } = request.payload;
-        console.log('chatReferencebg', chatReference)
+        
         sendChatDirect({
           directTo,
           chatReference,
