@@ -146,11 +146,17 @@ const MenuBar = ({ setEditorRef, isChat }) => {
         >
           <CodeIcon />
         </IconButton>
-        <IconButton sx={{
-          padding: isMobile ? '5px' : 'revert'
-        }} onClick={() => editor.chain().focus().unsetAllMarks().run()}>
-          <FormatClearIcon />
-        </IconButton>
+        <IconButton
+  onClick={() => editor.chain().focus().unsetAllMarks().run()}
+  sx={{
+    color: editor.isActive('bold') || editor.isActive('italic') || editor.isActive('strike') || editor.isActive('code') 
+      ? 'white' 
+      : 'gray',
+    padding: isMobile ? '5px' : 'revert',
+  }}
+>
+  <FormatClearIcon />
+</IconButton>
         <IconButton
           onClick={() => editor.chain().focus().toggleBulletList().run()}
           // color={editor.isActive('bulletList') ? 'white' : 'gray'}
@@ -191,9 +197,16 @@ const MenuBar = ({ setEditorRef, isChat }) => {
         >
           <FormatQuoteIcon />
         </IconButton>
-        <IconButton onClick={() => editor.chain().focus().setHorizontalRule().run()}>
-          <HorizontalRuleIcon />
-        </IconButton>
+        <IconButton
+  onClick={() => editor.chain().focus().setHorizontalRule().run()}
+  disabled={!editor.can().chain().focus().setHorizontalRule().run()}
+  sx={{
+    color:  'gray',
+    padding: isMobile ? '5px' : 'revert',
+  }}
+>
+  <HorizontalRuleIcon />
+</IconButton>
         <IconButton
           onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
           // color={editor.isActive('heading', { level: 1 }) ? 'white' : 'gray'}
