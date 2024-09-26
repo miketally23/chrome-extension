@@ -78,7 +78,7 @@ export const AddGroup = ({ address, open, setOpen }) => {
   };
 
   const handleChangeApprovalThreshold = (event: SelectChangeEvent) => {
-    setGroupType(event.target.value as string);
+    setApprovalThreshold(event.target.value as string);
   };
 
   const handleChangeMinBlock = (event: SelectChangeEvent) => {
