@@ -478,7 +478,7 @@ const handleNotification = async (groups) => {
   if(!isArray(mutedGroups)) mutedGroups = []
 
   let isFocused;
-  const data = groups.filter((group) => group?.sender !== address && !mutedGroups.includes(group.groupId));
+  const data = groups.filter((group) => group?.sender !== address && !mutedGroups.includes(group.groupId) && !group?.chatReference);
   try {
     if(isDisableNotifications) return
     if (!data || data?.length === 0) return;

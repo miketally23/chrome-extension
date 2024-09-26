@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import Picker, { Theme } from 'emoji-picker-react';
 import './ReactionPicker.css'; // CSS for proper positioning
 import { ButtonBase } from '@mui/material';
+import { isMobile } from '../App';
 
 export const ReactionPicker = ({ onReaction }) => {
   const [showPicker, setShowPicker] = useState(false); // Manage picker visibility
@@ -51,6 +52,8 @@ export const ReactionPicker = ({ onReaction }) => {
       {showPicker && (
         <div className="emoji-picker" ref={pickerRef}>
           <Picker
+            height={isMobile ? 300 : 450}
+            width={isMobile ? 250 : 350 }
             reactionsDefaultOpen={true}
             onReactionClick={handleReaction}
             onEmojiClick={handlePicker}

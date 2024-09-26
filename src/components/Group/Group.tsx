@@ -621,7 +621,7 @@ export const Group = ({
         isExtMsg(group?.data) &&
         group?.sender !== myAddress &&
         group?.timestamp &&
-        ((!timestampEnterData[group?.groupId] &&
+        ((!timestampEnterData[group?.groupId] && !group?.chatReference &&
           Date.now() - group?.timestamp < timeDifferenceForNotificationChats) ||
           timestampEnterData[group?.groupId] < group?.timestamp)
       ) {
@@ -1102,7 +1102,7 @@ export const Group = ({
     if (!findGroup) return false;
     if (!findGroup?.data || !isExtMsg(findGroup?.data)) return false;
     return (
-      findGroup?.timestamp &&
+      findGroup?.timestamp && !findGroup?.chatReference &&
       ((!timestampEnterData[selectedGroup?.groupId] &&
         Date.now() - findGroup?.timestamp <
           timeDifferenceForNotificationChats) ||
@@ -2101,7 +2101,7 @@ export const Group = ({
                         />
                       )}
                     {group?.data &&
-                      isExtMsg(group?.data) &&
+                      isExtMsg(group?.data) && !group?.chatReference &&
                       group?.sender !== myAddress &&
                       group?.timestamp &&
                       ((!timestampEnterData[group?.groupId] &&

@@ -128,7 +128,7 @@ export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey,
                     id: item.signature,
                     text: item?.decryptedData?.message || "",
                     repliedTo: item?.decryptedData?.repliedTo,
-                    unread: item?.sender === myAddress ? false : true
+                    unread: item?.sender === myAddress ? false : !!item?.chatReference ? false : true
                   }
                 } )
                 setMessages((prev)=> [...prev, ...formatted])
