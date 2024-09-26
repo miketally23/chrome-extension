@@ -1541,6 +1541,7 @@ async function sendChatGroup({
   chatReference,
   messageText,
 }) {
+  
   let _reference = new Uint8Array(64);
   self.crypto.getRandomValues(_reference);
 
@@ -1557,18 +1558,23 @@ async function sendChatGroup({
   // const hasEnoughBalance = +balance < 4 ? false : true;
   const difficulty = 8;
 
-  const tx = await createTransaction(181, keyPair, {
+  const txBody = {
     timestamp: Date.now(),
     groupID: Number(groupId),
     hasReceipient: 0,
-    hasChatReference: typeMessage === "edit" ? 1 : 0,
-    // chatReference: chatReference,
+    hasChatReference: chatReference ? 1 : 0,
     message: messageText,
     lastReference: reference,
     proofOfWorkNonce: 0,
     isEncrypted: 0, // Set default to not encrypted for groups
     isText: 1,
-  });
+  }
+
+  if(chatReference){
+    txBody['chatReference'] = chatReference
+  }
+
+  const tx = await createTransaction(181, keyPair, txBody);
 
   // if (!hasEnoughBalance) {
   //   throw new Error("Must have at least 4 QORT to send a chat message");

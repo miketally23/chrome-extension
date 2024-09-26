@@ -3,7 +3,7 @@ import { Virtuoso } from 'react-virtuoso';
 import { MessageItem } from './MessageItem';
 import { subscribeToEvent, unsubscribeFromEvent } from '../../utils/events';
 
-export const ChatList = ({ initialMessages, myAddress, tempMessages, chatId, onReply }) => {
+export const ChatList = ({ initialMessages, myAddress, tempMessages, chatId, onReply, handleReaction, chatReferences, tempChatReferences }) => {
   const virtuosoRef = useRef();
   const [messages, setMessages] = useState(initialMessages);
   const [showScrollButton, setShowScrollButton] = useState(false);
@@ -70,10 +70,7 @@ export const ChatList = ({ initialMessages, myAddress, tempMessages, chatId, onR
   }, []);
 
   const scrollToBottom = (initialMsgs) => {
-    console.log('initialMsgs', {
-      initialMsgs,
-      messages
-    })
+    
     const index = initialMsgs ? initialMsgs.length - 1 : messages.length - 1
     if (virtuosoRef.current) {
       virtuosoRef.current.scrollToIndex({ index});
@@ -109,6 +106,7 @@ export const ChatList = ({ initialMessages, myAddress, tempMessages, chatId, onR
   
     let replyIndex = messages.findIndex((msg)=> msg?.signature === message?.repliedTo)
     let reply
+    let reactions = null
     if(message?.repliedTo && replyIndex !== -1){
       reply = messages[replyIndex]
     }
@@ -125,6 +123,16 @@ export const ChatList = ({ initialMessages, myAddress, tempMessages, chatId, onR
       }
     }
 
+    if(chatReferences && chatReferences[message?.signature]){
+      if(chatReferences[message.signature]?.reactions){
+        reactions = chatReferences[message.signature]?.reactions
+      }
+    }
+    let isUpdating = false
+    if(tempChatReferences && tempChatReferences?.find((item)=> item?.chatReference === message?.signature)){
+      isUpdating = true
+    }
+
     return (
       <div style={{ padding: '10px 0', display: 'flex', justifyContent: 'center', width: '100%', minHeight: '50px' ,  overscrollBehavior: "none"}}>
         <MessageItem
@@ -137,6 +145,9 @@ export const ChatList = ({ initialMessages, myAddress, tempMessages, chatId, onR
           reply={reply}
           replyIndex={replyIndex}
           scrollToItem={scrollToItem}
+          handleReaction={handleReaction}
+          reactions={reactions}
+          isUpdating={isUpdating}
         />
       </div>
     );

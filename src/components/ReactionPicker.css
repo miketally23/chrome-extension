@@ -1,0 +1,14 @@
+.reaction-container {
+    position: relative; /* Parent must be positioned relatively */
+  }
+  
+  .emoji-picker {
+    position: absolute; /* Picker positioned absolutely relative to the parent */
+    right: 0;
+    z-index: 1000; /* Ensure picker appears above other content */
+  }
+  
+  .message-container {
+    overflow: visible; /* Ensure the message container doesn't cut off the picker */
+  }
+  

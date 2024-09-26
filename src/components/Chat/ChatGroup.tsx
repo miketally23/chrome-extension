@@ -29,6 +29,7 @@ const uid = new ShortUniqueId({ length: 5 });
 
 export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey, myAddress, handleNewEncryptionNotification, hide, handleSecretKeyCreationInProgress, triedToFetchSecretKey, myName, balance}) => {
   const [messages, setMessages] = useState([])
+  const [chatReferences, setChatReferences] = useState({})
   const [isSending, setIsSending] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [isMoved, setIsMoved] = useState(false);
@@ -56,7 +57,14 @@ export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey,
   const tempMessages = useMemo(()=> {
     if(!selectedGroup) return []
     if(queueChats[selectedGroup]){
-      return queueChats[selectedGroup]
+      return queueChats[selectedGroup]?.filter((item)=> !item?.chatReference)
+    }
+    return []
+  }, [selectedGroup, queueChats])
+  const tempChatReferences = useMemo(()=> {
+    if(!selectedGroup) return []
+    if(queueChats[selectedGroup]){
+      return queueChats[selectedGroup]?.filter((item)=> !!item?.chatReference)
     }
     return []
   }, [selectedGroup, queueChats])
@@ -91,6 +99,7 @@ export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey,
     })
    }
 
+
  
     const decryptMessages = (encryptedMessages: any[])=> {
       try {
@@ -113,7 +122,7 @@ export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey,
               res(response)
               if(hasInitialized.current){
                
-                const formatted = response.map((item: any)=> {
+                const formatted = response.filter((rawItem)=> !rawItem?.chatReference).map((item: any)=> {
                   return {
                     ...item,
                     id: item.signature,
@@ -123,8 +132,66 @@ export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey,
                   }
                 } )
                 setMessages((prev)=> [...prev, ...formatted])
+
+               
+                setChatReferences((prev) => {
+                  let organizedChatReferences = { ...prev };
+                
+                  response
+                    .filter((rawItem) => rawItem && rawItem.chatReference && rawItem.decryptedData?.type === 'reaction')
+                    .forEach((item) => {
+                      try {
+                        const content = item.decryptedData?.content;
+                        const sender = item.sender;
+                        const newTimestamp = item.timestamp;
+                        const contentState = item.decryptedData?.contentState;
+                
+                        if (!content || typeof content !== 'string' || !sender || typeof sender !== 'string' || !newTimestamp) {
+                          console.warn("Invalid content, sender, or timestamp in reaction data", item);
+                          return;
+                        }
+                
+                        // Initialize chat reference and reactions if not present
+                        organizedChatReferences[item.chatReference] = {
+                          ...(organizedChatReferences[item.chatReference] || {}),
+                          reactions: organizedChatReferences[item.chatReference]?.reactions || {}
+                        };
+                
+                        organizedChatReferences[item.chatReference].reactions[content] =
+                          organizedChatReferences[item.chatReference].reactions[content] || [];
+                
+                        const existingReactionIndex = organizedChatReferences[item.chatReference].reactions[content]
+                          .findIndex(reaction => reaction.sender === sender);
+                
+                        // Handle contentState: if false, remove the reaction
+                        if (contentState === false) {
+                          if (existingReactionIndex !== -1) {
+                            organizedChatReferences[item.chatReference].reactions[content].splice(existingReactionIndex, 1);
+                          }
+                        } else {
+                          // Add or update reaction
+                          if (existingReactionIndex !== -1) {
+                            const existingReaction = organizedChatReferences[item.chatReference].reactions[content][existingReactionIndex];
+                            const existingTimestamp = existingReaction.timestamp;
+                
+                            if (newTimestamp > existingTimestamp) {
+                              organizedChatReferences[item.chatReference].reactions[content][existingReactionIndex] = item;
+                            }
+                          } else {
+                            organizedChatReferences[item.chatReference].reactions[content].push(item);
+                          }
+                        }
+                      } catch (error) {
+                        console.error("Error processing reaction item:", error, item);
+                      }
+                    });
+                
+                  return organizedChatReferences;
+                });
+                
+                
               } else {
-                const formatted = response.map((item: any)=> {
+                const formatted = response.filter((rawItem)=> !rawItem?.chatReference).map((item: any)=> {
                   return {
                     ...item,
                     id: item.signature,
@@ -135,7 +202,64 @@ export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey,
                 } )
                 setMessages(formatted)
                 hasInitialized.current = true
-
+                setChatReferences((prev) => {
+                  let organizedChatReferences = { ...prev };
+                
+                  response
+                    .filter((rawItem) => rawItem && rawItem.chatReference && rawItem.decryptedData?.type === 'reaction')
+                    .forEach((item) => {
+                      try {
+                        const content = item.decryptedData?.content;
+                        const sender = item.sender;
+                        const newTimestamp = item.timestamp;
+                        const contentState = item.decryptedData?.contentState;
+                
+                        if (!content || typeof content !== 'string' || !sender || typeof sender !== 'string' || !newTimestamp) {
+                          console.warn("Invalid content, sender, or timestamp in reaction data", item);
+                          return;
+                        }
+                
+                        // Initialize chat reference and reactions if not present
+                        organizedChatReferences[item.chatReference] = {
+                          ...(organizedChatReferences[item.chatReference] || {}),
+                          reactions: organizedChatReferences[item.chatReference]?.reactions || {}
+                        };
+                
+                        organizedChatReferences[item.chatReference].reactions[content] =
+                          organizedChatReferences[item.chatReference].reactions[content] || [];
+                
+                        const existingReactionIndex = organizedChatReferences[item.chatReference].reactions[content]
+                          .findIndex(reaction => reaction.sender === sender);
+                
+                        // Handle contentState: if false, remove the reaction
+                        if (contentState === false) {
+                          if (existingReactionIndex !== -1) {
+                            organizedChatReferences[item.chatReference].reactions[content].splice(existingReactionIndex, 1);
+                          }
+                        } else {
+                          // Add or update reaction
+                          if (existingReactionIndex !== -1) {
+                            const existingReaction = organizedChatReferences[item.chatReference].reactions[content][existingReactionIndex];
+                            const existingTimestamp = existingReaction.timestamp;
+                
+                            if (newTimestamp > existingTimestamp) {
+                              organizedChatReferences[item.chatReference].reactions[content][existingReactionIndex] = item;
+                            }
+                          } else {
+                            organizedChatReferences[item.chatReference].reactions[content].push(item);
+                          }
+                        }
+                      } catch (error) {
+                        console.error("Error processing reaction item:", error, item);
+                      }
+                    });
+                
+                  return organizedChatReferences;
+                });
+                
+                
+                
+                
               }
             }
             rej(response.error)
@@ -386,6 +510,73 @@ const clearEditorContent = () => {
   const onReply = useCallback((message)=> {
     setReplyMessage(message)
   }, [])
+
+  const handleReaction = useCallback(async (reaction, chatMessage, reactionState = true)=> {
+    try {
+      
+      if(isSending) return
+      if(+balance < 4) throw new Error('You need at least 4 QORT to send a message')
+      pauseAllQueues()
+   
+     
+        setIsSending(true)
+      const message = ''
+      const secretKeyObject = await getSecretKey(false, true)
+
+     
+      const otherData = {
+        specialId: uid.rnd(),
+        type: 'reaction',
+        content: reaction,
+        contentState: reactionState
+      }
+      const objectMessage = {
+        message,
+        ...(otherData || {})
+      }
+      const message64: any = await objectToBase64(objectMessage)
+   
+      const encryptSingle = await encryptChatMessage(message64, secretKeyObject)
+      // const res = await sendChatGroup({groupId: selectedGroup,messageText: encryptSingle})
+     
+      const sendMessageFunc = async () => {
+        await sendChatGroup({groupId: selectedGroup,messageText: encryptSingle, chatReference: chatMessage.signature})
+      };
+
+      // Add the function to the queue
+      const messageObj = {
+        message: {
+          text: message,
+          timestamp: Date.now(),
+        senderName: myName,
+        sender: myAddress,
+           ...(otherData || {})
+        },
+       chatReference: chatMessage.signature
+      }
+      addToQueue(sendMessageFunc, messageObj, 'chat-reaction',
+      selectedGroup );
+      // setTimeout(() => {
+      //   executeEvent("sent-new-message-group", {})
+      // }, 150);
+      // clearEditorContent()
+      // setReplyMessage(null)
+
+      // send chat message
+    } catch (error) {
+      const errorMsg = error?.message || error
+      setInfoSnack({
+        type: "error",
+        message: errorMsg,
+      });
+      setOpenSnack(true);
+      console.error(error)
+    } finally {
+      setIsSending(false)
+      resumeAllQueues()
+    }
+  }, [])
+  
   
   return (
     <div style={{
@@ -398,7 +589,7 @@ const clearEditorContent = () => {
     left: hide && '-100000px',
     }}>
  
-              <ChatList onReply={onReply} chatId={selectedGroup} initialMessages={messages} myAddress={myAddress} tempMessages={tempMessages}/>
+              <ChatList onReply={onReply} chatId={selectedGroup} initialMessages={messages} myAddress={myAddress} tempMessages={tempMessages} handleReaction={handleReaction} chatReferences={chatReferences} tempChatReferences={tempChatReferences}/>
 
    
       <div style={{

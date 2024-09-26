@@ -14,6 +14,7 @@ import { executeEvent } from "../../utils/events";
 import { WrapperUserAction } from "../WrapperUserAction";
 import ReplyIcon from "@mui/icons-material/Reply";
 import { Spacer } from "../../common/Spacer";
+import { ReactionPicker } from "../ReactionPicker";
 
 export const MessageItem = ({
   message,
@@ -25,7 +26,10 @@ export const MessageItem = ({
   isShowingAsReply,
   reply,
   replyIndex,
-  scrollToItem
+  scrollToItem,
+  handleReaction,
+  reactions,
+  isUpdating
 }) => {
   const { ref, inView } = useInView({
     threshold: 0.7, // Fully visible
@@ -48,7 +52,7 @@ export const MessageItem = ({
         width: "95%",
         display: "flex",
         gap: "7px",
-        opacity: isTemp ? 0.5 : 1,
+        opacity: (isTemp || isUpdating) ? 0.5 : 1,
       }}
       id={message?.signature}
     >
@@ -110,6 +114,11 @@ export const MessageItem = ({
               {message?.senderName || message?.sender}
             </Typography>
           </WrapperUserAction>
+          <Box sx={{
+            display: 'flex',
+            gap: '10px',
+            alignItems: 'center'
+          }}>
           {!isShowingAsReply && (
             <ButtonBase
               onClick={() => {
@@ -119,6 +128,18 @@ export const MessageItem = ({
               <ReplyIcon />
             </ButtonBase>
           )}
+          {!isShowingAsReply && handleReaction && (
+            <ReactionPicker onReaction={(val)=> {
+              
+              if(reactions && reactions[val] && reactions[val]?.find((item)=> item?.sender === myAddress)){
+                handleReaction(val, message, false)
+              } else {
+                handleReaction(val, message, true)
+              }
+              
+            }} />
+          )}
+          </Box>
         </Box>
         {reply && (
           <>
@@ -187,11 +208,49 @@ export const MessageItem = ({
         <Box
           sx={{
             display: "flex",
-            justifyContent: "flex-end",
+            justifyContent: "space-between",
             width: "100%",
           }}
         >
-          {isTemp ? (
+          <Box sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '5px'
+          }}>
+            {reactions && Object.keys(reactions).map((reaction)=> {
+              const numberOfReactions = reactions[reaction]?.length
+              // const myReaction = reactions
+              if(numberOfReactions === 0) return null
+              return (
+                <ButtonBase sx={{
+                  height: '30px',
+                  minWidth:  '45px',
+                  background: 'var(--bg-2)',
+                  borderRadius: '7px'
+                }} onClick={()=> {
+                  if(reactions[reaction] && reactions[reaction]?.find((item)=> item?.sender === myAddress)){
+                    handleReaction(reaction, message, false)
+                  } else {
+                    handleReaction(reaction, message, true)
+                  }
+                }}>
+               <div>{reaction}</div>
+                </ButtonBase>
+              )
+            })}
+          </Box>
+          
+          {isUpdating ? (
+            <Typography
+              sx={{
+                fontSize: "14px",
+                color: "gray",
+                fontFamily: "Inter",
+              }}
+            >
+              Updating...
+            </Typography>
+          ) : isTemp ? (
             <Typography
               sx={{
                 fontSize: "14px",
