@@ -53,7 +53,7 @@ import ArrowDownSVG from "../../../assets/svgs/ArrowDown.svg";
 import { LoadingSnackbar } from "../../Snackbar/LoadingSnackbar";
 import { executeEvent, subscribeToEvent, unsubscribeFromEvent } from "../../../utils/events";
 import RefreshIcon from '@mui/icons-material/Refresh';
-import { getArbitraryEndpointReact, getBaseApiReact } from "../../../App";
+import { getArbitraryEndpointReact, getBaseApiReact, isMobile } from "../../../App";
 import { WrapperUserAction } from "../../WrapperUserAction";
 import { addDataPublishesFunc, getDataPublishesFunc } from "../Group";
 const filterOptions = ["Recently active", "Newest", "Oldest"];
@@ -105,12 +105,15 @@ export const GroupMail = ({
   const setTempData = async ()=> {
     try {
       const getTempAnnouncements = await getTempPublish()
-
+      
   if(getTempAnnouncements?.thread){
     let tempData = []
     Object.keys(getTempAnnouncements?.thread || {}).map((key)=> {
       const value = getTempAnnouncements?.thread[key]
-      tempData.push(value.data)
+      if(value?.data?.groupId === groupIdRef?.current){
+        tempData.push(value.data)
+      }
+     
     })
     setTempPublishedList(tempData)
   }
@@ -720,15 +723,18 @@ export const GroupMail = ({
                     display: "flex",
                     flexDirection: "column",
                     justifyContent: "center",
+                    width: '100%'
                   }}
                 >
                   <ThreadSingleTitle
                     sx={{
                       fontWeight: shouldAppearLighter && 300,
+                      fontSize: isMobile && '18px'
                     }}
                   >
                     {thread?.threadData?.title}
                   </ThreadSingleTitle>
+                  <Spacer height="10px" />
                   {filterMode === "Recently active" && (
                     <div
                       style={{

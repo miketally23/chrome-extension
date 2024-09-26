@@ -172,7 +172,10 @@ export const NewThread = ({
   const closeModal = () => {
     setIsOpen(false);
     setValue("");
-    setPostReply(null)
+    if(setPostReply){
+      setPostReply(null)
+    }
+   
   };
 
   async function publishQDNResource() {
@@ -288,6 +291,7 @@ export const NewThread = ({
           service: 'DOCUMENT',
           tempData: threadObject,
           created: Date.now(),
+          groupId: groupInfo.groupId
         }
         const dataToSaveToStoragePost = {
           name: myName,
@@ -313,15 +317,7 @@ export const NewThread = ({
         // );
         if (publishCallback) {
           publishCallback()
-          // threadCallback({
-          //   threadData: threadObject,
-          //   threadOwner: name,
-          //   name,
-          //   threadId: identifierThread,
-          //   created: Date.now(),
-          //   service: 'MAIL_PRIVATE',
-          //   identifier: identifier
-          // })
+    
         }
         closeModal();
       } else {

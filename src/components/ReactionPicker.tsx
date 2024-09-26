@@ -44,13 +44,28 @@ export const ReactionPicker = ({ onReaction }) => {
       {/* Emoji CTA */}
       <ButtonBase sx={{
         fontSize: '22px'
-      }} onClick={() => setShowPicker(!showPicker)}>
+      }} 
+      // onTouchStart={(e) => {
+      //   e.preventDefault(); // Prevent mobile keyboard
+      //   e.stopPropagation(); 
+      //   if(!isMobile) return
+      //   setShowPicker(!showPicker);
+      // }}
+      onClick={(e) => {
+        e.preventDefault(); // Prevents any focus issues
+        e.stopPropagation(); 
+        // if(isMobile) return
+
+        setShowPicker(!showPicker);
+      }}
+      
+      >
         😃
       </ButtonBase>
 
       {/* Emoji Picker with dark theme */}
       {showPicker && (
-        <div className="emoji-picker" ref={pickerRef}>
+        <div className="emoji-picker" ref={pickerRef} onClick={(e) => e.preventDefault()}>
           <Picker
             height={isMobile ? 300 : 450}
             width={isMobile ? 250 : 350 }
@@ -58,6 +73,7 @@ export const ReactionPicker = ({ onReaction }) => {
             onReactionClick={handleReaction}
             onEmojiClick={handlePicker}
             allowExpandReactions={true}
+            autoFocusSearch={false}
             theme={Theme.DARK} 
           />
         </div>
