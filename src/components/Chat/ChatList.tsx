@@ -1,26 +1,58 @@
-import React, { useCallback, useState, useEffect, useRef, useMemo } from 'react';
-import { List, AutoSizer, CellMeasurerCache, CellMeasurer } from 'react-virtualized';
+import React, { useCallback, useState, useEffect, useRef } from 'react';
+import { Virtuoso } from 'react-virtuoso';
 import { MessageItem } from './MessageItem';
 import { subscribeToEvent, unsubscribeFromEvent } from '../../utils/events';
 
-// const cache = new CellMeasurerCache({
-//   fixedWidth: true,
-//   defaultHeight: 50,
-// });
-
 export const ChatList = ({ initialMessages, myAddress, tempMessages, chatId, onReply }) => {
- 
-  const hasLoadedInitialRef = useRef(false);
-  const listRef = useRef();
+  const virtuosoRef = useRef();
   const [messages, setMessages] = useState(initialMessages);
   const [showScrollButton, setShowScrollButton] = useState(false);
-  const cache = useMemo(() => new CellMeasurerCache({
-    fixedWidth: true,
-    defaultHeight: 50,
-  }), [chatId]); // Recreate cache when chatId changes
+  const hasLoadedInitialRef = useRef(false);
+  const isAtBottomRef = useRef(true);  //
+  // Update message list with unique signatures and tempMessages
   useEffect(() => {
-    cache.clearAll();
-  }, []);
+    let uniqueInitialMessagesMap = new Map();
+
+    initialMessages.forEach((message) => {
+      uniqueInitialMessagesMap.set(message.signature, message);
+    });
+
+    const uniqueInitialMessages = Array.from(uniqueInitialMessagesMap.values()).sort(
+      (a, b) => a.timestamp - b.timestamp
+    );
+    const totalMessages = [...uniqueInitialMessages, ...(tempMessages || [])];
+
+    if (totalMessages.length === 0) return;
+
+    setMessages(totalMessages);
+
+    setTimeout(() => {
+      const hasUnreadMessages = totalMessages.some((msg) => msg.unread);
+
+      if (virtuosoRef.current) {
+
+
+        if (virtuosoRef.current && !isAtBottomRef.current) {
+
+   
+    
+
+    setShowScrollButton(hasUnreadMessages);
+        } else {
+          handleMessageSeen();
+
+        }
+       
+
+      }
+      if (!hasLoadedInitialRef.current) {
+        scrollToBottom(totalMessages);
+        hasLoadedInitialRef.current = true;
+      }
+    }, 500);
+  }, [initialMessages, tempMessages]);
+
+  
 
   const handleMessageSeen = useCallback(() => {
     setMessages((prevMessages) =>
@@ -31,72 +63,50 @@ export const ChatList = ({ initialMessages, myAddress, tempMessages, chatId, onR
     );
   }, []);
 
-  const handleScroll = ({ scrollTop, scrollHeight, clientHeight }) => {
+  const scrollToItem = useCallback((index) => {
+    if (virtuosoRef.current) {
+      virtuosoRef.current.scrollToIndex({ index, behavior: 'smooth' });
+    }
+  }, []);
+
+  const scrollToBottom = (initialMsgs) => {
+    console.log('initialMsgs', {
+      initialMsgs,
+      messages
+    })
+    const index = initialMsgs ? initialMsgs.length - 1 : messages.length - 1
+    if (virtuosoRef.current) {
+      virtuosoRef.current.scrollToIndex({ index, behavior: 'smooth' });
+    }
+  };
+
+  
+  const handleScroll = (scrollState) => {
+    const { scrollTop, scrollHeight, clientHeight } = scrollState;
     const isAtBottom = scrollTop + clientHeight >= scrollHeight - 50;
     const hasUnreadMessages = messages.some((msg) => msg.unread);
-    if(isAtBottom){
-      handleMessageSeen()
+
+    if (isAtBottom) {
+      handleMessageSeen();
     }
+
     setShowScrollButton(!isAtBottom && hasUnreadMessages);
   };
 
-  const debounce = (func, delay) => {
-    let timer;
-    return (...args) => {
-      clearTimeout(timer);
-      timer = setTimeout(() => {
-        func(...args);
-      }, delay);
-    };
-  };
-
-  const handleScrollDebounced = debounce(handleScroll, 100);
-
-  const scrollToBottom = (initialmsgs) => {
-    if (listRef.current) {
-      const msgs = initialmsgs?.length ? initialmsgs : messages
-   
-      listRef.current?.recomputeRowHeights();
-
-      listRef.current.scrollToRow(msgs.length - 1);
-      setTimeout(() => {
-      
-        listRef.current.scrollToRow(msgs.length - 1);
-      }, 100);
-      setShowScrollButton(false);
-    }
-  };
-
-  const scrollToItem = useCallback((index) => {
-    listRef.current.scrollToRow(index); // This scrolls to the specific index
-  }, []);
-
-  const recomputeListHeights = () => {
-    if (listRef.current) {
-      listRef.current.recomputeRowHeights();
-    }
-  };
-
-  const sentNewMessageGroupFunc = ()=> {
-   
-    scrollToBottom()
-  }
-
-  useEffect(() => {
-    subscribeToEvent("sent-new-message-group", sentNewMessageGroupFunc);
-
-    return () => {
-      unsubscribeFromEvent("sent-new-message-group", sentNewMessageGroupFunc);
-    };
+  const sentNewMessageGroupFunc = useCallback(() => {
+    scrollToBottom();
   }, [messages]);
 
- 
+  useEffect(() => {
+    subscribeToEvent('sent-new-message-group', sentNewMessageGroupFunc);
+    return () => {
+      unsubscribeFromEvent('sent-new-message-group', sentNewMessageGroupFunc);
+    };
+  }, [sentNewMessageGroupFunc]);
 
-  const rowRenderer = ({ index, key, parent, style }) => {
+  const rowRenderer = (index) => {
     let message = messages[index];
-    const isLargeMessage = message.text?.length > 200; // Adjust based on your message size threshold
-
-    // const reply = message?.repliedTo ? messages.find((msg)=> msg?.signature === message?.repliedTo) : undefined
+  
     let replyIndex = messages.findIndex((msg)=> msg?.signature === message?.repliedTo)
     let reply
     if(message?.repliedTo && replyIndex !== -1){
@@ -114,108 +124,45 @@ export const ChatList = ({ initialMessages, myAddress, tempMessages, chatId, onR
         unread:  false
       }
     }
+
     return (
-      <CellMeasurer
-        key={key}
-        cache={cache}
-        parent={parent}
-        columnIndex={0}
-        rowIndex={index}
-      >
-        {({ measure }) => (
-          <div style={style}>
-            <div
-              onLoad={() => {
-                if (isLargeMessage) {
-                  measure(); // Ensure large messages are properly measured
-                }
-              }}
-              style={{
-                marginBottom: '10px',
-                width: '100%',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-              }}
-            >
-              <MessageItem
-                isLast={index === messages.length - 1}
-                message={message}
-                onSeen={handleMessageSeen}
-                isTemp={!!message?.isTemp}
-                myAddress={myAddress}
-              onReply={onReply}
-              reply={reply}
-              scrollToItem={scrollToItem}
-              replyIndex={replyIndex}
-              />
-            </div>
-          </div>
-        )}
-      </CellMeasurer>
+      <div style={{ padding: '10px 0', display: 'flex', justifyContent: 'center', width: '100%' }}>
+        <MessageItem
+          isLast={index === messages.length - 1}
+          message={message}
+          onSeen={handleMessageSeen}
+          isTemp={!!message?.isTemp}
+          myAddress={myAddress}
+          onReply={onReply}
+          reply={reply}
+          replyIndex={replyIndex}
+          scrollToItem={scrollToItem}
+        />
+      </div>
     );
   };
 
-  useEffect(() => {
-    let uniqueInitialMessagesMap = new Map();
-
-// Iterate over initialMessages and add only unique messages based on signature
-initialMessages.forEach((message) => {
-    uniqueInitialMessagesMap.set(message.signature, message);
-});
-
-// Convert the map back to an array and sort by timestamp (old to new)
-let uniqueInitialMessages = Array.from(uniqueInitialMessagesMap.values()).sort((a, b) => a.timestamp - b.timestamp);
-    const totalMessages = [...uniqueInitialMessages, ...(tempMessages || [])]
-    if(totalMessages.length === 0) return
-    setMessages(totalMessages);
-    // cache.clearAll(); // Clear cache so the list can properly re-render with new messages
-    setTimeout(() => {
-      if (listRef.current) {
-        const { scrollTop, scrollHeight, clientHeight } = listRef.current.Grid._scrollingContainer;
-        handleScroll({ scrollTop, scrollHeight, clientHeight });
-        recomputeListHeights(); // Ensure heights are recomputed on message load
-        setTimeout(() => {
-          if(!hasLoadedInitialRef.current){
-            scrollToBottom(totalMessages);
-            hasLoadedInitialRef.current = true
-          }
-        }, 100);
-      }
-    }, 500);
-  }, [tempMessages, initialMessages]);
-
-  // useEffect(() => {
-  //   // Scroll to the bottom on initial load or when messages change
-  //   if (listRef.current && messages.length > 0 && !hasLoadedInitialRef.current) {
-  //     scrollToBottom();
-  //     hasLoadedInitialRef.current = true;
-  //   } else if (messages.length > 0 && messages[messages.length - 1].sender === myAddress) {
-  //     scrollToBottom();
-  //   }
-  // }, [messages, myAddress]);
+  const handleAtBottomStateChange = (atBottom) => {
+    isAtBottomRef.current = atBottom;
+  };
 
   return (
-    <div style={{ position: 'relative', marginTop: '14px', flexGrow: 1, width: '100%', display: 'flex', flexDirection: 'column', flexShrink: 1 }}>
-      <AutoSizer>
-        {({ height, width }) => (
-          <List
-            ref={listRef}
-            width={width}
-            height={height}
-            rowCount={messages.length}
-            rowHeight={cache.rowHeight}
-            rowRenderer={rowRenderer}
-            onScroll={handleScrollDebounced}
-            deferredMeasurementCache={cache}
-            onRowsRendered={recomputeListHeights} // Force recompute on render
-            overscanRowCount={10} // For performance: pre-render some rows
-          />
-        )}
-      </AutoSizer>
+    <div style={{ position: 'relative', height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <Virtuoso
+        ref={virtuosoRef}
+        data={messages}
+        itemContent={rowRenderer}
+        atBottomThreshold={50}
+        followOutput="smooth"
+        onScroll={handleScroll}
+        overscan={10}
+        increaseViewportBy={300} 
+        atBottomStateChange={handleAtBottomStateChange}  // Detect bottom status
+      />
+
       {showScrollButton && (
         <button
-          onClick={scrollToBottom}
+          onClick={()=> scrollToBottom()}
           style={{
             position: 'absolute',
             bottom: 20,
@@ -230,9 +177,7 @@ let uniqueInitialMessages = Array.from(uniqueInitialMessagesMap.values()).sort((
         >
           Scroll to Unread Messages
         </button>
-        
       )}
-     
     </div>
   );
 };

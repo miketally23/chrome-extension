@@ -484,13 +484,15 @@ const clearEditorContent = () => {
         position: isFocusedParent ? 'fixed' : 'relative',
         bottom: isFocusedParent ? '0px' : 'unset',
         top: isFocusedParent ? '0px' : 'unset',
-        zIndex: isFocusedParent ? 5 : 'unset'
+        zIndex: isFocusedParent ? 5 : 'unset',
+        flexShrink: 0
       }}>
       <div style={{
             display: 'flex',
             flexDirection: 'column',
             flexGrow: isMobile && 1,
             overflow: !isMobile &&  "auto",
+            flexShrink: 0
       }}>
       {replyMessage && (
         <Box sx={{
