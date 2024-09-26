@@ -32,7 +32,7 @@ export const ChatList = ({ initialMessages, myAddress, tempMessages, chatId, onR
       if (virtuosoRef.current) {
 
 
-        if (virtuosoRef.current && !isAtBottomRef.current) {
+        if (virtuosoRef.current && !isAtBottomRef.current && hasUnreadMessages) {
 
    
     
@@ -76,7 +76,7 @@ export const ChatList = ({ initialMessages, myAddress, tempMessages, chatId, onR
     })
     const index = initialMsgs ? initialMsgs.length - 1 : messages.length - 1
     if (virtuosoRef.current) {
-      virtuosoRef.current.scrollToIndex({ index, behavior: 'smooth' });
+      virtuosoRef.current.scrollToIndex({ index});
     }
   };
 
@@ -126,7 +126,7 @@ export const ChatList = ({ initialMessages, myAddress, tempMessages, chatId, onR
     }
 
     return (
-      <div style={{ padding: '10px 0', display: 'flex', justifyContent: 'center', width: '100%' }}>
+      <div style={{ padding: '10px 0', display: 'flex', justifyContent: 'center', width: '100%', minHeight: '50px' ,  overscrollBehavior: "none"}}>
         <MessageItem
           isLast={index === messages.length - 1}
           message={message}
@@ -155,9 +155,9 @@ export const ChatList = ({ initialMessages, myAddress, tempMessages, chatId, onR
         atBottomThreshold={50}
         followOutput="smooth"
         onScroll={handleScroll}
-        overscan={10}
-        increaseViewportBy={300} 
         atBottomStateChange={handleAtBottomStateChange}  // Detect bottom status
+        increaseViewportBy={3000}
+        
       />
 
       {showScrollButton && (

@@ -13,6 +13,7 @@ import Underline from "@tiptap/extension-underline";
 import { executeEvent } from "../../utils/events";
 import { WrapperUserAction } from "../WrapperUserAction";
 import ReplyIcon from "@mui/icons-material/Reply";
+import { Spacer } from "../../common/Spacer";
 
 export const MessageItem = ({
   message,
@@ -120,9 +121,10 @@ export const MessageItem = ({
           )}
         </Box>
         {reply && (
+          <>
+          <Spacer height="20px" />
           <Box
             sx={{
-              marginTop: '20px',
               width: "100%",
               borderRadius: "5px",
               backgroundColor: "var(--bg-primary)",
@@ -166,6 +168,7 @@ export const MessageItem = ({
               )}
             </Box>
           </Box>
+          </>
         )}
         {message?.messageText && (
           <MessageDisplay
