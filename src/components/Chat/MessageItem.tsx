@@ -234,7 +234,11 @@ export const MessageItem = ({
                     handleReaction(reaction, message, true)
                   }
                 }}>
-               <div>{reaction}</div>
+               <div>{reaction}</div>  {numberOfReactions > 1 && (
+                <Typography sx={{
+                  marginLeft: '4px'
+                }}>{' '} {numberOfReactions}</Typography>
+               )}
                 </ButtonBase>
               )
             })}

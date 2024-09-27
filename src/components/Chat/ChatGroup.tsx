@@ -100,7 +100,6 @@ export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey,
     })
    }
 
-
  
     const decryptMessages = (encryptedMessages: any[])=> {
       try {
@@ -162,26 +161,33 @@ export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey,
                         organizedChatReferences[item.chatReference].reactions[content] =
                           organizedChatReferences[item.chatReference].reactions[content] || [];
                 
-                        const existingReactionIndex = organizedChatReferences[item.chatReference].reactions[content]
-                          .findIndex(reaction => reaction.sender === sender);
+                        // Remove any existing reactions from the same sender before adding the new one
+                        let latestTimestampForSender = null;
                 
-                        // Handle contentState: if false, remove the reaction
-                        if (contentState === false) {
-                          if (existingReactionIndex !== -1) {
-                            organizedChatReferences[item.chatReference].reactions[content].splice(existingReactionIndex, 1);
-                          }
-                        } else {
-                          // Add or update reaction
-                          if (existingReactionIndex !== -1) {
-                            const existingReaction = organizedChatReferences[item.chatReference].reactions[content][existingReactionIndex];
-                            const existingTimestamp = existingReaction.timestamp;
-                
-                            if (newTimestamp > existingTimestamp) {
-                              organizedChatReferences[item.chatReference].reactions[content][existingReactionIndex] = item;
+                        // Track the latest reaction timestamp for the same content and sender
+                        organizedChatReferences[item.chatReference].reactions[content] =
+                          organizedChatReferences[item.chatReference].reactions[content].filter((reaction) => {
+                            if (reaction.sender === sender) {
+                              // Track the latest timestamp for this sender
+                              latestTimestampForSender = Math.max(latestTimestampForSender || 0, reaction.timestamp);
                             }
-                          } else {
-                            organizedChatReferences[item.chatReference].reactions[content].push(item);
-                          }
+                            return reaction.sender !== sender;
+                          });
+                
+                        // Compare with the latest tracked timestamp for this sender
+                        if (latestTimestampForSender && newTimestamp < latestTimestampForSender) {
+                          // Ignore this item if it's older than the latest known reaction
+                          return;
+                        }
+                
+                        // Add the new reaction only if contentState is true
+                        if (contentState !== false) {
+                          organizedChatReferences[item.chatReference].reactions[content].push(item);
+                        }
+                
+                        // If the reactions for a specific content are empty, clean up the object
+                        if (organizedChatReferences[item.chatReference].reactions[content].length === 0) {
+                          delete organizedChatReferences[item.chatReference].reactions[content];
                         }
                       } catch (error) {
                         console.error("Error processing reaction item:", error, item);
@@ -190,6 +196,7 @@ export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey,
                 
                   return organizedChatReferences;
                 });
+                
                 
                 
               } else {
@@ -230,26 +237,33 @@ export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey,
                         organizedChatReferences[item.chatReference].reactions[content] =
                           organizedChatReferences[item.chatReference].reactions[content] || [];
                 
-                        const existingReactionIndex = organizedChatReferences[item.chatReference].reactions[content]
-                          .findIndex(reaction => reaction.sender === sender);
+                        // Remove any existing reactions from the same sender before adding the new one
+                        let latestTimestampForSender = null;
                 
-                        // Handle contentState: if false, remove the reaction
-                        if (contentState === false) {
-                          if (existingReactionIndex !== -1) {
-                            organizedChatReferences[item.chatReference].reactions[content].splice(existingReactionIndex, 1);
-                          }
-                        } else {
-                          // Add or update reaction
-                          if (existingReactionIndex !== -1) {
-                            const existingReaction = organizedChatReferences[item.chatReference].reactions[content][existingReactionIndex];
-                            const existingTimestamp = existingReaction.timestamp;
-                
-                            if (newTimestamp > existingTimestamp) {
-                              organizedChatReferences[item.chatReference].reactions[content][existingReactionIndex] = item;
+                        // Track the latest reaction timestamp for the same content and sender
+                        organizedChatReferences[item.chatReference].reactions[content] =
+                          organizedChatReferences[item.chatReference].reactions[content].filter((reaction) => {
+                            if (reaction.sender === sender) {
+                              // Track the latest timestamp for this sender
+                              latestTimestampForSender = Math.max(latestTimestampForSender || 0, reaction.timestamp);
                             }
-                          } else {
-                            organizedChatReferences[item.chatReference].reactions[content].push(item);
-                          }
+                            return reaction.sender !== sender;
+                          });
+                
+                        // Compare with the latest tracked timestamp for this sender
+                        if (latestTimestampForSender && newTimestamp < latestTimestampForSender) {
+                          // Ignore this item if it's older than the latest known reaction
+                          return;
+                        }
+                
+                        // Add the new reaction only if contentState is true
+                        if (contentState !== false) {
+                          organizedChatReferences[item.chatReference].reactions[content].push(item);
+                        }
+                
+                        // If the reactions for a specific content are empty, clean up the object
+                        if (organizedChatReferences[item.chatReference].reactions[content].length === 0) {
+                          delete organizedChatReferences[item.chatReference].reactions[content];
                         }
                       } catch (error) {
                         console.error("Error processing reaction item:", error, item);
@@ -258,6 +272,7 @@ export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey,
                 
                   return organizedChatReferences;
                 });
+                
                 
                 
                 
