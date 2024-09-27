@@ -2238,6 +2238,8 @@ export const Group = ({
          hasUnreadDirects={directChatHasUnread}
          setMobileViewMode={setMobileViewMode}
          myName={userInfo?.name}
+         setSelectedDirect={setSelectedDirect}
+         setNewChat={setNewChat}
        />
       )}
      

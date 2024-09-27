@@ -29,7 +29,9 @@ const Header = ({
   hasUnreadGroups,
   hasUnreadDirects,
   setMobileViewMode,
-  myName
+  myName,
+  setSelectedDirect,
+  setNewChat
   // selectedGroup,
   // onHomeClick,
   // onLogoutClick,
@@ -184,6 +186,8 @@ const Header = ({
       >
         <MenuItem
           onClick={() => {
+            setSelectedDirect(null)
+            setNewChat(false)
             setMobileViewMode("groups");
             setMobileViewModeKeepOpen("")
             handleClose();

@@ -27,7 +27,7 @@ export const ChatList = ({ initialMessages, myAddress, tempMessages, chatId, onR
     setMessages(totalMessages);
 
     setTimeout(() => {
-      const hasUnreadMessages = totalMessages.some((msg) => msg.unread);
+      const hasUnreadMessages = totalMessages.some((msg) => msg.unread && !msg?.chatReference);
 
       if (virtuosoRef.current) {
 
