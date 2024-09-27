@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useReducer, useRef, useState } 
 import { CreateCommonSecret } from './CreateCommonSecret'
 import { reusableGet } from '../../qdn/publish/pubish'
 import { uint8ArrayToObject } from '../../backgroundFunctions/encryption'
-import { base64ToUint8Array, objectToBase64 } from '../../qdn/encryption/group-encryption'
+import { base64ToUint8Array, decodeBase64ForUIChatMessages, objectToBase64 } from '../../qdn/encryption/group-encryption'
 import {  ChatContainerComp } from './ChatContainer'
 import { ChatList } from './ChatList'
 import "@chatscope/chat-ui-kit-styles/dist/default/styles.min.css";
@@ -20,6 +20,7 @@ import ShortUniqueId from "short-unique-id";
 import { ReplyPreview } from './MessageItem'
 import { ExitIcon } from '../../assets/Icons/ExitIcon'
 import { RESOURCE_TYPE_NUMBER_GROUP_CHAT_REACTIONS } from '../../constants/resourceTypes'
+import { isExtMsg } from '../../background'
 
 
 const uid = new ShortUniqueId({ length: 5 });
@@ -113,22 +114,25 @@ export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey,
             secretKeyObject: secretKey
         }}, (response) => {
             if (!response?.error) {
-              processWithNewMessages(response?.map((item)=> {
+              const filterUImessages = encryptedMessages.filter((item)=> !isExtMsg(item.data))
+              const decodedUIMessages = decodeBase64ForUIChatMessages(filterUImessages)
+
+              const combineUIAndExtensionMsgs = [...decodedUIMessages, ...response]
+              processWithNewMessages(combineUIAndExtensionMsgs?.map((item)=> {
                 return {
                   ...item,
                   ...(item?.decryptedData || {})
                 }
               }), selectedGroup)
-              res(response)
+              res(combineUIAndExtensionMsgs)
               if(hasInitialized.current){
                
-                const formatted = response.filter((rawItem)=> !rawItem?.chatReference).map((item: any)=> {
-                  
+                const formatted = combineUIAndExtensionMsgs.filter((rawItem)=> !rawItem?.chatReference).map((item: any)=> {
                   return {
                     ...item,
                     id: item.signature,
                     text: item?.decryptedData?.message || "",
-                    repliedTo: item?.decryptedData?.repliedTo,
+                    repliedTo: item?.repliedTo || item?.decryptedData?.repliedTo,
                     unread: item?.sender === myAddress ? false : !!item?.chatReference ? false : true
                   }
                 } )
@@ -138,7 +142,7 @@ export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey,
                 setChatReferences((prev) => {
                   let organizedChatReferences = { ...prev };
                 
-                  response
+                  combineUIAndExtensionMsgs
                     .filter((rawItem) => rawItem && rawItem.chatReference && rawItem.decryptedData?.type === 'reaction')
                     .forEach((item) => {
                       try {
@@ -200,12 +204,12 @@ export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey,
                 
                 
               } else {
-                const formatted = response.filter((rawItem)=> !rawItem?.chatReference).map((item: any)=> {
+                const formatted = combineUIAndExtensionMsgs.filter((rawItem)=> !rawItem?.chatReference).map((item: any)=> {
                   return {
                     ...item,
                     id: item.signature,
                     text: item?.decryptedData?.message || "",
-                    repliedTo: item?.decryptedData?.repliedTo,
+                    repliedTo: item?.repliedTo || item?.decryptedData?.repliedTo,
                     unread:  false
                   }
                 } )
@@ -214,7 +218,7 @@ export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey,
                 setChatReferences((prev) => {
                   let organizedChatReferences = { ...prev };
                 
-                  response
+                  combineUIAndExtensionMsgs
                     .filter((rawItem) => rawItem && rawItem.chatReference && rawItem.decryptedData?.type === 'reaction')
                     .forEach((item) => {
                       try {

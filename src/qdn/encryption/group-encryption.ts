@@ -185,6 +185,27 @@ export const encryptSingle = async ({ data64, secretKeyObject, typeNumber = 1 }:
   
 	return finalEncryptedData;
   };
+
+
+export const decodeBase64ForUIChatMessages = (messages)=> {
+	console.log('messages', messages)
+	let msgs = []
+	for(const msg of messages){
+		try {
+			const decoded = atob(msg?.data);
+			const parseDecoded = JSON.parse(decoded)
+			if(parseDecoded?.messageText){
+				msgs.push({
+					...msg,
+					...parseDecoded
+				})
+			}
+		} catch (error) {
+			
+		}
+	}
+	return msgs
+}
   
   
 

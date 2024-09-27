@@ -103,7 +103,6 @@ export const ChatList = ({ initialMessages, myAddress, tempMessages, chatId, onR
 
   const rowRenderer = (index) => {
     let message = messages[index];
-  
     let replyIndex = messages.findIndex((msg)=> msg?.signature === message?.repliedTo)
     let reply
     let reactions = null
