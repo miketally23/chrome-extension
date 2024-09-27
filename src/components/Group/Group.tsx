@@ -619,7 +619,7 @@ export const Group = ({
   const groupChatHasUnread = useMemo(() => {
     let hasUnread = false;
     groups.forEach((group) => {
-      console.log('isUpdateMsg(group?.data)', isUpdateMsg(group?.data))
+     
 
       if (
         group?.data &&
