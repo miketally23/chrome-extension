@@ -15,7 +15,7 @@ import { WrapperUserAction } from "../WrapperUserAction";
 import ReplyIcon from "@mui/icons-material/Reply";
 import { Spacer } from "../../common/Spacer";
 import { ReactionPicker } from "../ReactionPicker";
-
+import KeyOffIcon from '@mui/icons-material/KeyOff';
 export const MessageItem = ({
   message,
   onSeen,
@@ -113,6 +113,7 @@ export const MessageItem = ({
             >
               {message?.senderName || message?.sender}
             </Typography>
+            
           </WrapperUserAction>
           <Box sx={{
             display: 'flex',
@@ -243,7 +244,18 @@ export const MessageItem = ({
               )
             })}
           </Box>
-          
+          <Box sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '15px'
+          }}>
+          {message?.isNotEncrypted && (
+              <KeyOffIcon sx={{
+                color: 'white',
+                marginLeft: '10px'
+              }} />
+            )}
+       
           {isUpdating ? (
             <Typography
               sx={{
@@ -275,6 +287,7 @@ export const MessageItem = ({
               {formatTimestamp(message.timestamp)}
             </Typography>
           )}
+             </Box>
         </Box>
       </Box>
 

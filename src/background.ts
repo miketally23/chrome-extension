@@ -501,6 +501,8 @@ const handleNotification = async (groups) => {
 
   let isFocused;
   const data = groups.filter((group) => group?.sender !== address && !mutedGroups.includes(group.groupId) && !isUpdateMsg(group?.data));
+  const dataWithUpdates = groups.filter((group) => group?.sender !== address && !mutedGroups.includes(group.groupId));
+
   try {
     if(isDisableNotifications) return
     if (!data || data?.length === 0) return;
@@ -619,7 +621,7 @@ const handleNotification = async (groups) => {
     }
   } finally {
     if (!data || data?.length === 0) return;
-    setChatHeads(data);
+    setChatHeads(dataWithUpdates);
     // chrome.runtime.sendMessage(
     //   {
     //     action: "setChatHeads",
