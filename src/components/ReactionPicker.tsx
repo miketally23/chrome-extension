@@ -67,8 +67,8 @@ export const ReactionPicker = ({ onReaction }) => {
       {showPicker && (
         <div className="emoji-picker" ref={pickerRef} onClick={(e) => e.preventDefault()}>
           <Picker
-            height={isMobile ? 300 : 450}
-            width={isMobile ? 250 : 350 }
+            height={isMobile ? 350 : 450}
+            width={isMobile ? 300 : 350 }
             reactionsDefaultOpen={true}
             onReactionClick={handleReaction}
             onEmojiClick={handlePicker}

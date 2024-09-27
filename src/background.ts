@@ -27,6 +27,7 @@ import { RequestQueueWithPromise } from "./utils/queue/queue";
 import { validateAddress } from "./utils/validateAddress";
 import { Sha256 } from "asmcrypto.js";
 import { TradeBotRespondMultipleRequest } from "./transactions/TradeBotRespondMultipleRequest";
+import { RESOURCE_TYPE_NUMBER_GROUP_CHAT_REACTIONS } from "./constants/resourceTypes";
 
 let lastGroupNotification;
 export const groupApi = "https://ext-node.qortal.link";
@@ -223,6 +224,27 @@ export function isExtMsg(data) {
   }
 
   return isMsgFromExtensionGroup;
+}
+
+export function isUpdateMsg(data) {
+  let isUpdateMessage = true;
+  try {
+    const decode1 = atob(data);
+    const decode2 = atob(decode1);
+    const keyStr = decode2.slice(10, 13);
+
+    // Convert the key string back to a number
+    const numberKey = parseInt(keyStr, 10);
+    if (isNaN(numberKey)) {
+      isUpdateMessage = false;
+    } else if(numberKey !== RESOURCE_TYPE_NUMBER_GROUP_CHAT_REACTIONS){
+      isUpdateMessage = false;
+    }
+  } catch (error) {
+    isUpdateMessage = false;
+  }
+
+  return isUpdateMessage;
 }
 
 async function checkWebviewFocus() {
@@ -478,7 +500,7 @@ const handleNotification = async (groups) => {
   if(!isArray(mutedGroups)) mutedGroups = []
 
   let isFocused;
-  const data = groups.filter((group) => group?.sender !== address && !mutedGroups.includes(group.groupId) && !group?.chatReference);
+  const data = groups.filter((group) => group?.sender !== address && !mutedGroups.includes(group.groupId) && !isUpdateMsg(group?.data));
   try {
     if(isDisableNotifications) return
     if (!data || data?.length === 0) return;
@@ -3924,9 +3946,9 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
         break;
       }
       case "encryptSingle": {
-        const { data, secretKeyObject } = request.payload;
+        const { data, secretKeyObject, typeNumber } = request.payload;
 
-        encryptSingle({ data64: data, secretKeyObject: secretKeyObject })
+        encryptSingle({ data64: data, secretKeyObject: secretKeyObject, typeNumber })
           .then((res) => {
             sendResponse(res);
           })

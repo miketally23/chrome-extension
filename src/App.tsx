@@ -134,7 +134,7 @@ const defaultValues: MyContextInterface = {
     message: "",
   },
 };
-export let isMobile = false
+export let isMobile = true
 
 const isMobileDevice = () => {
   const userAgent = navigator.userAgent || navigator.vendor || window.opera;
@@ -1215,7 +1215,9 @@ function App() {
           }} /></Box>
         )}
           
-      <AuthenticatedContainerInnerLeft>
+      <AuthenticatedContainerInnerLeft sx={{
+        overflowY: isMobile && 'auto'
+      }}>
       <Spacer height="48px" />
 
       {authenticatedMode === "ltc" ? (

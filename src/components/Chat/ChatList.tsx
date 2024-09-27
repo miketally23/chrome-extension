@@ -155,6 +155,10 @@ export const ChatList = ({ initialMessages, myAddress, tempMessages, chatId, onR
 
   const handleAtBottomStateChange = (atBottom) => {
     isAtBottomRef.current = atBottom;
+    if(atBottom){
+      handleMessageSeen();
+      setShowScrollButton(false)
+    }
   };
 
   return (
@@ -165,7 +169,6 @@ export const ChatList = ({ initialMessages, myAddress, tempMessages, chatId, onR
         itemContent={rowRenderer}
         atBottomThreshold={50}
         followOutput="smooth"
-        onScroll={handleScroll}
         atBottomStateChange={handleAtBottomStateChange}  // Detect bottom status
         increaseViewportBy={3000}
         

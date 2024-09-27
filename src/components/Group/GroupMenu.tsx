@@ -128,7 +128,7 @@ export const GroupMenu = ({ setGroupSection, groupSection, setOpenManageMembers,
             
             minWidth: '24px !important'
           }}>
-            <ChatIcon sx={{ color: hasUnreadChat ? 'var(--unread)' : "#fff" }} />
+            <ChatIcon color={hasUnreadChat ? 'var(--unread)' : "#fff"}  />
           </ListItemIcon>
           <ListItemText sx={{
                   "& .MuiTypography-root": {
@@ -147,7 +147,7 @@ export const GroupMenu = ({ setGroupSection, groupSection, setOpenManageMembers,
             
             minWidth: '24px !important'
           }}>
-          <NotificationIcon2 sx={{ color: hasUnreadAnnouncements ? 'var(--unread)' : "#fff" }} />
+          <NotificationIcon2 color={hasUnreadAnnouncements ? 'var(--unread)' : "#fff" } />
           </ListItemIcon>
           <ListItemText sx={{
                   "& .MuiTypography-root": {
@@ -165,7 +165,7 @@ export const GroupMenu = ({ setGroupSection, groupSection, setOpenManageMembers,
           <ListItemIcon sx={{
             minWidth: '24px !important'
           }}>
-                     <ThreadsIcon sx={{ color: "#fff" }} />
+                     <ThreadsIcon  color={"#fff"} />
 
           </ListItemIcon>
           <ListItemText sx={{

@@ -76,7 +76,7 @@ import { WebSocketActive } from "./WebsocketActive";
 import { flushSync } from "react-dom";
 import { useMessageQueue } from "../../MessageQueueContext";
 import { DrawerComponent } from "../Drawer/Drawer";
-import { isExtMsg } from "../../background";
+import { isExtMsg, isUpdateMsg } from "../../background";
 import { ContextMenu } from "../ContextMenu";
 import { MobileFooter } from "../Mobile/MobileFooter";
 import Header from "../Mobile/MobileHeader";
@@ -420,6 +420,7 @@ export const Group = ({
   const [mobileViewModeKeepOpen, setMobileViewModeKeepOpen] = useState("");
   const [desktopSideView, setDesktopSideView] = useState('groups')
   const isFocusedRef = useRef(true);
+  const timestampEnterDataRef = useRef({});
   const selectedGroupRef = useRef(null);
   const selectedDirectRef = useRef(null);
   const groupSectionRef = useRef(null);
@@ -429,9 +430,11 @@ export const Group = ({
   const settimeoutForRefetchSecretKey = useRef(null);
   const { clearStatesMessageQueueProvider } = useMessageQueue();
   const initiatedGetMembers = useRef(false);
-  // useEffect(()=> {
-  //   setFullHeight()
-  // }, [])
+  const [groupChatTimestamps, setGroupChatTimestamps] = React.useState({});
+
+  useEffect(()=> {
+    timestampEnterDataRef.current = timestampEnterData
+  }, [timestampEnterData])
 
   useEffect(() => {
     isFocusedRef.current = isFocused;
@@ -616,12 +619,14 @@ export const Group = ({
   const groupChatHasUnread = useMemo(() => {
     let hasUnread = false;
     groups.forEach((group) => {
+      console.log('isUpdateMsg(group?.data)', isUpdateMsg(group?.data))
+
       if (
         group?.data &&
         isExtMsg(group?.data) &&
         group?.sender !== myAddress &&
-        group?.timestamp &&
-        ((!timestampEnterData[group?.groupId] && !group?.chatReference &&
+        group?.timestamp && (!isUpdateMsg(group?.data) || groupChatTimestamps[group?.groupId]) &&
+        ((!timestampEnterData[group?.groupId]  &&
           Date.now() - group?.timestamp < timeDifferenceForNotificationChats) ||
           timestampEnterData[group?.groupId] < group?.timestamp)
       ) {
@@ -918,13 +923,52 @@ export const Group = ({
     } catch (error) {}
   };
 
+  const getCountNewMesg = async (groupId, after)=> {
+    try {
+      const response = await fetch(
+        `${getBaseApiReact()}/chat/messages?after=${after}&txGroupId=${groupId}&haschatreference=false&encoding=BASE64&limit=1`
+      );
+      const data = await response.json();
+      if(data && data[0]) return data[0].timestamp
+    } catch (error) {
+      
+    }
+  }
+
+  const getLatestRegularChat = async (groups)=> {
+    try {
+      
+      const groupData = {}
+
+     const getGroupData = groups.map(async(group)=> {
+        const isUpdate = isUpdateMsg(group?.data)
+        if(!group.groupId || !group?.timestamp) return null
+        if(isUpdate && (!groupData[group.groupId] || groupData[group.groupId] < group.timestamp)){
+          const hasMoreRecentMsg = await getCountNewMesg(group.groupId, timestampEnterDataRef.current[group?.groupId] || Date.now() - 24 * 60 * 60 * 1000)
+          if(hasMoreRecentMsg){
+            groupData[group.groupId] = hasMoreRecentMsg
+          }
+        } else {
+          return null
+        }
+      })
+
+      await Promise.all(getGroupData)
+      setGroupChatTimestamps(groupData)
+    } catch (error) {
+      
+    }
+  }
+
+ 
+
   useEffect(() => {
     // Listen for messages from the background script
     chrome?.runtime?.onMessage.addListener((message, sender, sendResponse) => {
       if (message.action === "SET_GROUPS") {
         // Update the component state with the received 'sendqort' state
         setGroups(message.payload);
-
+        getLatestRegularChat(message.payload)
         setMemberGroups(message.payload);
 
         if (selectedGroupRef.current && groupSectionRef.current === "chat") {
@@ -1102,13 +1146,13 @@ export const Group = ({
     if (!findGroup) return false;
     if (!findGroup?.data || !isExtMsg(findGroup?.data)) return false;
     return (
-      findGroup?.timestamp && !findGroup?.chatReference &&
+      findGroup?.timestamp && (!isUpdateMsg(findGroup?.data) || groupChatTimestamps[findGroup?.groupId]) &&
       ((!timestampEnterData[selectedGroup?.groupId] &&
         Date.now() - findGroup?.timestamp <
           timeDifferenceForNotificationChats) ||
         timestampEnterData?.[selectedGroup?.groupId] < findGroup?.timestamp)
     );
-  }, [timestampEnterData, selectedGroup]);
+  }, [timestampEnterData, selectedGroup, groupChatTimestamps]);
 
   const isUnread = useMemo(() => {
     if (!selectedGroup) return false;
@@ -2101,7 +2145,7 @@ export const Group = ({
                         />
                       )}
                     {group?.data &&
-                      isExtMsg(group?.data) && !group?.chatReference &&
+                      isExtMsg(group?.data) && (!isUpdateMsg(group?.data) || groupChatTimestamps[group?.groupId]) &&
                       group?.sender !== myAddress &&
                       group?.timestamp &&
                       ((!timestampEnterData[group?.groupId] &&

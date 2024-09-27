@@ -137,7 +137,7 @@ export const encryptDataGroup = ({ data64, publicKeys, privateKey, userPublicKey
 	}
 }
 
-export const encryptSingle = async ({ data64, secretKeyObject }: any) => {
+export const encryptSingle = async ({ data64, secretKeyObject, typeNumber = 1 }: any) => {
 	// Find the highest key in the secretKeyObject
 	const highestKey = Math.max(...Object.keys(secretKeyObject).filter(item => !isNaN(+item)).map(Number));
 	const highestKeyObject = secretKeyObject[highestKey];
@@ -152,47 +152,50 @@ export const encryptSingle = async ({ data64, secretKeyObject }: any) => {
   
 	let nonce, encryptedData, encryptedDataBase64, finalEncryptedData;
   
+	// Convert type number to a fixed length of 3 digits
+	const typeNumberStr = typeNumber.toString().padStart(3, '0');
+  
 	if (highestKeyObject.nonce) {
 	  // Old format: Use the nonce from secretKeyObject
 	  nonce = base64ToUint8Array(highestKeyObject.nonce);
-	  
+  
 	  // Encrypt the data with the existing nonce and message key
 	  encryptedData = nacl.secretbox(Uint8ArrayData, nonce, messageKey);
 	  encryptedDataBase64 = uint8ArrayToBase64(encryptedData);
-	  
-	  // Concatenate the highest key with the encrypted data (old format)
+  
+	  // Concatenate the highest key, type number, and encrypted data (old format)
 	  const highestKeyStr = highestKey.toString().padStart(10, '0');  // Fixed length of 10 digits
 	  finalEncryptedData = btoa(highestKeyStr + encryptedDataBase64);
 	} else {
 	  // New format: Generate a random nonce and embed it in the message
-	   nonce = new Uint8Array(24); // 24 bytes for the nonce
+	  nonce = new Uint8Array(24); // 24 bytes for the nonce
 	  crypto.getRandomValues(nonce);
-  
   
 	  // Encrypt the data with the new nonce and message key
 	  encryptedData = nacl.secretbox(Uint8ArrayData, nonce, messageKey);
 	  encryptedDataBase64 = uint8ArrayToBase64(encryptedData);
-	  
+  
 	  // Convert the nonce to base64
 	  const nonceBase64 = uint8ArrayToBase64(nonce);
   
-	  // Concatenate the highest key, nonce, and encrypted data (new format)
+	  // Concatenate the highest key, type number, nonce, and encrypted data (new format)
 	  const highestKeyStr = highestKey.toString().padStart(10, '0');  // Fixed length of 10 digits
-	  finalEncryptedData = btoa(highestKeyStr + nonceBase64 + encryptedDataBase64);
+	  finalEncryptedData = btoa(highestKeyStr + typeNumberStr + nonceBase64 + encryptedDataBase64);
 	}
   
 	return finalEncryptedData;
   };
   
+  
 
-export const decryptSingle = async ({ data64, secretKeyObject, skipDecodeBase64 }: any) => {
+  export const decryptSingle = async ({ data64, secretKeyObject, skipDecodeBase64 }: any) => {
 	// First, decode the base64-encoded input (if skipDecodeBase64 is not set)
 	const decodedData = skipDecodeBase64 ? data64 : atob(data64);
-  
+	
 	// Then, decode it again for the specific format (if double encoding is used)
 	const decodeForNumber = atob(decodedData);
   
-	// Extract the key (assuming it's 10 characters long)
+	// Extract the key (assuming it's always the first 10 characters)
 	const keyStr = decodeForNumber.slice(0, 10);
   
 	// Convert the key string back to a number
@@ -204,19 +207,28 @@ export const decryptSingle = async ({ data64, secretKeyObject, skipDecodeBase64 
 	}
   
 	const secretKeyEntry = secretKeyObject[highestKey];
-	
-	let nonceBase64, encryptedDataBase64;
   
+	let typeNumberStr, nonceBase64, encryptedDataBase64;
+  
+	// Determine if typeNumber exists by checking if the next 3 characters after keyStr are digits
+	const possibleTypeNumberStr = decodeForNumber.slice(10, 13);
+	const hasTypeNumber = /^\d{3}$/.test(possibleTypeNumberStr); // Check if next 3 characters are digits
+	
 	if (secretKeyEntry.nonce) {
-	  // Old format: nonce is present in the secretKeyObject
+	  // Old format: nonce is present in the secretKeyObject, so no type number exists
 	  nonceBase64 = secretKeyEntry.nonce;
 	  encryptedDataBase64 = decodeForNumber.slice(10); // The remaining part is the encrypted data
 	} else {
-	  // New format: nonce is included in the message (first 32 characters)
-	  nonceBase64 = decodeForNumber.slice(10, 42); // First 32 characters for the nonce
-	  encryptedDataBase64 = decodeForNumber.slice(42); // The remaining part is the encrypted data
-	  
-
+	  if (hasTypeNumber) {
+		// New format: Extract type number and nonce
+		typeNumberStr = possibleTypeNumberStr;  // Extract type number
+		nonceBase64 = decodeForNumber.slice(13, 45);   // Extract nonce (next 32 characters after type number)
+		encryptedDataBase64 = decodeForNumber.slice(45); // The remaining part is the encrypted data
+	  } else {
+		// Old format without type number (nonce is embedded in the message, first 32 characters after keyStr)
+		nonceBase64 = decodeForNumber.slice(10, 42);  // First 32 characters for the nonce
+		encryptedDataBase64 = decodeForNumber.slice(42); // The remaining part is the encrypted data
+	  }
 	}
   
 	// Convert Base64 strings to Uint8Array
@@ -239,6 +251,8 @@ export const decryptSingle = async ({ data64, secretKeyObject, skipDecodeBase64 
 	// Convert the decrypted Uint8Array back to a Base64 string
 	return uint8ArrayToBase64(decryptedData);
   };
+  
+  
   
   
 

@@ -19,6 +19,7 @@ import { Box, ButtonBase } from '@mui/material'
 import ShortUniqueId from "short-unique-id";
 import { ReplyPreview } from './MessageItem'
 import { ExitIcon } from '../../assets/Icons/ExitIcon'
+import { RESOURCE_TYPE_NUMBER_GROUP_CHAT_REACTIONS } from '../../constants/resourceTypes'
 
 
 const uid = new ShortUniqueId({ length: 5 });
@@ -123,6 +124,7 @@ export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey,
               if(hasInitialized.current){
                
                 const formatted = response.filter((rawItem)=> !rawItem?.chatReference).map((item: any)=> {
+                  
                   return {
                     ...item,
                     id: item.signature,
@@ -376,12 +378,13 @@ export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey,
     }, [messages])
   
 
-  const encryptChatMessage = async (data: string, secretKeyObject: any)=> {
+  const encryptChatMessage = async (data: string, secretKeyObject: any, reactiontypeNumber?: number)=> {
     try {
       return new Promise((res, rej)=> {
         chrome?.runtime?.sendMessage({ action: "encryptSingle", payload: {
           data,
-          secretKeyObject
+          secretKeyObject,
+          typeNumber: reactiontypeNumber
       }}, (response) => {
      
           if (!response?.error) {
@@ -535,8 +538,8 @@ const clearEditorContent = () => {
         ...(otherData || {})
       }
       const message64: any = await objectToBase64(objectMessage)
-   
-      const encryptSingle = await encryptChatMessage(message64, secretKeyObject)
+      const reactiontypeNumber = RESOURCE_TYPE_NUMBER_GROUP_CHAT_REACTIONS
+      const encryptSingle = await encryptChatMessage(message64, secretKeyObject, reactiontypeNumber)
       // const res = await sendChatGroup({groupId: selectedGroup,messageText: encryptSingle})
      
       const sendMessageFunc = async () => {
