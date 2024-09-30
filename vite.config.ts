@@ -3,6 +3,7 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 // Import path module for resolving file paths
 import { resolve } from 'path';
+import fixReactVirtualized from 'esbuild-plugin-react-virtualized'
 
 export default defineConfig({
   test: {
@@ -25,5 +26,10 @@ export default defineConfig({
         assetFileNames: `[name].[ext]`
       }
     }
-  }
+  },
+  optimizeDeps: {
+    esbuildOptions: {
+      plugins: [fixReactVirtualized],
+    },
+  },
 });
