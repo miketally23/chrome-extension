@@ -43,7 +43,7 @@ async function getSaveWallet() {
       throw new Error("No wallet saved");
     }
   }
-async function getNameInfo() {
+export async function getNameInfo() {
     const wallet = await getSaveWallet();
     const address = wallet.address0;
     const validApi = await getBaseApi()

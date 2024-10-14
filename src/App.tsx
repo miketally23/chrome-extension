@@ -1824,18 +1824,63 @@ function App() {
 {isShowQortalRequest &&  !isMainWindow && (
         <>
         <Spacer height="120px" />
-
+        <Box sx={{
+            display: 'flex',
+            justifyContent: 'center',
+            width: '100%'
+          }}>
         <TextP
           sx={{
-            textAlign: "center",
             lineHeight: 1.2,
-            maxWidth: '90%'
+            maxWidth: '90%',
+            textAlign: 'center'
           }}
         >
          {messageQortalRequest?.text1}
         </TextP>
+        </Box>
         <Spacer height="10px" />
+        <Box sx={{
+            display: 'flex',
+            justifyContent: 'flex-start',
+            width: '90%'
+          }}>
         <TextP
+          sx={{
+            lineHeight: 1.2,
+            fontSize: "16px",
+            fontWeight: "normal",
+          }}
+        >
+           {messageQortalRequest?.text2}
+        </TextP>
+        </Box>
+        <Spacer height="15px" />
+        {messageQortalRequest?.text3 && (
+          <Box sx={{
+            display: 'flex',
+            justifyContent: 'flex-start',
+            width: '90%'
+          }}>
+            <TextP
+          sx={{
+            lineHeight: 1.2,
+            fontSize: "16px",
+            fontWeight: "normal",
+          }}
+        >
+           {messageQortalRequest?.text3}
+        </TextP>
+        <Spacer height="15px" />
+          </Box>
+        )}
+         {messageQortalRequest?.text4 && (
+          <Box sx={{
+            display: 'flex',
+            justifyContent: 'flex-start',
+            width: '90%'
+          }}>
+            <TextP
           sx={{
             textAlign: "center",
             lineHeight: 1.2,
@@ -1844,9 +1889,12 @@ function App() {
             maxWidth: '90%'
           }}
         >
-           {messageQortalRequest?.text2}
+           {messageQortalRequest?.text4}
         </TextP>
-        <Spacer height="15px" />
+       
+          </Box>
+        )}
+         <Spacer height="15px" />
         <TextP
           sx={{
             textAlign: "center",
@@ -1856,7 +1904,7 @@ function App() {
             maxWidth: '90%'
           }}
         >
-           {messageQortalRequest?.text3}
+           {messageQortalRequest?.highlightedText}
         </TextP>
         {messageQortalRequest?.checkbox1 &&
         (

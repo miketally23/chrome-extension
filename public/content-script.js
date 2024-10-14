@@ -453,7 +453,7 @@ chrome.runtime?.onMessage.addListener(function (message, sender, sendResponse) {
   }
 });
 
-const UIQortalRequests = ['GET_USER_ACCOUNT',  'ENCRYPT_DATA', 'DECRYPT_DATA', 'SEND_COIN', 'GET_LIST_ITEMS', 'ADD_LIST_ITEMS', 'DELETE_LIST_ITEM']
+const UIQortalRequests = ['GET_USER_ACCOUNT',  'ENCRYPT_DATA', 'DECRYPT_DATA', 'SEND_COIN', 'GET_LIST_ITEMS', 'ADD_LIST_ITEMS', 'DELETE_LIST_ITEM', 'PUBLISH_QDN_RESOURCE']
 
 if (!window.hasAddedQortalListener) {
   console.log("Listener added");

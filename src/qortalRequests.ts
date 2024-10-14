@@ -1,4 +1,4 @@
-import { addListItems, decryptData, deleteListItems, encryptData, getListItems, getUserAccount, sendCoin } from "./qortalRequests/get";
+import { addListItems, decryptData, deleteListItems, encryptData, getListItems, getUserAccount, publishQDNResource, sendCoin } from "./qortalRequests/get";
 
 
 
@@ -56,6 +56,10 @@ function getLocalStorage(key) {
       return null;
     }
   }
+
+
+  // TODO: GET_FRIENDS_LIST
+  // NOT SURE IF TO IMPLEMENT: LINK_TO_QDN_RESOURCE, QDN_RESOURCE_DISPLAYED, SET_TAB_NOTIFICATIONS
   
 chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
   if (request) {
@@ -127,6 +131,19 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
         const data = request.payload;
         
         deleteListItems(data)
+          .then((res) => {
+            sendResponse(res);
+          })
+          .catch((error) => {
+            sendResponse({ error: error.message });
+          });
+
+        break;
+      }
+      case "PUBLISH_QDN_RESOURCE": {
+        const data = request.payload;
+        
+        publishQDNResource(data)
           .then((res) => {
             sendResponse(res);
           })

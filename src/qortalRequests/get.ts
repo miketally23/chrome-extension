@@ -1,9 +1,11 @@
 import {
   createEndpoint,
+  getFee,
   getKeyPair,
   getSaveWallet,
   removeDuplicateWindow,
 } from "../background";
+import { getNameInfo } from "../backgroundFunctions/encryption";
 import Base58 from "../deps/Base58";
 import {
   base64ToUint8Array,
@@ -13,6 +15,7 @@ import {
   uint8ArrayStartsWith,
   uint8ArrayToBase64,
 } from "../qdn/encryption/group-encryption";
+import { publishData } from "../qdn/publish/pubish";
 import { getPermission, setPermission } from "../qortalRequests";
 import { fileToBase64 } from "../utils/fileReading";
 
@@ -98,7 +101,7 @@ async function getUserPermission(payload: any) {
         payload: 30,
       });
       res(true);
-    }, 700);
+    }, 1000);
   });
   return new Promise((resolve) => {
     // Set a timeout for 1 second
@@ -220,32 +223,30 @@ export const getListItems = async (data) => {
     const errorMsg = `Missing fields: ${missingFieldsString}`;
     throw new Error(errorMsg);
   }
-  const value = await getPermission('qAPPAutoLists') || false;
+  const value = (await getPermission("qAPPAutoLists")) || false;
 
   let skip = false;
   if (value) {
-  	skip = true
+    skip = true;
   }
   let resPermission;
-  let acceptedVar
-  let checkbox1Var
+  let acceptedVar;
+  let checkbox1Var;
   if (!skip) {
     resPermission = await getUserPermission({
       text1: "Do you give this application permission to",
       text2: "Access the list",
-      text3: data.list_name,
+      highlightedText: data.list_name,
       checkbox1: {
         value: value,
-        label: 'Always allow lists to be retrieved automatically'
-      }
+        label: "Always allow lists to be retrieved automatically",
+      },
     });
-    const {accepted, checkbox1} = resPermission
-    acceptedVar = accepted
-    checkbox1Var = checkbox1
-    setPermission('qAPPAutoLists', checkbox1)
-
+    const { accepted, checkbox1 } = resPermission;
+    acceptedVar = accepted;
+    checkbox1Var = checkbox1;
+    setPermission("qAPPAutoLists", checkbox1);
   }
-
 
   if (acceptedVar || skip) {
     const url = await createEndpoint(`/lists/${data.list_name}`);
@@ -255,7 +256,7 @@ export const getListItems = async (data) => {
     if (!response.ok) throw new Error("Failed to fetch");
 
     const list = await response.json();
-    console.log('list', list)
+    console.log("list", list);
     return list;
   } else {
     throw new Error("User declined to share list");
@@ -282,9 +283,9 @@ export const addListItems = async (data) => {
   const resPermission = await getUserPermission({
     text1: "Do you give this application permission to",
     text2: `Add the following to the list ${list_name}:`,
-    text3: items.join(', ')
+    highlightedText: items.join(", "),
   });
-  const {accepted} = resPermission
+  const { accepted } = resPermission;
 
   if (accepted) {
     const url = await createEndpoint(`/lists/${list_name}`);
@@ -309,64 +310,171 @@ export const addListItems = async (data) => {
     } catch (e) {
       res = await response.text();
     }
-    return res
+    return res;
   } else {
     throw new Error("User declined add to list");
   }
 };
 
 export const deleteListItems = async (data) => {
-    const requiredFields = ['list_name', 'item']
-    const missingFields: string[] = [];
-    requiredFields.forEach((field) => {
-      if (!data[field]) {
-        missingFields.push(field);
-      }
-    });
-    if (missingFields.length > 0) {
-      const missingFieldsString = missingFields.join(", ");
-      const errorMsg = `Missing fields: ${missingFieldsString}`;
-      throw new Error(errorMsg);
+  const requiredFields = ["list_name", "item"];
+  const missingFields: string[] = [];
+  requiredFields.forEach((field) => {
+    if (!data[field]) {
+      missingFields.push(field);
     }
-  
-    const item = data.item;
-    const list_name = data.list_name;
-  
-    const resPermission = await getUserPermission({
-      text1: "Do you give this application permission to",
-      text2: `Remove the following from the list ${list_name}:`,
-      text3: item
-    });
-    const {accepted} = resPermission
+  });
+  if (missingFields.length > 0) {
+    const missingFieldsString = missingFields.join(", ");
+    const errorMsg = `Missing fields: ${missingFieldsString}`;
+    throw new Error(errorMsg);
+  }
 
-    if (accepted) {
-      const url = await createEndpoint(`/lists/${list_name}`);
-      console.log("url", url);
-      const body = {
-        items: [item],
-      };
-      const bodyToString = JSON.stringify(body);
-      const response = await fetch(url, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: bodyToString,
-      });
-  
-      console.log("response", response);
-      if (!response.ok) throw new Error("Failed to add to list");
-      let res;
-      try {
-        res = await response.clone().json();
-      } catch (e) {
-        res = await response.text();
-      }
-      return res
-    } else {
-      throw new Error("User declined add to list");
+  const item = data.item;
+  const list_name = data.list_name;
+
+  const resPermission = await getUserPermission({
+    text1: "Do you give this application permission to",
+    text2: `Remove the following from the list ${list_name}:`,
+    highlightedText: item,
+  });
+  const { accepted } = resPermission;
+
+  if (accepted) {
+    const url = await createEndpoint(`/lists/${list_name}`);
+    console.log("url", url);
+    const body = {
+      items: [item],
+    };
+    const bodyToString = JSON.stringify(body);
+    const response = await fetch(url, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: bodyToString,
+    });
+
+    console.log("response", response);
+    if (!response.ok) throw new Error("Failed to add to list");
+    let res;
+    try {
+      res = await response.clone().json();
+    } catch (e) {
+      res = await response.text();
     }
-  };
+    return res;
+  } else {
+    throw new Error("User declined add to list");
+  }
+};
+
+export const publishQDNResource = async (data: any) => {
+  const requiredFields = ["service"];
+  const missingFields: string[] = [];
+  requiredFields.forEach((field) => {
+    if (!data[field]) {
+      missingFields.push(field);
+    }
+  });
+  if (missingFields.length > 0) {
+    const missingFieldsString = missingFields.join(", ");
+    const errorMsg = `Missing fields: ${missingFieldsString}`;
+    throw new Error(errorMsg);
+  }
+  if (!data.file && !data.data64) {
+    throw new Error("No data or file was submitted");
+  }
+  // Use "default" if user hasn't specified an identifer
+  const service = data.service;
+  const registeredName = await getNameInfo();
+  const name = registeredName;
+  let identifier = data.identifier;
+  let data64 = data.data64;
+  const filename = data.filename;
+  const title = data.title;
+  const description = data.description;
+  const category = data.category;
+  const tag1 = data.tag1;
+  const tag2 = data.tag2;
+  const tag3 = data.tag3;
+  const tag4 = data.tag4;
+  const tag5 = data.tag5;
+  let feeAmount = null;
+  if (data.identifier == null) {
+    identifier = "default";
+  }
+  if (
+    data.encrypt &&
+    (!data.publicKeys ||
+      (Array.isArray(data.publicKeys) && data.publicKeys.length === 0))
+  ) {
+    throw new Error("Encrypting data requires public keys");
+  }
+  if (!data.encrypt && data.service.endsWith("_PRIVATE")) {
+    throw new Error("Only encrypted data can go into private services");
+  }
+  if (data.file) {
+    data64 = await fileToBase64(data.file);
+  }
+  if (data.encrypt) {
+    try {
+      const encryptDataResponse = encryptDataGroup({
+        data64,
+        publicKeys: data.publicKeys,
+      });
+      if (encryptDataResponse) {
+        data64 = encryptDataResponse;
+      }
+    } catch (error) {
+      throw new Error(
+        error.message || "Upload failed due to failed encryption"
+      );
+    }
+  }
+
+  const fee = await getFee('ARBITRARY')
+
+  const resPermission = await getUserPermission({
+    text1: "Do you give this application permission to publish to QDN?",
+    text2: `service: ${service}`,
+    text3: `identifier: ${identifier || null}`,
+    highlightedText: `isEncrypted: ${!!data.encrypt}`,
+    fee: fee.fee
+  });
+  const { accepted } = resPermission;
+  if (accepted) {
+    if (data.file && !data.encrypt) {
+      data64 = await fileToBase64(data.file);
+    }
+    try {
+      const resPublish = await publishData({
+        registeredName: encodeURIComponent(name),
+        file: data64,
+        service: service,
+        identifier: encodeURIComponent(identifier),
+        uploadType: "file",
+        isBase64: true,
+        filename: filename,
+        title,
+        description,
+        category,
+        tag1,
+        tag2,
+        tag3,
+        tag4,
+        tag5,
+        apiVersion: 2,
+        withFee: true,
+      });
+      return resPublish;
+    } catch (error) {
+      throw new Error(error?.message || "Upload failed");
+    }
+  } else {
+    throw new Error("User declined request");
+  }
+};
 
 export const sendCoin = async () => {
   try {
