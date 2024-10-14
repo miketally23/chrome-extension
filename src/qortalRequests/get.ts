@@ -79,8 +79,9 @@ async function getUserPermission(payload: any) {
                       top: 0,
                     },
                     async (newWindow) => {
+                        removeDuplicateWindow(popupUrl);
                         await waitForWindowReady(newWindow.id);
-                      removeDuplicateWindow(popupUrl);
+                     
                       res(null)
                     }
                   );
