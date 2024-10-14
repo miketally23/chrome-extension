@@ -453,22 +453,7 @@ chrome.runtime?.onMessage.addListener(function (message, sender, sendResponse) {
   }
 });
 
-const lastActionTimestamps = {};
-
-// Function to debounce actions based on message.action
-function debounceAction(action, wait = 500) {
-  const currentTime = Date.now();
-
-  // Check if this action has been recently triggered
-  if (lastActionTimestamps[action] && currentTime - lastActionTimestamps[action] < wait) {
-    // Ignore this action if it occurred within the debounce time window
-    return false;
-  }
-
-  // Update the last timestamp for this action
-  lastActionTimestamps[action] = currentTime;
-  return true;
-}
+const UIQortalRequests = ['GET_USER_ACCOUNT',  'ENCRYPT_DATA', 'DECRYPT_DATA', 'SEND_COIN', 'GET_LIST_ITEMS', 'ADD_LIST_ITEMS', 'DELETE_LIST_ITEM']
 
 if (!window.hasAddedQortalListener) {
   console.log("Listener added");
@@ -480,91 +465,14 @@ if (!window.hasAddedQortalListener) {
     event.stopImmediatePropagation();  // Stop other listeners from firing
     // Verify that the message is from the web page and contains expected data
     if (event.source !== window || !event.data || !event.data.action) return;
-    //  // Check if this action should be processed (debounced)
-    //  if (!debounceAction(event.data.action)) {
-    //   console.log(`Debounced action: ${event.data.action}`);
-    //   return;
-    // }
-    if(event?.data?.requestedHandler !== 'UI') return
-    if (event.data.action === "GET_USER_ACCOUNT") {
-      chrome?.runtime?.sendMessage(
-        { action: "GET_USER_ACCOUNT", type: "qortalRequest" },
-        (response) => {
-          if (response.error) {
-            event.ports[0].postMessage({
-              result: null,
-              error: response.error,
-            });
-          } else {
-            event.ports[0].postMessage({
-              result: response,
-              error: null,
-            });
-          }
-        }
-      );
-    } else if (event.data.action === "SEND_COIN") {
-      chrome?.runtime?.sendMessage(
-        { action: "SEND_COIN", type: "qortalRequest", payload: event.data },
-        (response) => {
-          if (response.error) {
-            event.ports[0].postMessage({
-              result: null,
-              error: response.error,
-            });
-          } else {
-            event.ports[0].postMessage({
-              result: response,
-              error: null,
-            });
-          }
-        }
-      );
-    } else if (event.data.action === "ENCRYPT_DATA") {
-      chrome?.runtime?.sendMessage(
-        { action: "ENCRYPT_DATA", type: "qortalRequest", payload: event.data },
-        (response) => {
-          if (response.error) {
-            event.ports[0].postMessage({
-              result: null,
-              error: response.error,
-            });
-          } else {
-            event.ports[0].postMessage({
-              result: response,
-              error: null,
-            });
-          }
-        }
-      );
-    } else if (event.data.action === "DECRYPT_DATA") {
-      chrome?.runtime?.sendMessage(
-        { action: "DECRYPT_DATA", type: "qortalRequest", payload: event.data },
-        (response) => {
-          if (response.error) {
-            event.ports[0].postMessage({
-              result: null,
-              error: response.error,
-            });
-          } else {
-            event.ports[0].postMessage({
-              result: response,
-              error: null,
-            });
-          }
-        }
-      );
-    } else if (event.data.action === "GET_LIST_ITEMS") {
-      console.log("message", event);
 
+    if(event?.data?.requestedHandler !== 'UI') return
+    if (UIQortalRequests.includes(event.data.action)) {
+      
       chrome?.runtime?.sendMessage(
-        {
-          action: "GET_LIST_ITEMS",
-          type: "qortalRequest",
-          payload: event.data,
-        },
+        { action: event.data.action, type: "qortalRequest", payload: event.data },
         (response) => {
-          console.log("response", response);
+          console.log('response', response)
           if (response.error) {
             event.ports[0].postMessage({
               result: null,
@@ -578,7 +486,7 @@ if (!window.hasAddedQortalListener) {
           }
         }
       );
-    }
+    } 
   };
   window.addEventListener("message", listener);
 }

@@ -1,4 +1,4 @@
-import { decryptData, encryptData, getListItems, getUserAccount, sendCoin } from "./qortalRequests/get";
+import { addListItems, decryptData, deleteListItems, encryptData, getListItems, getUserAccount, sendCoin } from "./qortalRequests/get";
 
 chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
   if (request) {
@@ -44,6 +44,32 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
         const data = request.payload;
         
         getListItems(data)
+          .then((res) => {
+            sendResponse(res);
+          })
+          .catch((error) => {
+            sendResponse({ error: error.message });
+          });
+
+        break;
+      }
+      case "ADD_LIST_ITEMS": {
+        const data = request.payload;
+        
+        addListItems(data)
+          .then((res) => {
+            sendResponse(res);
+          })
+          .catch((error) => {
+            sendResponse({ error: error.message });
+          });
+
+        break;
+      }
+      case "DELETE_LIST_ITEM": {
+        const data = request.payload;
+        
+        deleteListItems(data)
           .then((res) => {
             sendResponse(res);
           })

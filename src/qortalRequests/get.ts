@@ -1,4 +1,9 @@
-import { createEndpoint, getKeyPair, getSaveWallet, removeDuplicateWindow } from "../background";
+import {
+  createEndpoint,
+  getKeyPair,
+  getSaveWallet,
+  removeDuplicateWindow,
+} from "../background";
 import Base58 from "../deps/Base58";
 import {
   base64ToUint8Array,
@@ -11,121 +16,113 @@ import {
 import { fileToBase64 } from "../utils/fileReading";
 
 async function getUserPermission(payload: any) {
-   
-
-    function waitForWindowReady(windowId) {
-        return new Promise((resolve) => {
-          const checkInterval = setInterval(() => {
-            chrome.windows.get(windowId, (win) => {
-              if (chrome.runtime.lastError) {
-                clearInterval(checkInterval); // Stop polling if there's an error
-                resolve(false);
-              } else if (win.state === 'normal' || win.state === 'maximized') {
-                clearInterval(checkInterval); // Window is ready
-                resolve(true);
-              }
-            });
-          }, 100); // Check every 100ms
-        });
-      }
-    
-      await new Promise((res)=> {
-        const popupUrl = chrome.runtime.getURL(
-            "index.html?secondary=true"
-          );
-            console.log('popupUrl', popupUrl)
-          chrome.windows.getAll(
-            { populate: true, windowTypes: ["popup"] },
-            (windows) => {
-                console.log('windows', windows)
-              // Attempt to find an existing popup window that has a tab with the correct URL
-              const existingPopup = windows.find(
-                (w) =>
-                  w.tabs &&
-                  w.tabs.some(
-                    (tab) => tab.url && tab.url.startsWith(popupUrl)
-                  )
-              );
-              if (existingPopup) {
-                // If the popup exists but is minimized or not focused, focus it
-                chrome.windows.update(existingPopup.id, {
-                  focused: true,
-                  state: "normal",
-                });
-                res(null)
-              } else {
-                // No existing popup found, create a new one
-                chrome.system.display.getInfo((displays) => {
-                  // Assuming the primary display is the first one (adjust logic as needed)
-                  const primaryDisplay = displays[0];
-                  const screenWidth = primaryDisplay.bounds.width;
-                  const windowHeight = 500; // Your window height
-                  const windowWidth = 400; // Your window width
-    
-                  // Calculate left position for the window to appear on the right of the screen
-                  const leftPosition = screenWidth - windowWidth;
-    
-                  // Calculate top position for the window, adjust as desired
-                  const topPosition =
-                    (primaryDisplay.bounds.height - windowHeight) / 2;
-    
-                  chrome.windows.create(
-                    {
-                      url: popupUrl,
-                      type: "popup",
-                      width: windowWidth,
-                      height: windowHeight,
-                      left: leftPosition,
-                      top: 0,
-                    },
-                    async (newWindow) => {
-                        removeDuplicateWindow(popupUrl);
-                        await waitForWindowReady(newWindow.id);
-                     
-                      res(null)
-                    }
-                  );
-               
-                });
-              }
-    
-    
-         
-              
-            }
-          );
-      })
-
-      await new Promise((res)=> {
-        setTimeout(() => {
-            chrome.runtime.sendMessage({
-              action: "SET_COUNTDOWN",
-              payload: 15,
-            });
-            res(true)
-          }, 450);
-      })
+  function waitForWindowReady(windowId) {
     return new Promise((resolve) => {
-      // Set a timeout for 1 second
-      const timeout = setTimeout(() => {
-        resolve(false); // No response within 10 second, assume not focused
-      }, 15000);
-  
-      // Send message to the content script to check focus
-      console.log('send msg')
-      chrome.runtime.sendMessage({ action: "QORTAL_REQUEST_PERMISSION", payload }, (response) => {
-        console.log('permission response', response)
-        if(response === undefined) return
+      const checkInterval = setInterval(() => {
+        chrome.windows.get(windowId, (win) => {
+          if (chrome.runtime.lastError) {
+            clearInterval(checkInterval); // Stop polling if there's an error
+            resolve(false);
+          } else if (win.state === "normal" || win.state === "maximized") {
+            clearInterval(checkInterval); // Window is ready
+            resolve(true);
+          }
+        });
+      }, 100); // Check every 100ms
+    });
+  }
+
+  await new Promise((res) => {
+    const popupUrl = chrome.runtime.getURL("index.html?secondary=true");
+    console.log("popupUrl", popupUrl);
+    chrome.windows.getAll(
+      { populate: true, windowTypes: ["popup"] },
+      (windows) => {
+        console.log("windows", windows);
+        // Attempt to find an existing popup window that has a tab with the correct URL
+        const existingPopup = windows.find(
+          (w) =>
+            w.tabs &&
+            w.tabs.some((tab) => tab.url && tab.url.startsWith(popupUrl))
+        );
+        if (existingPopup) {
+          // If the popup exists but is minimized or not focused, focus it
+          chrome.windows.update(existingPopup.id, {
+            focused: true,
+            state: "normal",
+          });
+          res(null);
+        } else {
+          // No existing popup found, create a new one
+          chrome.system.display.getInfo((displays) => {
+            // Assuming the primary display is the first one (adjust logic as needed)
+            const primaryDisplay = displays[0];
+            const screenWidth = primaryDisplay.bounds.width;
+            const windowHeight = 500; // Your window height
+            const windowWidth = 400; // Your window width
+
+            // Calculate left position for the window to appear on the right of the screen
+            const leftPosition = screenWidth - windowWidth;
+
+            // Calculate top position for the window, adjust as desired
+            const topPosition =
+              (primaryDisplay.bounds.height - windowHeight) / 2;
+
+            chrome.windows.create(
+              {
+                url: popupUrl,
+                type: "popup",
+                width: windowWidth,
+                height: windowHeight,
+                left: leftPosition,
+                top: 0,
+              },
+              async (newWindow) => {
+                removeDuplicateWindow(popupUrl);
+                await waitForWindowReady(newWindow.id);
+
+                res(null);
+              }
+            );
+          });
+        }
+      }
+    );
+  });
+
+  await new Promise((res) => {
+    setTimeout(() => {
+      chrome.runtime.sendMessage({
+        action: "SET_COUNTDOWN",
+        payload: 30,
+      });
+      res(true);
+    }, 700);
+  });
+  return new Promise((resolve) => {
+    // Set a timeout for 1 second
+    const timeout = setTimeout(() => {
+      resolve(false); // No response within 10 second, assume not focused
+    }, 30000);
+
+    // Send message to the content script to check focus
+    console.log("send msg");
+    chrome.runtime.sendMessage(
+      { action: "QORTAL_REQUEST_PERMISSION", payload },
+      (response) => {
+        console.log("permission response", response);
+        if (response === undefined) return;
         clearTimeout(timeout); // Clear the timeout if we get a response
-  
+
         if (chrome.runtime.lastError) {
           resolve(false); // Error occurred, assume not focused
         } else {
           resolve(response); // Resolve based on the response
         }
-      });
-    });
-  }
+      }
+    );
+  });
+}
 
 export const getUserAccount = async () => {
   try {
@@ -171,7 +168,6 @@ export const encryptData = async (data) => {
 export const decryptData = async (data) => {
   const { encryptedData, publicKey } = data;
 
-
   if (!encryptedData) {
     throw new Error(`Missing fields: encryptedData`);
   }
@@ -210,61 +206,155 @@ export const decryptData = async (data) => {
   throw new Error("Unable to decrypt");
 };
 
-
-
 export const getListItems = async (data) => {
-    const requiredFields = ['list_name']
-					const missingFields: string[] = []
-					requiredFields.forEach((field) => {
-						if (!data[field]) {
-							missingFields.push(field)
-						}
-					})
-					if (missingFields.length > 0) {
-						const missingFieldsString = missingFields.join(', ')
-						const errorMsg = `Missing fields: ${missingFieldsString}`
-						throw new Error(errorMsg)
-					}
-					let skip = false
-					// if (window.parent.reduxStore.getState().app.qAPPAutoLists) {
-					// 	skip = true
-					// }
-					let resPermission
-					if (!skip) {
-						// res1 = await showModalAndWait(
-						// 	actions.GET_LIST_ITEMS,
-						// 	{
-						// 		list_name: data.list_name
-						// 	}
-						// )
+  const requiredFields = ["list_name"];
+  const missingFields: string[] = [];
+  requiredFields.forEach((field) => {
+    if (!data[field]) {
+      missingFields.push(field);
+    }
+  });
+  if (missingFields.length > 0) {
+    const missingFieldsString = missingFields.join(", ");
+    const errorMsg = `Missing fields: ${missingFieldsString}`;
+    throw new Error(errorMsg);
+  }
+  let skip = false;
+  // if (window.parent.reduxStore.getState().app.qAPPAutoLists) {
+  // 	skip = true
+  // }
+  let resPermission;
+  if (!skip) {
+    // res1 = await showModalAndWait(
+    // 	actions.GET_LIST_ITEMS,
+    // 	{
+    // 		list_name: data.list_name
+    // 	}
+    // )
 
-                         resPermission = await getUserPermission({
-                            text1: 'Do you give this application permission to',
-                            text2: 'Access the list',
-                            text3: data.list_name
-                         })
+    resPermission = await getUserPermission({
+      text1: "Do you give this application permission to",
+      text2: "Access the list",
+      text3: data.list_name,
+    });
+  }
+  console.log("resPermission", resPermission);
+  if (resPermission || skip) {
+    const url = await createEndpoint(`/lists/${data.list_name}`);
+    console.log("url", url);
+    const response = await fetch(url);
+    console.log("response", response);
+    if (!response.ok) throw new Error("Failed to fetch");
 
-					}
-                    console.log('resPermission', resPermission)
-					if (resPermission || skip) {
-						try {
-							
-                            const url = await createEndpoint(`/lists/${data.list_name}`);
-                            console.log('url', url)
-                            const response = await fetch(url);
-                            console.log('response', response)
-                            if (!response.ok) throw new Error("Failed to fetch");
-                      
-                            const list = await response.json();
-							return list
+    const list = await response.json();
+    return list;
+  } else {
+    throw new Error("User declined to share list");
+  }
+};
 
-						} catch (error) {
-							throw new Error("Error in retrieving list")
-						} 
-					} else {
-						const data = {}
-						throw new Error("User declined to share list")
-					}
+export const addListItems = async (data) => {
+  const requiredFields = ["list_name", "items"];
+  const missingFields: string[] = [];
+  requiredFields.forEach((field) => {
+    if (!data[field]) {
+      missingFields.push(field);
+    }
+  });
+  if (missingFields.length > 0) {
+    const missingFieldsString = missingFields.join(", ");
+    const errorMsg = `Missing fields: ${missingFieldsString}`;
+    throw new Error(errorMsg);
+  }
+
+  const items = data.items;
+  const list_name = data.list_name;
+
+  const resPermission = await getUserPermission({
+    text1: "Do you give this application permission to",
+    text2: `Add the following to the list ${list_name}:`,
+    text3: items.join(', ')
+  });
+
+  if (resPermission) {
+    const url = await createEndpoint(`/lists/${list_name}`);
+    console.log("url", url);
+    const body = {
+      items: items,
+    };
+    const bodyToString = JSON.stringify(body);
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: bodyToString,
+    });
+
+    console.log("response", response);
+    if (!response.ok) throw new Error("Failed to add to list");
+    let res;
+    try {
+      res = await response.clone().json();
+    } catch (e) {
+      res = await response.text();
+    }
+    return res
+  } else {
+    throw new Error("User declined add to list");
+  }
+};
+
+export const deleteListItems = async (data) => {
+    const requiredFields = ['list_name', 'item']
+    const missingFields: string[] = [];
+    requiredFields.forEach((field) => {
+      if (!data[field]) {
+        missingFields.push(field);
+      }
+    });
+    if (missingFields.length > 0) {
+      const missingFieldsString = missingFields.join(", ");
+      const errorMsg = `Missing fields: ${missingFieldsString}`;
+      throw new Error(errorMsg);
+    }
+  
+    const item = data.item;
+    const list_name = data.list_name;
+  
+    const resPermission = await getUserPermission({
+      text1: "Do you give this application permission to",
+      text2: `Remove the following from the list ${list_name}:`,
+      text3: item
+    });
+  
+    if (resPermission) {
+      const url = await createEndpoint(`/lists/${list_name}`);
+      console.log("url", url);
+      const body = {
+        items: [item],
+      };
+      const bodyToString = JSON.stringify(body);
+      const response = await fetch(url, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: bodyToString,
+      });
+  
+      console.log("response", response);
+      if (!response.ok) throw new Error("Failed to add to list");
+      let res;
+      try {
+        res = await response.clone().json();
+      } catch (e) {
+        res = await response.text();
+      }
+      return res
+    } else {
+      throw new Error("User declined add to list");
+    }
   };
 
 export const sendCoin = async () => {

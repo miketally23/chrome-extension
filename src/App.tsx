@@ -1816,7 +1816,8 @@ function App() {
         <TextP
           sx={{
             textAlign: "center",
-            lineHeight: "15px",
+            lineHeight: 1.2,
+            maxWidth: '90%'
           }}
         >
          {messageQortalRequest?.text1}
@@ -1825,8 +1826,10 @@ function App() {
         <TextP
           sx={{
             textAlign: "center",
-            lineHeight: "15px",
-            fontSize: "10px",
+            lineHeight: 1.2,
+            fontSize: "16px",
+            fontWeight: "normal",
+            maxWidth: '90%'
           }}
         >
            {messageQortalRequest?.text2}
@@ -1838,6 +1841,7 @@ function App() {
             lineHeight: 1.2,
             fontSize: "16px",
             fontWeight: 700,
+            maxWidth: '90%'
           }}
         >
            {messageQortalRequest?.text3}
