@@ -13,6 +13,7 @@ import {
   uint8ArrayStartsWith,
   uint8ArrayToBase64,
 } from "../qdn/encryption/group-encryption";
+import { getPermission, setPermission } from "../qortalRequests";
 import { fileToBase64 } from "../utils/fileReading";
 
 async function getUserPermission(payload: any) {
@@ -219,27 +220,34 @@ export const getListItems = async (data) => {
     const errorMsg = `Missing fields: ${missingFieldsString}`;
     throw new Error(errorMsg);
   }
-  let skip = false;
-  // if (window.parent.reduxStore.getState().app.qAPPAutoLists) {
-  // 	skip = true
-  // }
-  let resPermission;
-  if (!skip) {
-    // res1 = await showModalAndWait(
-    // 	actions.GET_LIST_ITEMS,
-    // 	{
-    // 		list_name: data.list_name
-    // 	}
-    // )
+  const value = await getPermission('qAPPAutoLists') || false;
 
+  let skip = false;
+  if (value) {
+  	skip = true
+  }
+  let resPermission;
+  let acceptedVar
+  let checkbox1Var
+  if (!skip) {
     resPermission = await getUserPermission({
       text1: "Do you give this application permission to",
       text2: "Access the list",
       text3: data.list_name,
+      checkbox1: {
+        value: value,
+        label: 'Always allow lists to be retrieved automatically'
+      }
     });
+    const {accepted, checkbox1} = resPermission
+    acceptedVar = accepted
+    checkbox1Var = checkbox1
+    setPermission('qAPPAutoLists', checkbox1)
+
   }
-  console.log("resPermission", resPermission);
-  if (resPermission || skip) {
+
+
+  if (acceptedVar || skip) {
     const url = await createEndpoint(`/lists/${data.list_name}`);
     console.log("url", url);
     const response = await fetch(url);
@@ -247,6 +255,7 @@ export const getListItems = async (data) => {
     if (!response.ok) throw new Error("Failed to fetch");
 
     const list = await response.json();
+    console.log('list', list)
     return list;
   } else {
     throw new Error("User declined to share list");
@@ -275,8 +284,9 @@ export const addListItems = async (data) => {
     text2: `Add the following to the list ${list_name}:`,
     text3: items.join(', ')
   });
+  const {accepted} = resPermission
 
-  if (resPermission) {
+  if (accepted) {
     const url = await createEndpoint(`/lists/${list_name}`);
     console.log("url", url);
     const body = {
@@ -327,8 +337,9 @@ export const deleteListItems = async (data) => {
       text2: `Remove the following from the list ${list_name}:`,
       text3: item
     });
-  
-    if (resPermission) {
+    const {accepted} = resPermission
+
+    if (accepted) {
       const url = await createEndpoint(`/lists/${list_name}`);
       console.log("url", url);
       const body = {

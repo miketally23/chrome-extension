@@ -1,5 +1,62 @@
 import { addListItems, decryptData, deleteListItems, encryptData, getListItems, getUserAccount, sendCoin } from "./qortalRequests/get";
 
+
+
+// Promisify chrome.storage.local.get
+function getLocalStorage(key) {
+    return new Promise((resolve, reject) => {
+      chrome.storage.local.get([key], function (result) {
+        if (chrome.runtime.lastError) {
+          return reject(chrome.runtime.lastError);
+        }
+        resolve(result[key]);
+      });
+    });
+  }
+  
+  // Promisify chrome.storage.local.set
+  function setLocalStorage(data) {
+    return new Promise((resolve, reject) => {
+      chrome.storage.local.set(data, function () {
+        if (chrome.runtime.lastError) {
+          return reject(chrome.runtime.lastError);
+        }
+        resolve();
+      });
+    });
+  }
+
+  
+  export async function setPermission(key, value) {
+    try {
+      // Get the existing qortalRequestPermissions object
+      const qortalRequestPermissions = (await getLocalStorage('qortalRequestPermissions')) || {};
+      
+      // Update the permission
+      qortalRequestPermissions[key] = value;
+      
+      // Save the updated object back to storage
+      await setLocalStorage({ qortalRequestPermissions });
+      
+      console.log('Permission set for', key);
+    } catch (error) {
+      console.error('Error setting permission:', error);
+    }
+  }
+
+  export async function getPermission(key) {
+    try {
+      // Get the qortalRequestPermissions object from storage
+      const qortalRequestPermissions = (await getLocalStorage('qortalRequestPermissions')) || {};
+      
+      // Return the value for the given key, or null if it doesn't exist
+      return qortalRequestPermissions[key] || null;
+    } catch (error) {
+      console.error('Error getting permission:', error);
+      return null;
+    }
+  }
+  
 chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
   if (request) {
     switch (request.action) {

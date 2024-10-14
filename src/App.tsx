@@ -322,6 +322,7 @@ function App() {
   const [isOpenSendQortSuccess, setIsOpenSendQortSuccess] = useState(false)
   const [rootHeight, setRootHeight] = useState('100%')
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const qortalRequestCheckbox1Ref = useRef(null);
   useEffect(() => {
     if(!isMobile) return
     // Function to set the height of the app to the viewport height
@@ -569,10 +570,21 @@ function App() {
       !isMainWindow
     ) {
       try {
+        console.log('payloadbefore', message.payload)
+
         await showQortalRequest(message?.payload)
-        sendResponse(true)
+        console.log('payload', message.payload)
+        if(message?.payload?.checkbox1){
+          console.log('qortalRequestCheckbox1Ref.current', qortalRequestCheckbox1Ref.current)
+          sendResponse({accepted: true, 
+            checkbox1: qortalRequestCheckbox1Ref.current
+          })
+          return
+        }
+        sendResponse({accepted: true})
       } catch (error) {
-        sendResponse(false)
+        console.log('error', error)
+        sendResponse({accepted: false})
       } finally {
         window.close();
       }
@@ -1811,7 +1823,7 @@ function App() {
 
 {isShowQortalRequest &&  !isMainWindow && (
         <>
-        <Spacer height="100px" />
+        <Spacer height="120px" />
 
         <TextP
           sx={{
@@ -1846,6 +1858,42 @@ function App() {
         >
            {messageQortalRequest?.text3}
         </TextP>
+        {messageQortalRequest?.checkbox1 &&
+        (
+          <Box
+          sx={{
+            display: "flex",
+            gap: "10px",
+            alignItems: "center",
+            justifyContent: 'center',
+            width: '90%',
+            marginTop: '20px'
+          }}
+        >
+              <Checkbox
+                onChange={(e)=> {
+                  qortalRequestCheckbox1Ref.current = e.target.checked
+                }}
+                edge="start"
+                tabIndex={-1}
+                disableRipple
+                defaultChecked={messageQortalRequest?.checkbox1?.value}
+                sx={{
+                  "&.Mui-checked": {
+                    color: "white", // Customize the color when checked
+                  },
+                  "& .MuiSvgIcon-root": {
+                    color: "white",
+                  },
+                }}
+              />
+
+              <Typography sx={{
+                fontSize: '14px'
+              }}>{messageQortalRequest?.checkbox1?.label}</Typography>
+              </Box>
+        )}
+       
         <Spacer height="29px" />
         <Box
           sx={{
