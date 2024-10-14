@@ -304,6 +304,8 @@ function App() {
   const holdRefExtState = useRef<extStates>("not-authenticated");
   const isFocusedRef = useRef<boolean>(true);
   const { isShow, onCancel, onOk, show, message } = useModal();
+  const {  onCancel: onCancelQortalRequest, onOk: onOkQortalRequest, show: showQortalRequest, isShow: isShowQortalRequest, message: messageQortalRequest } = useModal();
+
   const [openRegisterName, setOpenRegisterName] = useState(false);
   const registerNamePopoverRef = useRef(null);
   const [isLoadingRegisterName, setIsLoadingRegisterName] = useState(false);
@@ -561,55 +563,49 @@ function App() {
     setRequestAuthentication(null);
   };
 
+  const qortalRequestPermisson = async (message, sender, sendResponse)=> {
+    if (
+      message.action === "QORTAL_REQUEST_PERMISSION" &&
+      !isMainWindow
+    ) {
+      try {
+        await showQortalRequest(message?.payload)
+        sendResponse(true)
+      } catch (error) {
+        sendResponse(false)
+      } finally {
+        window.close();
+      }
+    }
+  }
+
   useEffect(() => {
     // Listen for messages from the background script
-    chrome.runtime?.onMessage.addListener((message, sender, sendResponse) => {
-      // Check if the message is to update the state
-      if (
-        message.action === "UPDATE_STATE_CONFIRM_SEND_QORT" &&
-        !isMainWindow
-      ) {
-        // Update the component state with the received 'sendqort' state
+    const messageListener = (message, sender, sendResponse) => {
+      // Handle various actions
+      if (message.action === "UPDATE_STATE_CONFIRM_SEND_QORT" && !isMainWindow) {
         setSendqortState(message.payload);
         setExtstate("web-app-request-payment");
       } else if (message.action === "closePopup" && !isMainWindow) {
-        // Update the component state with the received 'sendqort' state
         window.close();
-      } else if (
-        message.action === "UPDATE_STATE_REQUEST_CONNECTION" &&
-        !isMainWindow
-      ) {
-   
-        // Update the component state with the received 'sendqort' state
+      } else if (message.action === "UPDATE_STATE_REQUEST_CONNECTION" && !isMainWindow) {
         setRequestConnection(message.payload);
         setExtstate("web-app-request-connection");
-      } else if (
-        message.action === "UPDATE_STATE_REQUEST_BUY_ORDER" &&
-        !isMainWindow
-      ) {
-        // Update the component state with the received 'sendqort' state
+      } else if (message.action === "UPDATE_STATE_REQUEST_BUY_ORDER" && !isMainWindow) {
         setRequestBuyOrder(message.payload);
         setExtstate("web-app-request-buy-order");
-      } else if (
-        message.action === "UPDATE_STATE_REQUEST_AUTHENTICATION" &&
-        !isMainWindow
-      ) {
-        // Update the component state with the received 'sendqort' state
+      } else if (message.action === "UPDATE_STATE_REQUEST_AUTHENTICATION" && !isMainWindow) {
         setRequestAuthentication(message.payload);
         setExtstate("web-app-request-authentication");
       } else if (message.action === "SET_COUNTDOWN" && !isMainWindow) {
         setCountdown(message.payload);
       } else if (message.action === "INITIATE_MAIN") {
-        // Update the component state with the received 'sendqort' state
         setIsMain(true);
         isMainRef.current = true;
       } else if (message.action === "CHECK_FOCUS" && isMainWindow) {
-        
-        sendResponse(isFocusedRef.current);
-      } else if (
-        message.action === "NOTIFICATION_OPEN_DIRECT" &&
-        isMainWindow
-      ) {
+        sendResponse(isFocusedRef.current);  // Synchronous response
+        return true;  // Return true if you plan to send a response asynchronously
+      } else if (message.action === "NOTIFICATION_OPEN_DIRECT" && isMainWindow) {
         executeEvent("openDirectMessage", {
           from: message.payload.from,
         });
@@ -617,22 +613,34 @@ function App() {
         executeEvent("openGroupMessage", {
           from: message.payload.from,
         });
-      } else if (
-        message.action === "NOTIFICATION_OPEN_ANNOUNCEMENT_GROUP" &&
-        isMainWindow
-      ) {
+      } else if (message.action === "NOTIFICATION_OPEN_ANNOUNCEMENT_GROUP" && isMainWindow) {
         executeEvent("openGroupAnnouncement", {
           from: message.payload.from,
         });
-      } else if (
-        message.action === "NOTIFICATION_OPEN_THREAD_NEW_POST" &&
-        isMainWindow
-      ) {
+      } else if (message.action === "NOTIFICATION_OPEN_THREAD_NEW_POST" && isMainWindow) {
         executeEvent("openThreadNewPost", {
           data: message.payload.data,
         });
       }
-    });
+      
+      // Call the permission request handler for "QORTAL_REQUEST_PERMISSION"
+     qortalRequestPermisson(message, sender, sendResponse);
+      if (message.action === "QORTAL_REQUEST_PERMISSION" && !isMainWindow) {
+        console.log('isMainWindow', isMainWindow, window?.location?.href )
+        return true;  // Return true to indicate an async response is coming
+      } 
+      if(message.action === "QORTAL_REQUEST_PERMISSION" && isMainWindow){
+        return;
+      }
+    };
+  
+    // Add message listener
+    chrome.runtime?.onMessage.addListener(messageListener);
+  
+    // Clean up the listener on component unmount
+    return () => {
+      chrome.runtime?.onMessage.removeListener(messageListener);
+    };
   }, []);
 
 
@@ -1800,6 +1808,68 @@ function App() {
           </CustomButton>
         </Box>
       )}
+
+{isShowQortalRequest &&  !isMainWindow && (
+        <>
+        <Spacer height="100px" />
+
+        <TextP
+          sx={{
+            textAlign: "center",
+            lineHeight: "15px",
+          }}
+        >
+         {messageQortalRequest?.text1}
+        </TextP>
+        <Spacer height="10px" />
+        <TextP
+          sx={{
+            textAlign: "center",
+            lineHeight: "15px",
+            fontSize: "10px",
+          }}
+        >
+           {messageQortalRequest?.text2}
+        </TextP>
+        <Spacer height="15px" />
+        <TextP
+          sx={{
+            textAlign: "center",
+            lineHeight: 1.2,
+            fontSize: "16px",
+            fontWeight: 700,
+          }}
+        >
+           {messageQortalRequest?.text3}
+        </TextP>
+        <Spacer height="29px" />
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: "14px",
+          }}
+        >
+          <CustomButton
+            sx={{
+              minWidth: "102px",
+            }}
+            onClick={() => onOkQortalRequest("accepted")}
+          >
+            accept
+          </CustomButton>
+          <CustomButton
+            sx={{
+              minWidth: "102px",
+            }}
+            onClick={() => onCancelQortalRequest()}
+          >
+            decline
+          </CustomButton>
+        </Box>
+        <ErrorText>{sendPaymentError}</ErrorText>
+      </>
+      )}
       {extState === "web-app-request-buy-order" && !isMainWindow && (
         <>
           <Spacer height="100px" />
@@ -1890,6 +1960,7 @@ function App() {
           <ErrorText>{sendPaymentError}</ErrorText>
         </>
       )}
+    
       {extState === "web-app-request-payment" && !isMainWindow && (
         <>
           <Spacer height="100px" />

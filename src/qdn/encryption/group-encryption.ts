@@ -332,3 +332,42 @@ export function decryptGroupData(data64EncryptedData: string, privateKey: string
 	}
 	throw new Error("Unable to decrypt data")
 }
+
+export function uint8ArrayStartsWith(uint8Array, string) {
+	const stringEncoder = new TextEncoder()
+	const stringUint8Array = stringEncoder.encode(string)
+	if (uint8Array.length < stringUint8Array.length) {
+		return false
+	}
+	for (let i = 0; i < stringUint8Array.length; i++) {
+		if (uint8Array[i] !== stringUint8Array[i]) {
+			return false
+		}
+	}
+	return true
+}
+
+export function decryptDeprecatedSingle(uint8Array, publicKey, privateKey) {
+	const combinedData = uint8Array
+	const str = "qortalEncryptedData"
+	const strEncoder = new TextEncoder()
+	const strUint8Array = strEncoder.encode(str)
+	const strData = combinedData.slice(0, strUint8Array.length)
+	const nonce = combinedData.slice(strUint8Array.length, strUint8Array.length + 24)
+	const _encryptedData = combinedData.slice(strUint8Array.length + 24)
+	
+	const _publicKey = window.parent.Base58.decode(publicKey)
+	if (!privateKey || !_publicKey) {
+		throw new Error("Unable to retrieve keys")
+	}
+	const convertedPrivateKey = ed2curve.convertSecretKey(privateKey)
+	const convertedPublicKey = ed2curve.convertPublicKey(_publicKey)
+	const sharedSecret = new Uint8Array(32)
+	nacl.lowlevel.crypto_scalarmult(sharedSecret, convertedPrivateKey, convertedPublicKey)
+	const _chatEncryptionSeed = new window.parent.Sha256().process(sharedSecret).finish().result
+	const _decryptedData = nacl.secretbox.open(_encryptedData, nonce, _chatEncryptionSeed)
+	if (!_decryptedData) {
+		throw new Error("Unable to decrypt")
+	}
+	return uint8ArrayToBase64(_decryptedData)
+}

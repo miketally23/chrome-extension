@@ -1,5 +1,7 @@
 // @ts-nocheck
 // import { encryptAndPublishSymmetricKeyGroupChat } from "./backgroundFunctions/encryption";
+
+import './qortalRequests'
 import { constant, isArray } from "lodash";
 import {
   decryptGroupEncryption,
@@ -144,7 +146,7 @@ export const createEndpointSocket = async (endpoint) => {
   }
 };
 
-export const createEndpoint = async (endpoint, customApi) => {
+export const createEndpoint = async (endpoint, customApi?: string) => {
   if (customApi) {
     return `${customApi}${endpoint}`;
   }
@@ -949,7 +951,7 @@ async function getAddressInfo(address) {
   return data;
 }
 
-async function getKeyPair() {
+export async function getKeyPair() {
   const res = await chrome.storage.local.get(["keyPair"]);
   if (res?.keyPair) {
     return res.keyPair;
@@ -958,7 +960,7 @@ async function getKeyPair() {
   }
 }
 
-async function getSaveWallet() {
+export async function getSaveWallet() {
   const res = await chrome.storage.local.get(["walletInfo"]);
   if (res?.walletInfo) {
     return res.walletInfo;
@@ -2498,7 +2500,7 @@ async function listenForChatMessageForBuyOrder({
   }
 }
 
-function removeDuplicateWindow(popupUrl) {
+export function removeDuplicateWindow(popupUrl) {
   chrome.windows.getAll(
     { populate: true, windowTypes: ["popup"] },
     (windows) => {
@@ -2800,6 +2802,7 @@ async function getChatHeadsDirect() {
 }
 chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
   if (request) {
+
     switch (request.action) {
       case "version":
         // Example: respond with the version
