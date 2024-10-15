@@ -19,6 +19,30 @@ import { publishData } from "../qdn/publish/pubish";
 import { getPermission, setPermission } from "../qortalRequests";
 import { fileToBase64 } from "../utils/fileReading";
 
+function getFileFromContentScript(fileId, sender) {
+    console.log('sender', sender)
+    return new Promise((resolve, reject) => {
+    
+       
+          chrome.tabs.sendMessage(
+            sender.tab.id,
+            { action: "getFileFromIndexedDB", fileId: fileId },
+            (response) => {
+                console.log('response2', response)
+              if (response && response.result) {
+                
+                resolve(response.result);
+              } else {
+                reject(response?.error || "Failed to retrieve file");
+              }
+            }
+          );
+       
+    
+    });
+  }
+  
+
 async function getUserPermission(payload: any) {
   function waitForWindowReady(windowId) {
     return new Promise((resolve) => {
@@ -369,7 +393,7 @@ export const deleteListItems = async (data) => {
   }
 };
 
-export const publishQDNResource = async (data: any) => {
+export const publishQDNResource = async (data: any, sender) => {
   const requiredFields = ["service"];
   const missingFields: string[] = [];
   requiredFields.forEach((field) => {
@@ -382,7 +406,7 @@ export const publishQDNResource = async (data: any) => {
     const errorMsg = `Missing fields: ${missingFieldsString}`;
     throw new Error(errorMsg);
   }
-  if (!data.file && !data.data64) {
+  if (!data.fileId && !data.data64) {
     throw new Error("No data or file was submitted");
   }
   // Use "default" if user hasn't specified an identifer
@@ -414,8 +438,8 @@ export const publishQDNResource = async (data: any) => {
   if (!data.encrypt && data.service.endsWith("_PRIVATE")) {
     throw new Error("Only encrypted data can go into private services");
   }
-  if (data.file) {
-    data64 = await fileToBase64(data.file);
+  if (data.fileId) {
+    data64 = await  getFileFromContentScript(data.fileId, sender);
   }
   if (data.encrypt) {
     try {
@@ -433,19 +457,19 @@ export const publishQDNResource = async (data: any) => {
     }
   }
 
-  const fee = await getFee('ARBITRARY')
+  const fee = await getFee("ARBITRARY");
 
   const resPermission = await getUserPermission({
     text1: "Do you give this application permission to publish to QDN?",
     text2: `service: ${service}`,
     text3: `identifier: ${identifier || null}`,
     highlightedText: `isEncrypted: ${!!data.encrypt}`,
-    fee: fee.fee
+    fee: fee.fee,
   });
   const { accepted } = resPermission;
   if (accepted) {
-    if (data.file && !data.encrypt) {
-      data64 = await fileToBase64(data.file);
+    if (data.fileId && !data.encrypt) {
+      data64 = await  getFileFromContentScript(data.fileId, sender);
     }
     try {
       const resPublish = await publishData({
@@ -474,6 +498,234 @@ export const publishQDNResource = async (data: any) => {
   } else {
     throw new Error("User declined request");
   }
+};
+
+export const publishMultipleQDNResources = async (data: any, sender) => {
+  const requiredFields = ["resources"];
+  const missingFields: string[] = [];
+  let feeAmount = null;
+  requiredFields.forEach((field) => {
+    if (!data[field]) {
+      missingFields.push(field);
+    }
+  });
+  if (missingFields.length > 0) {
+    const missingFieldsString = missingFields.join(", ");
+    const errorMsg = `Missing fields: ${missingFieldsString}`;
+    throw new Error(errorMsg);
+  }
+  const resources = data.resources;
+  if (!Array.isArray(resources)) {
+    throw new Error("Invalid data");
+  }
+  if (resources.length === 0) {
+    throw new Error("No resources to publish");
+  }
+  if (
+    data.encrypt &&
+    (!data.publicKeys ||
+      (Array.isArray(data.publicKeys) && data.publicKeys.length === 0))
+  ) {
+    throw new Error("Encrypting data requires public keys");
+  }
+  const fee = await getFee("ARBITRARY");
+  const registeredName = await getNameInfo();
+  const name = registeredName;
+  const resPermission = await getUserPermission({
+    text1: "Do you give this application permission to publish to QDN?",
+    html: `
+    <div style="max-height: 30vh; overflow-y: auto;">
+    <style>
+      body {
+        background-color: #121212;
+        color: #e0e0e0;
+      }
+  
+      .resource-container {
+        display: flex;
+        flex-direction: column;
+        border: 1px solid #444;
+        padding: 16px;
+        margin: 8px 0;
+        border-radius: 8px;
+        background-color: #1e1e1e;
+      }
+      
+      .resource-detail {
+        margin-bottom: 8px;
+      }
+      
+      .resource-detail span {
+        font-weight: bold;
+        color: #bb86fc;
+      }
+  
+      @media (min-width: 600px) {
+        .resource-container {
+          flex-direction: row;
+          flex-wrap: wrap;
+        }
+        .resource-detail {
+          flex: 1 1 45%;
+          margin-bottom: 0;
+          padding: 4px 0;
+        }
+      }
+    </style>
+  
+    ${data.resources
+      .map(
+        (resource) => `
+        <div class="resource-container">
+          <div class="resource-detail"><span>Service:</span> ${resource.service}</div>
+          <div class="resource-detail"><span>Name:</span> ${resource.name}</div>
+          <div class="resource-detail"><span>Identifier:</span> ${resource.identifier}</div>
+          ${
+            resource.filename
+              ? `<div class="resource-detail"><span>Filename:</span> ${resource.filename}</div>`
+              : ""
+          }
+        </div>`
+      )
+      .join("")}
+  </div>
+  
+      `,
+    highlightedText: `isEncrypted: ${!!data.encrypt}`,
+    fee: fee.fee * resources.length,
+  });
+  const { accepted } = resPermission;
+  console.log('accepted', accepted)
+  if (!accepted) {
+    throw new Error("User declined request");
+  }
+  let failedPublishesIdentifiers = [];
+  console.log('resources', resources)
+  for (const resource of resources) {
+    try {
+      const requiredFields = ["service"];
+      const missingFields: string[] = [];
+      requiredFields.forEach((field) => {
+        if (!resource[field]) {
+          missingFields.push(field);
+        }
+      });
+      if (missingFields.length > 0) {
+        const missingFieldsString = missingFields.join(", ");
+        const errorMsg = `Missing fields: ${missingFieldsString}`;
+        failedPublishesIdentifiers.push({
+          reason: errorMsg,
+          identifier: resource.identifier,
+        });
+        continue;
+      }
+      if (!resource.fileId && !resource.data64) {
+        const errorMsg = "No data or file was submitted";
+        failedPublishesIdentifiers.push({
+          reason: errorMsg,
+          identifier: resource.identifier,
+        });
+        continue;
+      }
+      const service = resource.service;
+      let identifier = resource.identifier;
+      let data64 = resource.data64;
+      const filename = resource.filename;
+      const title = resource.title;
+      const description = resource.description;
+      const category = resource.category;
+      const tag1 = resource.tag1;
+      const tag2 = resource.tag2;
+      const tag3 = resource.tag3;
+      const tag4 = resource.tag4;
+      const tag5 = resource.tag5;
+      if (resource.identifier == null) {
+        identifier = "default";
+      }
+      if (!data.encrypt && service.endsWith("_PRIVATE")) {
+        const errorMsg = "Only encrypted data can go into private services";
+        failedPublishesIdentifiers.push({
+          reason: errorMsg,
+          identifier: resource.identifier,
+        });
+        continue;
+      }
+    //   if (data.file) {
+    //     data64 = await getFileFromContentScript(resource.identifier + "_file");
+    //   }
+      if (data.encrypt) {
+        try {
+          const encryptDataResponse = encryptDataGroup({
+            data64,
+            publicKeys: data.publicKeys,
+          });
+          if (encryptDataResponse) {
+            data64 = encryptDataResponse;
+          }
+        } catch (error) {
+          const errorMsg =
+            error.message || "Upload failed due to failed encryption";
+          failedPublishesIdentifiers.push({
+            reason: errorMsg,
+            identifier: resource.identifier,
+          });
+          continue;
+        }
+      }
+      if (resource.fileId && !data.encrypt) {
+       
+            data64 = await getFileFromContentScript(resource.fileId, sender);
+
+      }
+      try {
+        
+        await publishData({
+          registeredName: encodeURIComponent(name),
+          file: data64,
+          service: service,
+          identifier: encodeURIComponent(identifier),
+          uploadType: "file",
+          isBase64: true,
+          filename: filename,
+          title,
+          description,
+          category,
+          tag1,
+          tag2,
+          tag3,
+          tag4,
+          tag5,
+          apiVersion: 2,
+          withFee: true,
+        });
+        await new Promise((res) => {
+          setTimeout(() => {
+            res();
+          }, 1000);
+        });
+      } catch (error) {
+        const errorMsg = error.message || "Upload failed";
+        failedPublishesIdentifiers.push({
+          reason: errorMsg,
+          identifier: resource.identifier,
+        });
+      }
+    } catch (error) {
+        console.log('error', error)
+      failedPublishesIdentifiers.push({
+        reason: "Unknown error",
+        identifier: resource.identifier,
+      });
+    }
+  }
+  if (failedPublishesIdentifiers.length > 0) {
+    const obj = {};
+    obj["error"] = {
+      unsuccessfulPublishes: failedPublishesIdentifiers,
+    };
+    return obj;
+  }
+  return true;
 };
 
 export const sendCoin = async () => {

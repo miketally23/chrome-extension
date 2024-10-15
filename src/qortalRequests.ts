@@ -1,4 +1,4 @@
-import { addListItems, decryptData, deleteListItems, encryptData, getListItems, getUserAccount, publishQDNResource, sendCoin } from "./qortalRequests/get";
+import { addListItems, decryptData, deleteListItems, encryptData, getListItems, getUserAccount, publishMultipleQDNResources, publishQDNResource, sendCoin } from "./qortalRequests/get";
 
 
 
@@ -143,7 +143,20 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
       case "PUBLISH_QDN_RESOURCE": {
         const data = request.payload;
         
-        publishQDNResource(data)
+        publishQDNResource(data, sender)
+          .then((res) => {
+            sendResponse(res);
+          })
+          .catch((error) => {
+            sendResponse({ error: error.message });
+          });
+
+        break;
+      }
+      case "PUBLISH_MULTIPLE_QDN_RESOURCES": {
+        const data = request.payload;
+        
+        publishMultipleQDNResources(data, sender)
           .then((res) => {
             sendResponse(res);
           })

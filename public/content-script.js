@@ -1,3 +1,61 @@
+class Semaphore {
+	constructor(count) {
+		this.count = count
+		this.waiting = []
+	}
+	acquire() {
+		return new Promise(resolve => {
+			if (this.count > 0) {
+				this.count--
+				resolve()
+			} else {
+				this.waiting.push(resolve)
+			}
+		})
+	}
+	release() {
+		if (this.waiting.length > 0) {
+			const resolve = this.waiting.shift()
+			resolve()
+		} else {
+			this.count++
+		}
+	}
+}
+let semaphore = new Semaphore(1)
+let reader = new FileReader()
+
+const fileToBase64 = (file) => new Promise(async (resolve, reject) => {
+	if (!reader) {
+		reader = new FileReader()
+	}
+	await semaphore.acquire()
+	reader.readAsDataURL(file)
+	reader.onload = () => {
+		const dataUrl = reader.result
+		if (typeof dataUrl === "string") {
+			const base64String = dataUrl.split(',')[1]
+			reader.onload = null
+			reader.onerror = null
+			resolve(base64String)
+		} else {
+			reader.onload = null
+			reader.onerror = null
+			reject(new Error('Invalid data URL'))
+		}
+		semaphore.release()
+	}
+	reader.onerror = (error) => {
+		reader.onload = null
+		reader.onerror = null
+		reject(error)
+		semaphore.release()
+	}
+})
+
+
+
+
 async function connection(hostname) {
   const isConnected = await chrome.storage.local.get([hostname]);
   let connected = false;
@@ -430,7 +488,70 @@ document.addEventListener("qortalExtensionRequests", async (event) => {
   // Handle other request types as needed...
 });
 
-chrome.runtime?.onMessage.addListener(function (message, sender, sendResponse) {
+async function handleGetFileFromIndexedDB(fileId, sendResponse) {
+  try {
+    const db = await openIndexedDB();
+    const transaction = db.transaction(["files"], "readonly");
+    const objectStore = transaction.objectStore("files");
+
+    const getRequest = objectStore.get(fileId);
+
+    getRequest.onsuccess = async function (event) {
+      if (getRequest.result) {
+        const file = getRequest.result.data;
+
+        try {
+          const base64String = await fileToBase64(file);
+
+          // Create a new transaction to delete the file
+          const deleteTransaction = db.transaction(["files"], "readwrite");
+          const deleteObjectStore = deleteTransaction.objectStore("files");
+          const deleteRequest = deleteObjectStore.delete(fileId);
+
+          deleteRequest.onsuccess = function () {
+            console.log(`File with ID ${fileId} has been removed from IndexedDB`);
+            try {
+              sendResponse({ result: base64String });
+
+            } catch (error) {
+              console.log('error', error)
+            }
+          };
+
+          deleteRequest.onerror = function () {
+            console.error(`Error deleting file with ID ${fileId} from IndexedDB`);
+            sendResponse({ result: null, error: "Failed to delete file from IndexedDB" });
+          };
+        } catch (error) {
+          console.error("Error converting file to Base64:", error);
+          sendResponse({ result: null, error: "Failed to convert file to Base64" });
+        }
+      } else {
+        console.error(`File with ID ${fileId} not found in IndexedDB`);
+        sendResponse({ result: null, error: "File not found in IndexedDB" });
+      }
+    };
+
+    getRequest.onerror = function () {
+      console.error(`Error retrieving file with ID ${fileId} from IndexedDB`);
+      sendResponse({ result: null, error: "Error retrieving file from IndexedDB" });
+    };
+  } catch (error) {
+    console.error("Error opening IndexedDB:", error);
+    sendResponse({ result: null, error: "Error opening IndexedDB" });
+  } 
+}
+
+const testAsync = async (sendResponse)=> {
+  await new Promise((res)=> {
+    setTimeout(() => {
+      res()
+    }, 2500);
+  })
+  sendResponse({ result: null, error: "Testing" });
+}
+
+chrome.runtime?.onMessage.addListener( function (message, sender, sendResponse) {
   if (message.type === "LOGOUT") {
     // Notify the web page
     window.postMessage(
@@ -451,42 +572,232 @@ chrome.runtime?.onMessage.addListener(function (message, sender, sendResponse) {
       "*"
     );
   }
+
+  else  if (message.action === "getFileFromIndexedDB") {
+    handleGetFileFromIndexedDB(message.fileId, sendResponse);
+    return true; // Keep the message channel open for async response
+  }
 });
 
-const UIQortalRequests = ['GET_USER_ACCOUNT',  'ENCRYPT_DATA', 'DECRYPT_DATA', 'SEND_COIN', 'GET_LIST_ITEMS', 'ADD_LIST_ITEMS', 'DELETE_LIST_ITEM', 'PUBLISH_QDN_RESOURCE']
+function openIndexedDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open("fileStorageDB", 1);
+
+    request.onupgradeneeded = function (event) {
+      const db = event.target.result;
+      if (!db.objectStoreNames.contains("files")) {
+        db.createObjectStore("files", { keyPath: "id" });
+      }
+    };
+
+    request.onsuccess = function (event) {
+      resolve(event.target.result);
+    };
+
+    request.onerror = function () {
+      reject("Error opening IndexedDB");
+    };
+  });
+}
+
+
+async function retrieveFileFromIndexedDB(fileId) {
+  const db = await openIndexedDB();
+  const transaction = db.transaction(["files"], "readwrite");
+  const objectStore = transaction.objectStore("files");
+
+  return new Promise((resolve, reject) => {
+    const getRequest = objectStore.get(fileId);
+
+    getRequest.onsuccess = function (event) {
+      if (getRequest.result) {
+        // File found, resolve it and delete from IndexedDB
+        const file = getRequest.result.data;
+        objectStore.delete(fileId);
+        resolve(file);
+      } else {
+        reject("File not found in IndexedDB");
+      }
+    };
+
+    getRequest.onerror = function () {
+      reject("Error retrieving file from IndexedDB");
+    };
+  });
+}
+
+async function deleteQortalFilesFromIndexedDB() {
+  try {
+    console.log("Opening IndexedDB for deleting files...");
+    const db = await openIndexedDB();
+    const transaction = db.transaction(["files"], "readwrite");
+    const objectStore = transaction.objectStore("files");
+
+    // Create a request to get all keys
+    const getAllKeysRequest = objectStore.getAllKeys();
+
+    getAllKeysRequest.onsuccess = function (event) {
+      const keys = event.target.result;
+
+      // Iterate through keys to find and delete those containing '_qortalfile'
+      for (let key of keys) {
+        if (key.includes("_qortalfile")) {
+          const deleteRequest = objectStore.delete(key);
+
+          deleteRequest.onsuccess = function () {
+            console.log(`File with key '${key}' has been deleted from IndexedDB`);
+          };
+
+          deleteRequest.onerror = function () {
+            console.error(`Failed to delete file with key '${key}' from IndexedDB`);
+          };
+        }
+      }
+    };
+
+    getAllKeysRequest.onerror = function () {
+      console.error("Failed to retrieve keys from IndexedDB");
+    };
+
+    transaction.oncomplete = function () {
+      console.log("Transaction complete for deleting files from IndexedDB");
+    };
+
+    transaction.onerror = function () {
+      console.error("Error occurred during transaction for deleting files");
+    };
+  } catch (error) {
+    console.error("Error opening IndexedDB:", error);
+  }
+}
+
+
+async function storeFilesInIndexedDB(obj) {
+  // First delete any existing files in IndexedDB with '_qortalfile' in their ID
+  await deleteQortalFilesFromIndexedDB();
+
+  // Open the IndexedDB
+  const db = await openIndexedDB();
+  const transaction = db.transaction(["files"], "readwrite");
+  const objectStore = transaction.objectStore("files");
+
+  // Handle the obj.file if it exists and is a File instance
+  if (obj.file instanceof File) {
+    const fileId = "objFile_qortalfile";
+
+    // Store the file in IndexedDB
+    const fileData = {
+      id: fileId,
+      data: obj.file,
+    };
+    objectStore.put(fileData);
+
+    // Replace the file object with the file ID in the original object
+    obj.fileId = fileId;
+    delete obj.file;
+  }
+
+  // Iterate through resources to find files and save them to IndexedDB
+  for (let resource of obj.resources) {
+    if (resource.file instanceof File) {
+      const fileId = resource.identifier + "_qortalfile";
+
+      // Store the file in IndexedDB
+      const fileData = {
+        id: fileId,
+        data: resource.file,
+      };
+      objectStore.put(fileData);
+
+      // Replace the file object with the file ID in the original object
+      resource.fileId = fileId;
+      delete resource.file;
+    }
+  }
+
+  // Set transaction completion handlers
+  transaction.oncomplete = function () {
+    console.log("Files saved successfully to IndexedDB");
+  };
+
+  transaction.onerror = function () {
+    console.error("Error saving files to IndexedDB");
+  };
+
+  return obj; // Updated object with references to stored files
+}
+
+
+
+const UIQortalRequests = ['GET_USER_ACCOUNT',  'ENCRYPT_DATA', 'DECRYPT_DATA', 'SEND_COIN', 'GET_LIST_ITEMS', 'ADD_LIST_ITEMS', 'DELETE_LIST_ITEM']
 
 if (!window.hasAddedQortalListener) {
   console.log("Listener added");
   window.hasAddedQortalListener = true;
   //qortalRequests
-  const listener = (event) => {
-
+  const listener = async (event) => {
     event.preventDefault();  // Prevent default behavior
     event.stopImmediatePropagation();  // Stop other listeners from firing
+  
     // Verify that the message is from the web page and contains expected data
     if (event.source !== window || !event.data || !event.data.action) return;
-
-    if(event?.data?.requestedHandler !== 'UI') return
-    if (UIQortalRequests.includes(event.data.action)) {
-      
-      chrome?.runtime?.sendMessage(
-        { action: event.data.action, type: "qortalRequest", payload: event.data },
-        (response) => {
-          console.log('response', response)
-          if (response.error) {
-            event.ports[0].postMessage({
-              result: null,
-              error: response.error,
-            });
-          } else {
-            event.ports[0].postMessage({
-              result: response,
-              error: null,
-            });
-          }
+  
+    if (event?.data?.requestedHandler !== 'UI') return;
+  
+    const sendMessageToRuntime = (message, eventPort) => {
+      chrome?.runtime?.sendMessage(message, (response) => {
+        console.log('response', response);
+        if (response.error) {
+          eventPort.postMessage({
+            result: null,
+            error: response.error,
+          });
+        } else {
+          eventPort.postMessage({
+            result: response,
+            error: null,
+          });
         }
+      });
+    };
+  
+    // Check if action is included in the predefined list of UI requests
+    if (UIQortalRequests.includes(event.data.action)) {
+      console.log('event?.data', event?.data);
+      sendMessageToRuntime(
+        { action: event.data.action, type: 'qortalRequest', payload: event.data },
+        event.ports[0]
       );
-    } 
+    } else if (event?.data?.action === 'PUBLISH_MULTIPLE_QDN_RESOURCES' || event?.data?.action === 'PUBLISH_QDN_RESOURCE') {
+      let data;
+      try {
+        data = await storeFilesInIndexedDB(event.data);
+      } catch (error) {
+        console.error('Error storing files in IndexedDB:', error);
+        event.ports[0].postMessage({
+          result: null,
+          error: 'Failed to store files in IndexedDB',
+        });
+        return;
+      }
+  
+      if (data) {
+        sendMessageToRuntime(
+          { action: event.data.action, type: 'qortalRequest', payload: data },
+          event.ports[0]
+        );
+      } else {
+        event.ports[0].postMessage({
+          result: null,
+          error: 'Failed to prepare data for publishing',
+        });
+      }
+    }
   };
-  window.addEventListener("message", listener);
+  
+  // Add the listener for messages coming from the window
+  window.addEventListener('message', listener);
+  
 }
+
+
