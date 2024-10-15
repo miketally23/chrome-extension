@@ -25,6 +25,7 @@ import { publishData } from "../qdn/publish/pubish";
 import { getPermission, setPermission } from "../qortalRequests";
 import { createTransaction } from "../transactions/transactions";
 import { fileToBase64 } from "../utils/fileReading";
+import { mimeToExtensionMap } from "../utils/memeTypes";
 
 const _createPoll = async (pollName, pollDescription, options) => {
   const fee = await getFee("CREATE_POLL");
@@ -127,6 +128,15 @@ function getFileFromContentScript(fileId, sender) {
     );
   });
 }
+function sendToSaveFilePicker(data, sender) {
+    console.log("sender", sender);
+   
+      chrome.tabs.sendMessage(
+        sender.tab.id,
+        { action: "SHOW_SAVE_FILE_PICKER", data }
+      );
+
+  }
 
 async function getUserPermission(payload: any) {
   function waitForWindowReady(windowId) {
@@ -251,11 +261,11 @@ export const getUserAccount = async () => {
   }
 };
 
-export const encryptData = async (data) => {
+export const encryptData = async (data, sender) => {
   let data64 = data.data64;
   let publicKeys = data.publicKeys || [];
-  if (data.file) {
-    data64 = await fileToBase64(data.file);
+  if (data.fileId) {
+    data64 = await getFileFromContentScript(data.fileId, sender)
   }
   if (!data64) {
     throw new Error("Please include data to encrypt");
@@ -509,7 +519,6 @@ export const publishQDNResource = async (data: any, sender) => {
   const tag3 = data.tag3;
   const tag4 = data.tag4;
   const tag5 = data.tag5;
-  let feeAmount = null;
   if (data.identifier == null) {
     identifier = "default";
   }
@@ -1112,6 +1121,69 @@ export const joinGroup = async (data) => {
                         throw new Error("User declined add to list");
                       }
 					
+  };
+
+  export const saveFile = async (data, sender) => {
+    try {
+        const requiredFields = ['filename', 'fileId']
+        const missingFields: string[] = []
+        requiredFields.forEach((field) => {
+            if (!data[field]) {
+                missingFields.push(field)
+            }
+        })
+        if (missingFields.length > 0) {
+            const missingFieldsString = missingFields.join(', ')
+            const errorMsg = `Missing fields: ${missingFieldsString}`
+            throw new Error(errorMsg)
+        }
+        const filename = data.filename
+        const blob = data.blob
+        const fileId = data.fileId
+        const resPermission = await getUserPermission({
+            text1: "Would you like to download:",
+            highlightedText: `${filename}`,
+          });
+          const { accepted } = resPermission;
+
+          if(accepted){
+           
+            const mimeType = blob.type || data.mimeType
+            let backupExention = filename.split('.').pop()
+            if (backupExention) {
+                backupExention = '.' + backupExention
+            }
+            const fileExtension = mimeToExtensionMap[mimeType] || backupExention
+            let fileHandleOptions = {}
+            if (!mimeType) {
+              
+                throw new Error('A mimeType could not be derived')
+            }
+            if (!fileExtension) {
+                const obj = {}
+                throw new Error('A file extension could not be derived')
+            }
+            if (fileExtension && mimeType) {
+                fileHandleOptions = {
+                    accept: {
+                        [mimeType]: [fileExtension]
+                    }
+                }
+            }
+            sendToSaveFilePicker( {
+                filename, mimeType, blob, fileId,  fileHandleOptions
+            } ,sender)
+            return true
+          } else {
+            throw new Error("User declined add to list");
+
+          }
+       
+    } catch (error) {
+        
+        throw new Error(error?.message || 'Failed to initiate download')
+    }
+    
   };
 
 export const sendCoin = async () => {

@@ -551,7 +551,32 @@ const testAsync = async (sendResponse)=> {
   sendResponse({ result: null, error: "Testing" });
 }
 
+const showSaveFilePicker = async (data) => {
+  try {
+    const {filename, mimeType,  fileHandleOptions, fileId} = data
+    const blob = await retrieveFileFromIndexedDB(fileId)
+    const fileHandle = await window.showSaveFilePicker({
+        suggestedName: filename,
+        types: [
+            {
+                description: mimeType,
+                ...fileHandleOptions
+            }
+        ]
+    })
+    const writeFile = async (fileHandle, contents) => {
+        const writable = await fileHandle.createWritable()
+        await writable.write(contents)
+        await writable.close()
+    }
+    writeFile(fileHandle, blob).then(() => console.log("FILE SAVED"))
+} catch (error) {
+    FileSaver.saveAs(blob, filename)
+} 
+}
+
 chrome.runtime?.onMessage.addListener( function (message, sender, sendResponse) {
+  console.log('message', message)
   if (message.type === "LOGOUT") {
     // Notify the web page
     window.postMessage(
@@ -571,6 +596,8 @@ chrome.runtime?.onMessage.addListener( function (message, sender, sendResponse) 
       },
       "*"
     );
+  } else if(message.action === "SHOW_SAVE_FILE_PICKER"){
+    showSaveFilePicker(message?.data)
   }
 
   else  if (message.action === "getFileFromIndexedDB") {
@@ -696,9 +723,27 @@ async function storeFilesInIndexedDB(obj) {
     obj.fileId = fileId;
     delete obj.file;
   }
+  if (obj.blob instanceof Blob) {
+    const fileId = "objFile_qortalfile";
+
+    // Store the file in IndexedDB
+    const fileData = {
+      id: fileId,
+      data: obj.blob,
+    };
+    objectStore.put(fileData);
+
+    // Replace the file object with the file ID in the original object
+    let blobObj = {
+      type: obj.blob?.type
+    }
+    obj.fileId = fileId;
+    delete obj.blob;
+    obj.blob = blobObj
+  }
 
   // Iterate through resources to find files and save them to IndexedDB
-  for (let resource of obj.resources) {
+  for (let resource of (obj?.resources || [])) {
     if (resource.file instanceof File) {
       const fileId = resource.identifier + "_qortalfile";
 
@@ -729,7 +774,7 @@ async function storeFilesInIndexedDB(obj) {
 
 
 
-const UIQortalRequests = ['GET_USER_ACCOUNT',  'ENCRYPT_DATA', 'DECRYPT_DATA', 'SEND_COIN', 'GET_LIST_ITEMS', 'ADD_LIST_ITEMS', 'DELETE_LIST_ITEM', 'VOTE_ON_POLL', 'CREATE_POLL', 'SEND_CHAT_MESSAGE', 'JOIN_GROUP']
+const UIQortalRequests = ['GET_USER_ACCOUNT', 'DECRYPT_DATA', 'SEND_COIN', 'GET_LIST_ITEMS', 'ADD_LIST_ITEMS', 'DELETE_LIST_ITEM', 'VOTE_ON_POLL', 'CREATE_POLL', 'SEND_CHAT_MESSAGE', 'JOIN_GROUP']
 
 if (!window.hasAddedQortalListener) {
   console.log("Listener added");
@@ -768,7 +813,7 @@ if (!window.hasAddedQortalListener) {
         { action: event.data.action, type: 'qortalRequest', payload: event.data },
         event.ports[0]
       );
-    } else if (event?.data?.action === 'PUBLISH_MULTIPLE_QDN_RESOURCES' || event?.data?.action === 'PUBLISH_QDN_RESOURCE') {
+    } else if (event?.data?.action === 'PUBLISH_MULTIPLE_QDN_RESOURCES' || event?.data?.action === 'PUBLISH_QDN_RESOURCE' || event?.data?.action === 'ENCRYPT_DATA' || event?.data?.action === 'SAVE_FILE') {
       let data;
       try {
         data = await storeFilesInIndexedDB(event.data);

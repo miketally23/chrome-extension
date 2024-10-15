@@ -1,4 +1,4 @@
-import { addListItems, createPoll, decryptData, deleteListItems, encryptData, getListItems, getUserAccount, joinGroup, publishMultipleQDNResources, publishQDNResource, sendChatMessage, sendCoin, voteOnPoll } from "./qortalRequests/get";
+import { addListItems, createPoll, decryptData, deleteListItems, encryptData, getListItems, getUserAccount, joinGroup, publishMultipleQDNResources, publishQDNResource, saveFile, sendChatMessage, sendCoin, voteOnPoll } from "./qortalRequests/get";
 
 
 
@@ -78,7 +78,7 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
       case "ENCRYPT_DATA": {
         const data = request.payload;
         
-        encryptData(data)
+        encryptData(data, sender)
           .then((res) => {
             sendResponse(res);
           })
@@ -207,8 +207,21 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
       }
       case "JOIN_GROUP": {
         const data = request.payload;
-        console.log('data', data)
+      
         joinGroup(data)
+          .then((res) => {
+            sendResponse(res);
+          })
+          .catch((error) => {
+            sendResponse({ error: error.message });
+          });
+
+        break;
+      }
+      case "SAVE_FILE": {
+        const data = request.payload;
+      
+        saveFile(data, sender)
           .then((res) => {
             sendResponse(res);
           })
