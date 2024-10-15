@@ -1,11 +1,15 @@
 import {
+  computePow,
   createEndpoint,
+  getBalanceInfo,
   getFee,
   getKeyPair,
   getLastRef,
   getSaveWallet,
   processTransactionVersion2,
   removeDuplicateWindow,
+  signChatFunc,
+  joinGroup as joinGroupFunc
 } from "../background";
 import { getNameInfo } from "../backgroundFunctions/encryption";
 import Base58 from "../deps/Base58";
@@ -22,118 +26,107 @@ import { getPermission, setPermission } from "../qortalRequests";
 import { createTransaction } from "../transactions/transactions";
 import { fileToBase64 } from "../utils/fileReading";
 
+const _createPoll = async (pollName, pollDescription, options) => {
+  const fee = await getFee("CREATE_POLL");
 
-const  _createPoll = async (pollName, pollDescription, options) => {
+  const resPermission = await getUserPermission({
+    text1: "You are requesting to create the poll below:",
+    text2: `Poll: ${pollName}`,
+    text3: `Description: ${pollDescription}`,
+    text4: `Options: ${options?.join(", ")}`,
+    fee: fee.fee,
+  });
+  const { accepted } = resPermission;
 
-    const fee = await getFee("CREATE_POLL");
+  if (accepted) {
+    const wallet = await getSaveWallet();
+    const address = wallet.address0;
+    const resKeyPair = await getKeyPair();
+    const parsedData = JSON.parse(resKeyPair);
+    const uint8PrivateKey = Base58.decode(parsedData.privateKey);
+    const uint8PublicKey = Base58.decode(parsedData.publicKey);
+    const keyPair = {
+      privateKey: uint8PrivateKey,
+      publicKey: uint8PublicKey,
+    };
+    let lastRef = await getLastRef();
 
-    const resPermission = await getUserPermission({
-      text1: "You are requesting to create the poll below:",
-      text2: `Poll: ${pollName}`,
-      text3: `Description: ${pollDescription}`,
-      text4: `Options: ${options?.join(', ')}`,
+    const tx = await createTransaction(8, keyPair, {
       fee: fee.fee,
+      ownerAddress: address,
+      rPollName: pollName,
+      rPollDesc: pollDescription,
+      rOptions: options,
+      lastReference: lastRef,
     });
-    const { accepted } = resPermission;
+    const signedBytes = Base58.encode(tx.signedBytes);
+    const res = await processTransactionVersion2(signedBytes);
+    if (!res?.signature)
+      throw new Error("Transaction was not able to be processed");
+    return res;
+  } else {
+    throw new Error("User declined request");
+  }
+};
 
-    if(accepted){
-        const wallet = await getSaveWallet();
-        const address = wallet.address0;
-        const resKeyPair = await getKeyPair();
-        const parsedData = JSON.parse(resKeyPair);
-        const uint8PrivateKey = Base58.decode(parsedData.privateKey);
-        const uint8PublicKey = Base58.decode(parsedData.publicKey);
-        const keyPair = {
-          privateKey: uint8PrivateKey,
-          publicKey: uint8PublicKey,
-        };
-        let lastRef = await getLastRef()
+const _voteOnPoll = async (pollName, optionIndex, optionName) => {
+  const fee = await getFee("VOTE_ON_POLL");
 
-        const tx = await createTransaction(8, keyPair, {
-            fee: fee.fee,
-                ownerAddress: address,
-                rPollName: pollName,
-                rPollDesc: pollDescription,
-                rOptions: options,
-                lastReference: lastRef
-          });
-          const signedBytes = Base58.encode(tx.signedBytes);
-          const res = await processTransactionVersion2(signedBytes);
-          if (!res?.signature)
-            throw new Error("Transaction was not able to be processed");
-          return res;
-    } else {
-        throw new Error("User declined request");
-    }
-  
-}
+  const resPermission = await getUserPermission({
+    text1: "You are being requested to vote on the poll below:",
+    text2: `Poll: ${pollName}`,
+    text3: `Option: ${optionName}`,
+    fee: fee.fee,
+  });
+  const { accepted } = resPermission;
 
-const _voteOnPoll =async (pollName, optionIndex, optionName)=> {
+  if (accepted) {
+    const wallet = await getSaveWallet();
+    const address = wallet.address0;
+    const resKeyPair = await getKeyPair();
+    const parsedData = JSON.parse(resKeyPair);
+    const uint8PrivateKey = Base58.decode(parsedData.privateKey);
+    const uint8PublicKey = Base58.decode(parsedData.publicKey);
+    const keyPair = {
+      privateKey: uint8PrivateKey,
+      publicKey: uint8PublicKey,
+    };
+    let lastRef = await getLastRef();
 
-    const fee = await getFee("VOTE_ON_POLL");
-
-    const resPermission = await getUserPermission({
-      text1: "You are being requested to vote on the poll below:",
-      text2: `Poll: ${pollName}`,
-      text3: `Option: ${optionName}`,
+    const tx = await createTransaction(9, keyPair, {
       fee: fee.fee,
+      voterAddress: address,
+      rPollName: pollName,
+      rOptionIndex: optionIndex,
+      lastReference: lastRef,
     });
-    const { accepted } = resPermission;
-
-    if(accepted){
-        const wallet = await getSaveWallet();
-        const address = wallet.address0;
-        const resKeyPair = await getKeyPair();
-        const parsedData = JSON.parse(resKeyPair);
-        const uint8PrivateKey = Base58.decode(parsedData.privateKey);
-        const uint8PublicKey = Base58.decode(parsedData.publicKey);
-        const keyPair = {
-          privateKey: uint8PrivateKey,
-          publicKey: uint8PublicKey,
-        };
-        let lastRef = await getLastRef()
-
-        const tx = await createTransaction(9, keyPair, {
-            fee: fee.fee,
-            voterAddress: address,
-            rPollName: pollName,
-            rOptionIndex: optionIndex,
-            lastReference: lastRef
-          });
-          const signedBytes = Base58.encode(tx.signedBytes);
-          const res = await processTransactionVersion2(signedBytes);
-          if (!res?.signature)
-            throw new Error("Transaction was not able to be processed");
-          return res;
-    } else {
-        throw new Error("User declined request");
-    }
-   
-}
+    const signedBytes = Base58.encode(tx.signedBytes);
+    const res = await processTransactionVersion2(signedBytes);
+    if (!res?.signature)
+      throw new Error("Transaction was not able to be processed");
+    return res;
+  } else {
+    throw new Error("User declined request");
+  }
+};
 
 function getFileFromContentScript(fileId, sender) {
-    console.log('sender', sender)
-    return new Promise((resolve, reject) => {
-    
-       
-          chrome.tabs.sendMessage(
-            sender.tab.id,
-            { action: "getFileFromIndexedDB", fileId: fileId },
-            (response) => {
-                console.log('response2', response)
-              if (response && response.result) {
-                
-                resolve(response.result);
-              } else {
-                reject(response?.error || "Failed to retrieve file");
-              }
-            }
-          );
-       
-    
-    });
-  }
-  
+  console.log("sender", sender);
+  return new Promise((resolve, reject) => {
+    chrome.tabs.sendMessage(
+      sender.tab.id,
+      { action: "getFileFromIndexedDB", fileId: fileId },
+      (response) => {
+        console.log("response2", response);
+        if (response && response.result) {
+          resolve(response.result);
+        } else {
+          reject(response?.error || "Failed to retrieve file");
+        }
+      }
+    );
+  });
+}
 
 async function getUserPermission(payload: any) {
   function waitForWindowReady(windowId) {
@@ -531,7 +524,7 @@ export const publishQDNResource = async (data: any, sender) => {
     throw new Error("Only encrypted data can go into private services");
   }
   if (data.fileId) {
-    data64 = await  getFileFromContentScript(data.fileId, sender);
+    data64 = await getFileFromContentScript(data.fileId, sender);
   }
   if (data.encrypt) {
     try {
@@ -561,7 +554,7 @@ export const publishQDNResource = async (data: any, sender) => {
   const { accepted } = resPermission;
   if (accepted) {
     if (data.fileId && !data.encrypt) {
-      data64 = await  getFileFromContentScript(data.fileId, sender);
+      data64 = await getFileFromContentScript(data.fileId, sender);
     }
     try {
       const resPublish = await publishData({
@@ -669,9 +662,13 @@ export const publishMultipleQDNResources = async (data: any, sender) => {
       .map(
         (resource) => `
         <div class="resource-container">
-          <div class="resource-detail"><span>Service:</span> ${resource.service}</div>
+          <div class="resource-detail"><span>Service:</span> ${
+            resource.service
+          }</div>
           <div class="resource-detail"><span>Name:</span> ${resource.name}</div>
-          <div class="resource-detail"><span>Identifier:</span> ${resource.identifier}</div>
+          <div class="resource-detail"><span>Identifier:</span> ${
+            resource.identifier
+          }</div>
           ${
             resource.filename
               ? `<div class="resource-detail"><span>Filename:</span> ${resource.filename}</div>`
@@ -687,12 +684,12 @@ export const publishMultipleQDNResources = async (data: any, sender) => {
     fee: fee.fee * resources.length,
   });
   const { accepted } = resPermission;
-  console.log('accepted', accepted)
+  console.log("accepted", accepted);
   if (!accepted) {
     throw new Error("User declined request");
   }
   let failedPublishesIdentifiers = [];
-  console.log('resources', resources)
+  console.log("resources", resources);
   for (const resource of resources) {
     try {
       const requiredFields = ["service"];
@@ -764,9 +761,8 @@ export const publishMultipleQDNResources = async (data: any, sender) => {
           continue;
         }
       }
-     
+
       try {
-        
         await publishData({
           registeredName: encodeURIComponent(name),
           file: data64,
@@ -799,7 +795,7 @@ export const publishMultipleQDNResources = async (data: any, sender) => {
         });
       }
     } catch (error) {
-        console.log('error', error)
+      console.log("error", error);
       failedPublishesIdentifiers.push({
         reason: "Unknown error",
         identifier: resource.identifier,
@@ -817,10 +813,258 @@ export const publishMultipleQDNResources = async (data: any, sender) => {
 };
 
 export const voteOnPoll = async (data) => {
-    const requiredFields = ['pollName', 'optionIndex']
+  const requiredFields = ["pollName", "optionIndex"];
+  const missingFields: string[] = [];
+  requiredFields.forEach((field) => {
+    if (!data[field] && data[field] !== 0) {
+      missingFields.push(field);
+    }
+  });
+  if (missingFields.length > 0) {
+    const missingFieldsString = missingFields.join(", ");
+    const errorMsg = `Missing fields: ${missingFieldsString}`;
+    throw new Error(errorMsg);
+  }
+  const pollName = data.pollName;
+  const optionIndex = data.optionIndex;
+  let pollInfo = null;
+  try {
+    const url = await createEndpoint(`/polls/${encodeURIComponent(pollName)}`);
+    const response = await fetch(url);
+    if (!response.ok) throw new Error("Failed to fetch poll");
+
+    pollInfo = await response.json();
+  } catch (error) {
+    const errorMsg = (error && error.message) || "Poll not found";
+    throw new Error(errorMsg);
+  }
+  if (!pollInfo || pollInfo.error) {
+    const errorMsg = (pollInfo && pollInfo.message) || "Poll not found";
+    throw new Error(errorMsg);
+  }
+  try {
+    const optionName = pollInfo.pollOptions[optionIndex].optionName;
+    const resVoteOnPoll = await _voteOnPoll(pollName, optionIndex, optionName);
+    return resVoteOnPoll;
+  } catch (error) {
+    throw new Error(error?.message || "Failed to vote on the poll.");
+  }
+};
+
+export const createPoll = async (data) => {
+  const requiredFields = [
+    "pollName",
+    "pollDescription",
+    "pollOptions",
+    "pollOwnerAddress",
+  ];
+  const missingFields: string[] = [];
+  requiredFields.forEach((field) => {
+    if (!data[field]) {
+      missingFields.push(field);
+    }
+  });
+  if (missingFields.length > 0) {
+    const missingFieldsString = missingFields.join(", ");
+    const errorMsg = `Missing fields: ${missingFieldsString}`;
+    throw new Error(errorMsg);
+  }
+  const pollName = data.pollName;
+  const pollDescription = data.pollDescription;
+  const pollOptions = data.pollOptions;
+  const pollOwnerAddress = data.pollOwnerAddress;
+  try {
+    const resCreatePoll = await _createPoll(
+      pollName,
+      pollDescription,
+      pollOptions,
+      pollOwnerAddress
+    );
+    return resCreatePoll;
+  } catch (error) {
+    throw new Error(error?.message || "Failed to created poll.");
+  }
+};
+
+export const sendChatMessage = async (data) => {
+  const message = data.message;
+  const recipient = data.destinationAddress;
+  const groupId = data.groupId;
+  const isRecipient = !groupId;
+  const resPermission = await getUserPermission({
+    text1: "Do you give this application permission to send this chat message?",
+    text2: `To: ${isRecipient ? recipient : `group ${groupId}`}`,
+    text3: `${message?.slice(0, 25)}${message?.length > 25 ? "..." : ""}`,
+  });
+
+  const { accepted } = resPermission;
+  if (accepted) {
+    const tiptapJson = {
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [
+            {
+              type: "text",
+              text: message,
+            },
+          ],
+        },
+      ],
+    };
+    const messageObject = {
+      messageText: tiptapJson,
+      images: [""],
+      repliedTo: "",
+      version: 3,
+    };
+    try {
+        JSON.stringify(messageObject);
+
+    } catch (error) {
+        console.log('my error', error)
+    }
+    const stringifyMessageObject = JSON.stringify(messageObject);
+
+    const balance = await getBalanceInfo();
+    const hasEnoughBalance = +balance < 4 ? false : true;
+    if (!hasEnoughBalance) {
+      throw new Error("You need at least 4 QORT to send a message");
+    }
+    if (isRecipient && recipient) {
+      const url = await createEndpoint(`/addresses/publickey/${recipient}`);
+      const response = await fetch(url);
+      if (!response.ok)
+        throw new Error("Failed to fetch recipient's public key");
+    
+      let key
+      let hasPublicKey;
+      let res 
+      const contentType = response.headers.get("content-type");
+  
+  // If the response is JSON, parse it as JSON
+  if (contentType && contentType.includes("application/json")) {
+    res = await response.json();
+  } else {
+    // Otherwise, treat it as plain text
+    res = await response.text();
+  }
+      console.log('res', res)
+      if (res?.error === 102) {
+        key = "";
+        hasPublicKey = false;
+      } else if (res !== false) {
+        key = res;
+        hasPublicKey = true;
+      } else {
+        key = "";
+        hasPublicKey = false;
+      }
+
+      if (!hasPublicKey && isRecipient) {
+        throw new Error(
+          "Cannot send an encrypted message to this user since they do not have their publickey on chain."
+        );
+      }
+      let _reference = new Uint8Array(64);
+      self.crypto.getRandomValues(_reference);
+
+      let sendTimestamp = Date.now();
+
+      let reference = Base58.encode(_reference);
+      const resKeyPair = await getKeyPair();
+      const parsedData = JSON.parse(resKeyPair);
+      const uint8PrivateKey = Base58.decode(parsedData.privateKey);
+      const uint8PublicKey = Base58.decode(parsedData.publicKey);
+      const keyPair = {
+        privateKey: uint8PrivateKey,
+        publicKey: uint8PublicKey,
+      };
+     
+      const difficulty = 8;
+      const tx = await createTransaction(18, keyPair, {
+        timestamp: sendTimestamp,
+        recipient: recipient,
+        recipientPublicKey: key,
+        hasChatReference: 0,
+        message: stringifyMessageObject,
+        lastReference: reference,
+        proofOfWorkNonce: 0,
+        isEncrypted: 1,
+        isText: 1,
+      });
+      const path = chrome.runtime.getURL("memory-pow.wasm.full");
+
+      const { nonce, chatBytesArray } = await computePow({
+        chatBytes: tx.chatBytes,
+        path,
+        difficulty,
+      });
+
+      let _response = await signChatFunc(chatBytesArray, nonce, null, keyPair);
+      if (_response?.error) {
+        throw new Error(_response?.message);
+      }
+      return _response;
+    } else if (!isRecipient && groupId) {
+        let _reference = new Uint8Array(64);
+        self.crypto.getRandomValues(_reference);
+      
+        let reference = Base58.encode(_reference);
+        const resKeyPair = await getKeyPair();
+        const parsedData = JSON.parse(resKeyPair);
+        const uint8PrivateKey = Base58.decode(parsedData.privateKey);
+        const uint8PublicKey = Base58.decode(parsedData.publicKey);
+        const keyPair = {
+          privateKey: uint8PrivateKey,
+          publicKey: uint8PublicKey,
+        };
+       
+        const difficulty = 8;
+      
+        const txBody = {
+          timestamp: Date.now(),
+          groupID: Number(groupId),
+          hasReceipient: 0,
+          hasChatReference: 0,
+          message: stringifyMessageObject,
+          lastReference: reference,
+          proofOfWorkNonce: 0,
+          isEncrypted: 0, // Set default to not encrypted for groups
+          isText: 1,
+        }
+      
+        const tx = await createTransaction(181, keyPair, txBody);
+      
+        // if (!hasEnoughBalance) {
+        //   throw new Error("Must have at least 4 QORT to send a chat message");
+        // }
+        const path = chrome.runtime.getURL("memory-pow.wasm.full");
+      
+        const { nonce, chatBytesArray } = await computePow({
+          chatBytes: tx.chatBytes,
+          path,
+          difficulty,
+        });
+        let _response = await signChatFunc(chatBytesArray, nonce, null, keyPair);
+        if (_response?.error) {
+          throw new Error(_response?.message);
+        }
+        return _response;
+    } else {
+      throw new Error("Please enter a recipient or groupId");
+    }
+  } else {
+    throw new Error("User declined add to list");
+  }
+};
+
+export const joinGroup = async (data) => {
+    const requiredFields = ['groupId']
 					const missingFields: string[] = []
 					requiredFields.forEach((field) => {
-						if (!data[field] && data[field] !== 0) {
+						if (!data[field]) {
 							missingFields.push(field)
 						}
 					})
@@ -829,56 +1073,45 @@ export const voteOnPoll = async (data) => {
 						const errorMsg = `Missing fields: ${missingFieldsString}`
 						throw new Error(errorMsg)
 					}
-					const pollName = data.pollName
-					const optionIndex = data.optionIndex
-					let pollInfo = null
+                    let groupInfo = null
 					try {
-                        const url = await createEndpoint(`/polls/${encodeURIComponent(pollName)}`);
-                        const response = await fetch(url);
-                        if (!response.ok) throw new Error("Failed to fetch poll");
-                    
-                        pollInfo = await response.json();
-					} catch (error) {
-						const errorMsg = (error && error.message) || 'Poll not found'
-						throw new Error(errorMsg)
-					}
-					if (!pollInfo || pollInfo.error) {
-						const errorMsg = (pollInfo && pollInfo.message) || 'Poll not found'
-						throw new Error(errorMsg)
-					}
-					try {
-                        const optionName = pollInfo.pollOptions[optionIndex].optionName
-						const resVoteOnPoll = await _voteOnPoll(pollName, optionIndex, optionName)
-						return resVoteOnPoll
-					} catch (error) {
 						
-						throw new Error(error?.message || 'Failed to vote on the poll.')
-					}
-  };
+                        const url = await createEndpoint(`/groups/${data.groupId}`);
+    const response = await fetch(url);
+    if (!response.ok) throw new Error("Failed to fetch group");
 
-  export const createPoll = async (data) => {
-    const requiredFields = ['pollName', 'pollDescription', 'pollOptions', 'pollOwnerAddress']
-    const missingFields: string[] = []
-    requiredFields.forEach((field) => {
-        if (!data[field]) {
-            missingFields.push(field)
-        }
-    })
-    if (missingFields.length > 0) {
-        const missingFieldsString = missingFields.join(', ')
-        const errorMsg = `Missing fields: ${missingFieldsString}`
-        throw new Error(errorMsg)
-    }
-    const pollName = data.pollName
-    const pollDescription = data.pollDescription
-    const pollOptions = data.pollOptions
-    const pollOwnerAddress = data.pollOwnerAddress
-    try {
-        const resCreatePoll = await _createPoll(pollName, pollDescription, pollOptions, pollOwnerAddress)
-        return resCreatePoll
-    } catch (error) {
-        throw new Error(error?.message || 'Failed to created poll.')
-    }
+    groupInfo = await response.json();
+					} catch (error) {
+						const errorMsg = (error && error.message) || 'Group not found'
+						throw new Error(errorMsg)
+					}
+                    const fee = await getFee("JOIN_GROUP");
+
+                    const resPermission = await getUserPermission({
+                        text1: "Confirm joining the group:",
+                        highlightedText: `${groupInfo.groupName}`,
+                        fee: fee.fee
+                      });
+                      const { accepted } = resPermission;
+
+                      if(accepted){
+                        const groupId = data.groupId
+				
+					if (!groupInfo || groupInfo.error) {
+						const errorMsg = (groupInfo && groupInfo.message) || 'Group not found'
+						throw new Error(errorMsg)
+					}
+					try {
+						const resJoinGroup = await joinGroupFunc({groupId})
+						return resJoinGroup
+					} catch (error) {
+			
+						throw new Error(error?.message || 'Failed to join the group.')
+					} 
+                      } else {
+                        throw new Error("User declined add to list");
+                      }
+					
   };
 
 export const sendCoin = async () => {

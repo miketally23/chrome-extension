@@ -1896,6 +1896,7 @@ function App() {
                   {messageQortalRequest?.text2}
                 </TextP>
               </Box>
+              <Spacer height="15px" />
             </>
           )}
           {messageQortalRequest?.text3 && (
@@ -1947,8 +1948,23 @@ function App() {
             />
           )}
           <Spacer height="15px" />
+       
+          <TextP
+            sx={{
+              textAlign: "center",
+              lineHeight: 1.2,
+              fontSize: "16px",
+              fontWeight: 700,
+              maxWidth: "90%",
+            }}
+          >
+            {messageQortalRequest?.highlightedText}
+          </TextP>
+
           {messageQortalRequest?.fee && (
             <>
+                      <Spacer height="15px" />
+
             <TextP
     sx={{
                   textAlign: "center",
@@ -1964,17 +1980,6 @@ function App() {
 
             </>
           )}
-          <TextP
-            sx={{
-              textAlign: "center",
-              lineHeight: 1.2,
-              fontSize: "16px",
-              fontWeight: 700,
-              maxWidth: "90%",
-            }}
-          >
-            {messageQortalRequest?.highlightedText}
-          </TextP>
           {messageQortalRequest?.checkbox1 && (
             <Box
               sx={{

@@ -1009,7 +1009,7 @@ async function getTradesInfo(qortalAtAddresses) {
   return trades; // Return the array of trade info objects
 }
 
-async function getBalanceInfo() {
+export async function getBalanceInfo() {
   const wallet = await getSaveWallet();
   const address = wallet.address0;
   const validApi = await getBaseApi();
@@ -1384,7 +1384,7 @@ async function decryptWallet({ password, wallet, walletVersion }) {
   }
 }
 
-async function signChatFunc(chatBytesArray, chatNonce, customApi, keyPair) {
+export async function signChatFunc(chatBytesArray, chatNonce, customApi, keyPair) {
   let response;
   try {
     const signedChatBytes = signChat(chatBytesArray, chatNonce, keyPair);
@@ -1409,7 +1409,7 @@ function sbrk(size, heap) {
   return old;
 }
 
-const computePow = async ({ chatBytes, path, difficulty }) => {
+export const computePow = async ({ chatBytes, path, difficulty }) => {
   let response = null;
   await new Promise((resolve, reject) => {
     const _chatBytesArray = Object.keys(chatBytes).map(function (key) {
@@ -1973,7 +1973,7 @@ async function leaveGroup({ groupId }) {
   return res;
 }
 
-async function joinGroup({ groupId }) {
+export async function joinGroup({ groupId }) {
   const wallet = await getSaveWallet();
   const address = wallet.address0;
   const lastReference = await getLastRef();
