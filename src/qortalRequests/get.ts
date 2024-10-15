@@ -650,9 +650,9 @@ export const publishMultipleQDNResources = async (data: any, sender) => {
         });
         continue;
       }
-    //   if (data.file) {
-    //     data64 = await getFileFromContentScript(resource.identifier + "_file");
-    //   }
+      if (resource.fileId) {
+        data64 = await getFileFromContentScript(resource.fileId, sender);
+      }
       if (data.encrypt) {
         try {
           const encryptDataResponse = encryptDataGroup({
@@ -672,11 +672,7 @@ export const publishMultipleQDNResources = async (data: any, sender) => {
           continue;
         }
       }
-      if (resource.fileId && !data.encrypt) {
-       
-            data64 = await getFileFromContentScript(resource.fileId, sender);
-
-      }
+     
       try {
         
         await publishData({
