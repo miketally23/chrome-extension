@@ -2,7 +2,9 @@ import {
   createEndpoint,
   getFee,
   getKeyPair,
+  getLastRef,
   getSaveWallet,
+  processTransactionVersion2,
   removeDuplicateWindow,
 } from "../background";
 import { getNameInfo } from "../backgroundFunctions/encryption";
@@ -17,7 +19,97 @@ import {
 } from "../qdn/encryption/group-encryption";
 import { publishData } from "../qdn/publish/pubish";
 import { getPermission, setPermission } from "../qortalRequests";
+import { createTransaction } from "../transactions/transactions";
 import { fileToBase64 } from "../utils/fileReading";
+
+
+const  _createPoll = async (pollName, pollDescription, options) => {
+
+    const fee = await getFee("CREATE_POLL");
+
+    const resPermission = await getUserPermission({
+      text1: "You are requesting to create the poll below:",
+      text2: `Poll: ${pollName}`,
+      text3: `Description: ${pollDescription}`,
+      text4: `Options: ${options?.join(', ')}`,
+      fee: fee.fee,
+    });
+    const { accepted } = resPermission;
+
+    if(accepted){
+        const wallet = await getSaveWallet();
+        const address = wallet.address0;
+        const resKeyPair = await getKeyPair();
+        const parsedData = JSON.parse(resKeyPair);
+        const uint8PrivateKey = Base58.decode(parsedData.privateKey);
+        const uint8PublicKey = Base58.decode(parsedData.publicKey);
+        const keyPair = {
+          privateKey: uint8PrivateKey,
+          publicKey: uint8PublicKey,
+        };
+        let lastRef = await getLastRef()
+
+        const tx = await createTransaction(8, keyPair, {
+            fee: fee.fee,
+                ownerAddress: address,
+                rPollName: pollName,
+                rPollDesc: pollDescription,
+                rOptions: options,
+                lastReference: lastRef
+          });
+          const signedBytes = Base58.encode(tx.signedBytes);
+          const res = await processTransactionVersion2(signedBytes);
+          if (!res?.signature)
+            throw new Error("Transaction was not able to be processed");
+          return res;
+    } else {
+        throw new Error("User declined request");
+    }
+  
+}
+
+const _voteOnPoll =async (pollName, optionIndex, optionName)=> {
+
+    const fee = await getFee("VOTE_ON_POLL");
+
+    const resPermission = await getUserPermission({
+      text1: "You are being requested to vote on the poll below:",
+      text2: `Poll: ${pollName}`,
+      text3: `Option: ${optionName}`,
+      fee: fee.fee,
+    });
+    const { accepted } = resPermission;
+
+    if(accepted){
+        const wallet = await getSaveWallet();
+        const address = wallet.address0;
+        const resKeyPair = await getKeyPair();
+        const parsedData = JSON.parse(resKeyPair);
+        const uint8PrivateKey = Base58.decode(parsedData.privateKey);
+        const uint8PublicKey = Base58.decode(parsedData.publicKey);
+        const keyPair = {
+          privateKey: uint8PrivateKey,
+          publicKey: uint8PublicKey,
+        };
+        let lastRef = await getLastRef()
+
+        const tx = await createTransaction(9, keyPair, {
+            fee: fee.fee,
+            voterAddress: address,
+            rPollName: pollName,
+            rOptionIndex: optionIndex,
+            lastReference: lastRef
+          });
+          const signedBytes = Base58.encode(tx.signedBytes);
+          const res = await processTransactionVersion2(signedBytes);
+          if (!res?.signature)
+            throw new Error("Transaction was not able to be processed");
+          return res;
+    } else {
+        throw new Error("User declined request");
+    }
+   
+}
 
 function getFileFromContentScript(fileId, sender) {
     console.log('sender', sender)
@@ -723,6 +815,71 @@ export const publishMultipleQDNResources = async (data: any, sender) => {
   }
   return true;
 };
+
+export const voteOnPoll = async (data) => {
+    const requiredFields = ['pollName', 'optionIndex']
+					const missingFields: string[] = []
+					requiredFields.forEach((field) => {
+						if (!data[field] && data[field] !== 0) {
+							missingFields.push(field)
+						}
+					})
+					if (missingFields.length > 0) {
+						const missingFieldsString = missingFields.join(', ')
+						const errorMsg = `Missing fields: ${missingFieldsString}`
+						throw new Error(errorMsg)
+					}
+					const pollName = data.pollName
+					const optionIndex = data.optionIndex
+					let pollInfo = null
+					try {
+                        const url = await createEndpoint(`/polls/${encodeURIComponent(pollName)}`);
+                        const response = await fetch(url);
+                        if (!response.ok) throw new Error("Failed to fetch poll");
+                    
+                        pollInfo = await response.json();
+					} catch (error) {
+						const errorMsg = (error && error.message) || 'Poll not found'
+						throw new Error(errorMsg)
+					}
+					if (!pollInfo || pollInfo.error) {
+						const errorMsg = (pollInfo && pollInfo.message) || 'Poll not found'
+						throw new Error(errorMsg)
+					}
+					try {
+                        const optionName = pollInfo.pollOptions[optionIndex].optionName
+						const resVoteOnPoll = await _voteOnPoll(pollName, optionIndex, optionName)
+						return resVoteOnPoll
+					} catch (error) {
+						
+						throw new Error(error?.message || 'Failed to vote on the poll.')
+					}
+  };
+
+  export const createPoll = async (data) => {
+    const requiredFields = ['pollName', 'pollDescription', 'pollOptions', 'pollOwnerAddress']
+    const missingFields: string[] = []
+    requiredFields.forEach((field) => {
+        if (!data[field]) {
+            missingFields.push(field)
+        }
+    })
+    if (missingFields.length > 0) {
+        const missingFieldsString = missingFields.join(', ')
+        const errorMsg = `Missing fields: ${missingFieldsString}`
+        throw new Error(errorMsg)
+    }
+    const pollName = data.pollName
+    const pollDescription = data.pollDescription
+    const pollOptions = data.pollOptions
+    const pollOwnerAddress = data.pollOwnerAddress
+    try {
+        const resCreatePoll = await _createPoll(pollName, pollDescription, pollOptions, pollOwnerAddress)
+        return resCreatePoll
+    } catch (error) {
+        throw new Error(error?.message || 'Failed to created poll.')
+    }
+  };
 
 export const sendCoin = async () => {
   try {

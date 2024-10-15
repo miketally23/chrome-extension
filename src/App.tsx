@@ -1931,11 +1931,9 @@ function App() {
             >
               <TextP
                 sx={{
-                  textAlign: "center",
                   lineHeight: 1.2,
                   fontSize: "16px",
                   fontWeight: "normal",
-                  maxWidth: "90%",
                 }}
               >
                 {messageQortalRequest?.text4}

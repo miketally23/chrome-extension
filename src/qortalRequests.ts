@@ -1,4 +1,4 @@
-import { addListItems, decryptData, deleteListItems, encryptData, getListItems, getUserAccount, publishMultipleQDNResources, publishQDNResource, sendCoin } from "./qortalRequests/get";
+import { addListItems, createPoll, decryptData, deleteListItems, encryptData, getListItems, getUserAccount, publishMultipleQDNResources, publishQDNResource, sendCoin, voteOnPoll } from "./qortalRequests/get";
 
 
 
@@ -157,6 +157,32 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
         const data = request.payload;
         
         publishMultipleQDNResources(data, sender)
+          .then((res) => {
+            sendResponse(res);
+          })
+          .catch((error) => {
+            sendResponse({ error: error.message });
+          });
+
+        break;
+      }
+      case "VOTE_ON_POLL": {
+        const data = request.payload;
+        
+        voteOnPoll(data)
+          .then((res) => {
+            sendResponse(res);
+          })
+          .catch((error) => {
+            sendResponse({ error: error.message });
+          });
+
+        break;
+      }
+      case "CREATE_POLL": {
+        const data = request.payload;
+        
+        createPoll(data)
           .then((res) => {
             sendResponse(res);
           })

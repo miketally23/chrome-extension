@@ -1059,7 +1059,7 @@ const processTransactionVersion2Chat = async (body: any, customApi) => {
   });
 };
 
-const processTransactionVersion2 = async (body: any) => {
+export const processTransactionVersion2 = async (body: any) => {
   const url = await createEndpoint(`/transactions/process?apiVersion=2`);
 
   try {
@@ -1141,7 +1141,7 @@ const makeTransactionRequest = async (
   return myTxnrequest;
 };
 
-const getLastRef = async () => {
+export const getLastRef = async () => {
   const wallet = await getSaveWallet();
   const address = wallet.address0;
   const validApi = await getBaseApi();
