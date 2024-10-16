@@ -20,7 +20,6 @@ import Base58 from "../deps/Base58";
 import {
   base64ToUint8Array,
   decryptDeprecatedSingle,
-  decryptGroupData,
   decryptGroupDataQortalRequest,
   encryptDataGroup,
   uint8ArrayStartsWith,
@@ -29,15 +28,14 @@ import {
 import { publishData } from "../qdn/publish/pubish";
 import { getPermission, setPermission } from "../qortalRequests";
 import { createTransaction } from "../transactions/transactions";
-import { fileToBase64 } from "../utils/fileReading";
 import { mimeToExtensionMap } from "../utils/memeTypes";
 
 
 const btcFeePerByte = 0.00000100
-		const ltcFeePerByte = 0.00000030
-		const dogeFeePerByte = 0.00001000
-		const dgbFeePerByte = 0.00000010
-		const rvnFeePerByte = 0.00001125
+const ltcFeePerByte = 0.00000030
+const dogeFeePerByte = 0.00001000
+const dgbFeePerByte = 0.00000010
+const rvnFeePerByte = 0.00001125
 
 
 const _createPoll = async (pollName, pollDescription, options) => {
@@ -401,6 +399,8 @@ export const decryptData = async (data) => {
 };
 
 export const getListItems = async (data) => {
+    const localNodeAvailable = await isUsingLocal()
+    if(!localNodeAvailable) throw new Error('Please use your local node.')
   const requiredFields = ["list_name"];
   const missingFields: string[] = [];
   requiredFields.forEach((field) => {
@@ -454,6 +454,8 @@ export const getListItems = async (data) => {
 };
 
 export const addListItems = async (data) => {
+    const localNodeAvailable = await isUsingLocal()
+    if(!localNodeAvailable) throw new Error('Please use your local node.')
   const requiredFields = ["list_name", "items"];
   const missingFields: string[] = [];
   requiredFields.forEach((field) => {
@@ -507,6 +509,8 @@ export const addListItems = async (data) => {
 };
 
 export const deleteListItems = async (data) => {
+    const localNodeAvailable = await isUsingLocal()
+    if(!localNodeAvailable) throw new Error('Please use your local node.')
   const requiredFields = ["list_name", "item"];
   const missingFields: string[] = [];
   requiredFields.forEach((field) => {
@@ -1726,6 +1730,8 @@ export const getTxActivitySummary = async (data) => {
   };
 
   export const updateForeignFee = async (data) => {
+    const localNodeAvailable = await isUsingLocal()
+    if(!localNodeAvailable) throw new Error('Please use your local node.')
     const requiredFields = ['coin', 'type', 'value'];
     const missingFields: string[] = [];
   
@@ -1821,6 +1827,8 @@ export const getTxActivitySummary = async (data) => {
   };
 
   export const setCurrentForeignServer = async (data) => {
+    const localNodeAvailable = await isUsingLocal()
+    if(!localNodeAvailable) throw new Error('Please use your local node.')
     const requiredFields = ['coin'];
     const missingFields: string[] = [];
   
@@ -1878,6 +1886,8 @@ export const getTxActivitySummary = async (data) => {
   
 
   export const addForeignServer = async (data) => {
+    const localNodeAvailable = await isUsingLocal()
+    if(!localNodeAvailable) throw new Error('Please use your local node.')
     const requiredFields = ['coin'];
     const missingFields: string[] = [];
   
@@ -1934,6 +1944,8 @@ export const getTxActivitySummary = async (data) => {
   };
   
   export const removeForeignServer = async (data) => {
+    const localNodeAvailable = await isUsingLocal()
+    if(!localNodeAvailable) throw new Error('Please use your local node.')
     const requiredFields = ['coin'];
     const missingFields: string[] = [];
   
