@@ -1,4 +1,4 @@
-import { addListItems, createPoll, decryptData, deleteListItems, deployAt, encryptData, getListItems, getUserAccount, getUserWallet, getUserWalletInfo, getWalletBalance, joinGroup, publishMultipleQDNResources, publishQDNResource, saveFile, sendChatMessage, sendCoin, voteOnPoll } from "./qortalRequests/get";
+import { addForeignServer, addListItems, createPoll, decryptData, deleteListItems, deployAt, encryptData, getCrossChainServerInfo, getDaySummary, getForeignFee, getListItems, getServerConnectionHistory, getTxActivitySummary, getUserAccount, getUserWallet, getUserWalletInfo, getWalletBalance, joinGroup, publishMultipleQDNResources, publishQDNResource, removeForeignServer, saveFile, sendChatMessage, sendCoin, setCurrentForeignServer, updateForeignFee, voteOnPoll } from "./qortalRequests/get";
 
 
 
@@ -284,6 +284,131 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
 
         break;
       }
+      case "GET_CROSSCHAIN_SERVER_INFO": {
+        const data = request.payload;
+      
+        getCrossChainServerInfo(data)
+          .then((res) => {
+            sendResponse(res);
+          })
+          .catch((error) => {
+            sendResponse({ error: error.message });
+          });
+
+        break;
+      }
+      case "GET_TX_ACTIVITY_SUMMARY": {
+        const data = request.payload;
+    
+        getTxActivitySummary(data)
+            .then((res) => {
+                sendResponse(res);
+            })
+            .catch((error) => {
+                sendResponse({ error: error.message });
+            });
+    
+        break;
+    }
+    
+    case "GET_FOREIGN_FEE": {
+        const data = request.payload;
+    
+        getForeignFee(data)
+            .then((res) => {
+                sendResponse(res);
+            })
+            .catch((error) => {
+                sendResponse({ error: error.message });
+            });
+    
+        break;
+    }
+    
+    case "UPDATE_FOREIGN_FEE": {
+        const data = request.payload;
+    
+        updateForeignFee(data)
+            .then((res) => {
+                sendResponse(res);
+            })
+            .catch((error) => {
+                sendResponse({ error: error.message });
+            });
+    
+        break;
+    }
+    
+    case "GET_SERVER_CONNECTION_HISTORY": {
+        const data = request.payload;
+    
+        getServerConnectionHistory(data)
+            .then((res) => {
+                sendResponse(res);
+            })
+            .catch((error) => {
+                sendResponse({ error: error.message });
+            });
+    
+        break;
+    }
+    
+    case "SET_CURRENT_FOREIGN_SERVER": {
+        const data = request.payload;
+    
+        setCurrentForeignServer(data)
+            .then((res) => {
+                sendResponse(res);
+            })
+            .catch((error) => {
+                sendResponse({ error: error.message });
+            });
+    
+        break;
+    }
+    
+    case "ADD_FOREIGN_SERVER": {
+        const data = request.payload;
+    
+        addForeignServer(data)
+            .then((res) => {
+                sendResponse(res);
+            })
+            .catch((error) => {
+                sendResponse({ error: error.message });
+            });
+    
+        break;
+    }
+    
+    case "REMOVE_FOREIGN_SERVER": {
+        const data = request.payload;
+    
+        removeForeignServer(data)
+            .then((res) => {
+                sendResponse(res);
+            })
+            .catch((error) => {
+                sendResponse({ error: error.message });
+            });
+    
+        break;
+    }
+    
+    case "GET_DAY_SUMMARY": {
+        const data = request.payload;
+    
+        getDaySummary(data)
+            .then((res) => {
+                sendResponse(res);
+            })
+            .catch((error) => {
+                sendResponse({ error: error.message });
+            });
+    
+        break;
+    }
+    
       case "SEND_COIN": {
         const data = request.payload;
         const requiredFields = ["coin", "destinationAddress", "amount"];

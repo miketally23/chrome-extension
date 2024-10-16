@@ -1565,6 +1565,427 @@ export const getUserWalletInfo = async (data) => {
     throw new Error("User declined request");
   }
 };
+
+export const getCrossChainServerInfo = async (data)=> {
+    const requiredFields = ['coin']
+					const missingFields: string[] = []
+					requiredFields.forEach((field) => {
+						if (!data[field]) {
+							missingFields.push(field)
+						}
+					})
+					if (missingFields.length > 0) {
+						const missingFieldsString = missingFields.join(', ')
+						const errorMsg = `Missing fields: ${missingFieldsString}`
+						throw new Error(errorMsg)
+					}
+					let _url = `/crosschain/` + data.coin.toLowerCase() + `/serverinfos`
+					try {
+					
+					
+                        const url = await createEndpoint(_url);
+                        const response = await fetch(url);
+                        if (!response.ok) throw new Error("Failed to fetch");
+                        let res;
+                        try {
+                          res = await response.clone().json();
+                        } catch (e) {
+                          res = await response.text();
+                        }
+                        if (res?.error && res?.message) {
+                          throw new Error(res.message);
+                        }
+						return res.servers
+					} catch (error) {
+						
+                        throw new Error(error?.message || 'Error in retrieving server info')
+					} 
+}
+
+export const getTxActivitySummary = async (data) => {
+    const requiredFields = ['coin'];
+    const missingFields: string[] = [];
+    requiredFields.forEach((field) => {
+      if (!data[field]) {
+        missingFields.push(field);
+      }
+    });
+  
+    if (missingFields.length > 0) {
+      const missingFieldsString = missingFields.join(', ');
+      const errorMsg = `Missing fields: ${missingFieldsString}`;
+      throw new Error(errorMsg);
+    }
+  
+    const coin = data.coin;
+    const url = `/crosschain/txactivity?foreignBlockchain=${coin}`; // No apiKey here
+  
+    try {
+      const endpoint = await createEndpoint(url);
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          Accept: '*/*',
+          'Content-Type': 'application/json',
+        },
+      });
+  
+      if (!response.ok) throw new Error('Failed to fetch');
+      let res;
+      try {
+        res = await response.clone().json();
+      } catch (e) {
+        res = await response.text();
+      }
+      if (res?.error && res?.message) {
+        throw new Error(res.message);
+      }
+      return res; // Return full response here
+    } catch (error) {
+      throw new Error(error?.message || 'Error in tx activity summary');
+    }
+  };
+
+  export const getForeignFee = async (data) => {
+    const requiredFields = ['coin', 'type'];
+    const missingFields: string[] = [];
+  
+    requiredFields.forEach((field) => {
+      if (!data[field]) {
+        missingFields.push(field);
+      }
+    });
+  
+    if (missingFields.length > 0) {
+      const missingFieldsString = missingFields.join(', ');
+      const errorMsg = `Missing fields: ${missingFieldsString}`;
+      throw new Error(errorMsg);
+    }
+  
+    const { coin, type } = data;
+    const url = `/crosschain/${coin}/${type}`;
+  
+    try {
+      const endpoint = await createEndpoint(url);
+      const response = await fetch(endpoint, {
+        method: 'GET',
+        headers: {
+          Accept: '*/*',
+          'Content-Type': 'application/json',
+        },
+      });
+  
+      if (!response.ok) throw new Error('Failed to fetch');
+      let res;
+      try {
+        res = await response.clone().json();
+      } catch (e) {
+        res = await response.text();
+      }
+      if (res?.error && res?.message) {
+        throw new Error(res.message);
+      }
+      return res; // Return full response here
+    } catch (error) {
+      throw new Error(error?.message || 'Error in get foreign fee');
+    }
+  };
+
+  export const updateForeignFee = async (data) => {
+    const requiredFields = ['coin', 'type', 'value'];
+    const missingFields: string[] = [];
+  
+    requiredFields.forEach((field) => {
+      if (!data[field]) {
+        missingFields.push(field);
+      }
+    });
+  
+    if (missingFields.length > 0) {
+      const missingFieldsString = missingFields.join(', ');
+      const errorMsg = `Missing fields: ${missingFieldsString}`;
+      throw new Error(errorMsg);
+    }
+  
+    const { coin, type, value } = data;
+    const url = `/crosschain/${coin}/update${type}`;
+  
+    try {
+      const endpoint = await createEndpoint(url);
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          Accept: '*/*',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ value }),
+      });
+  
+      if (!response.ok) throw new Error('Failed to update foreign fee');
+      let res;
+      try {
+        res = await response.clone().json();
+      } catch (e) {
+        res = await response.text();
+      }
+      if (res?.error && res?.message) {
+        throw new Error(res.message);
+      }
+      return res; // Return full response here
+    } catch (error) {
+      throw new Error(error?.message || 'Error in update foreign fee');
+    }
+  };
+  
+  export const getServerConnectionHistory = async (data) => {
+    const requiredFields = ['coin'];
+    const missingFields: string[] = [];
+  
+    // Validate required fields
+    requiredFields.forEach((field) => {
+      if (!data[field]) {
+        missingFields.push(field);
+      }
+    });
+  
+    if (missingFields.length > 0) {
+      const missingFieldsString = missingFields.join(', ');
+      const errorMsg = `Missing fields: ${missingFieldsString}`;
+      throw new Error(errorMsg);
+    }
+  
+    const coin = data.coin.toLowerCase();
+    const url = `/crosschain/${coin}/serverconnectionhistory`;
+  
+    try {
+      const endpoint = await createEndpoint(url); // Assuming createEndpoint is available
+      const response = await fetch(endpoint, {
+        method: 'GET',
+        headers: {
+          Accept: '*/*',
+          'Content-Type': 'application/json',
+        },
+      });
+  
+      if (!response.ok) throw new Error('Failed to fetch server connection history');
+      
+      let res;
+      try {
+        res = await response.clone().json();
+      } catch (e) {
+        res = await response.text();
+      }
+  
+      if (res?.error && res?.message) {
+        throw new Error(res.message);
+      }
+  
+      return res; // Return full response here
+    } catch (error) {
+      throw new Error(error?.message || 'Error in get server connection history');
+    }
+  };
+
+  export const setCurrentForeignServer = async (data) => {
+    const requiredFields = ['coin'];
+    const missingFields: string[] = [];
+  
+    // Validate required fields
+    requiredFields.forEach((field) => {
+      if (!data[field]) {
+        missingFields.push(field);
+      }
+    });
+  
+    if (missingFields.length > 0) {
+      const missingFieldsString = missingFields.join(', ');
+      const errorMsg = `Missing fields: ${missingFieldsString}`;
+      throw new Error(errorMsg);
+    }
+  
+    const { coin, host, port, type } = data;
+    const body = {
+      hostName: host,
+      port: port,
+      connectionType: type,
+    };
+  
+    const url = `/crosschain/${coin}/setcurrentserver`;
+  
+    try {
+      const endpoint = await createEndpoint(url); // Assuming createEndpoint is available
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          Accept: '*/*',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      });
+  
+      if (!response.ok) throw new Error('Failed to set current server');
+      
+      let res;
+      try {
+        res = await response.clone().json();
+      } catch (e) {
+        res = await response.text();
+      }
+  
+      if (res?.error && res?.message) {
+        throw new Error(res.message);
+      }
+  
+      return res; // Return the full response
+    } catch (error) {
+      throw new Error(error?.message || 'Error in set current server');
+    }
+  };
+  
+
+  export const addForeignServer = async (data) => {
+    const requiredFields = ['coin'];
+    const missingFields: string[] = [];
+  
+    // Validate required fields
+    requiredFields.forEach((field) => {
+      if (!data[field]) {
+        missingFields.push(field);
+      }
+    });
+  
+    if (missingFields.length > 0) {
+      const missingFieldsString = missingFields.join(', ');
+      const errorMsg = `Missing fields: ${missingFieldsString}`;
+      throw new Error(errorMsg);
+    }
+  
+    const { coin, host, port, type } = data;
+    const body = {
+      hostName: host,
+      port: port,
+      connectionType: type,
+    };
+  
+    const url = `/crosschain/${coin}/addserver`;
+  
+    try {
+      const endpoint = await createEndpoint(url); // Assuming createEndpoint is available
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          Accept: '*/*',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      });
+  
+      if (!response.ok) throw new Error('Failed to add server');
+      
+      let res;
+      try {
+        res = await response.clone().json();
+      } catch (e) {
+        res = await response.text();
+      }
+  
+      if (res?.error && res?.message) {
+        throw new Error(res.message);
+      }
+  
+      return res; // Return the full response
+    } catch (error) {
+      throw new Error(error.message || 'Error in adding server');
+    }
+  };
+  
+  export const removeForeignServer = async (data) => {
+    const requiredFields = ['coin'];
+    const missingFields: string[] = [];
+  
+    // Validate required fields
+    requiredFields.forEach((field) => {
+      if (!data[field]) {
+        missingFields.push(field);
+      }
+    });
+  
+    if (missingFields.length > 0) {
+      const missingFieldsString = missingFields.join(', ');
+      const errorMsg = `Missing fields: ${missingFieldsString}`;
+      throw new Error(errorMsg);
+    }
+  
+    const { coin, host, port, type } = data;
+    const body = {
+      hostName: host,
+      port: port,
+      connectionType: type,
+    };
+  
+    const url = `/crosschain/${coin}/removeserver`;
+  
+    try {
+      const endpoint = await createEndpoint(url); // Assuming createEndpoint is available
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          Accept: '*/*',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      });
+  
+      if (!response.ok) throw new Error('Failed to remove server');
+      
+      let res;
+      try {
+        res = await response.clone().json();
+      } catch (e) {
+        res = await response.text();
+      }
+  
+      if (res?.error && res?.message) {
+        throw new Error(res.message);
+      }
+  
+      return res; // Return the full response
+    } catch (error) {
+      throw new Error(error?.message || 'Error in removing server');
+    }
+  };
+  
+  export const getDaySummary = async () => {
+    const url = `/admin/summary`; // Simplified endpoint URL
+  
+    try {
+      const endpoint = await createEndpoint(url); // Assuming createEndpoint is available for constructing the full URL
+      const response = await fetch(endpoint, {
+        method: 'GET',
+        headers: {
+          Accept: '*/*',
+        },
+      });
+  
+      if (!response.ok) throw new Error('Failed to retrieve summary');
+  
+      let res;
+      try {
+        res = await response.clone().json();
+      } catch (e) {
+        res = await response.text();
+      }
+  
+      if (res?.error && res?.message) {
+        throw new Error(res.message);
+      }
+  
+      return res; // Return the full response
+    } catch (error) {
+      throw new Error(error?.message || 'Error in retrieving summary');
+    }
+  };
+  
 export const sendCoin = async () => {
   try {
     const wallet = await getSaveWallet();
