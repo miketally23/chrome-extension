@@ -1,4 +1,4 @@
-import { addListItems, createPoll, decryptData, deleteListItems, deployAt, encryptData, getListItems, getUserAccount, getUserWallet, joinGroup, publishMultipleQDNResources, publishQDNResource, saveFile, sendChatMessage, sendCoin, voteOnPoll } from "./qortalRequests/get";
+import { addListItems, createPoll, decryptData, deleteListItems, deployAt, encryptData, getListItems, getUserAccount, getUserWallet, getWalletBalance, joinGroup, publishMultipleQDNResources, publishQDNResource, saveFile, sendChatMessage, sendCoin, voteOnPoll } from "./qortalRequests/get";
 
 
 
@@ -248,6 +248,19 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
         const data = request.payload;
       
         getUserWallet(data)
+          .then((res) => {
+            sendResponse(res);
+          })
+          .catch((error) => {
+            sendResponse({ error: error.message });
+          });
+
+        break;
+      }
+      case "GET_WALLET_BALANCE": {
+        const data = request.payload;
+      
+        getWalletBalance(data)
           .then((res) => {
             sendResponse(res);
           })

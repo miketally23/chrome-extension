@@ -1291,7 +1291,8 @@ export const getUserWallet = async (data) => {
     throw new Error(errorMsg);
   }
   const resPermission = await getUserPermission({
-    text1: "Do you give this application permission to get your wallet information?",
+    text1:
+      "Do you give this application permission to get your wallet information?",
   });
   const { accepted } = resPermission;
 
@@ -1305,7 +1306,7 @@ export const getUserWallet = async (data) => {
     const parsedData = JSON.parse(resKeyPair);
     const arrrSeed58 = parsedData.arrrSeed58;
     if (coin === "ARRR") {
-      const bodyToString = arrrSeed58
+      const bodyToString = arrrSeed58;
       const url = await createEndpoint(`/crosschain/arrr/walletaddress`);
       const response = await fetch(url, {
         method: "POST",
@@ -1320,8 +1321,8 @@ export const getUserWallet = async (data) => {
       } catch (e) {
         res = await response.text();
       }
-      if(res?.error && res?.message){
-        throw new Error(res.message)
+      if (res?.error && res?.message) {
+        throw new Error(res.message);
       }
       arrrAddress = res;
     }
@@ -1357,6 +1358,113 @@ export const getUserWallet = async (data) => {
         break;
     }
     return userWallet;
+  } else {
+    throw new Error("User declined request");
+  }
+};
+
+export const getWalletBalance = async (data) => {
+  const requiredFields = ["coin"];
+  const missingFields: string[] = [];
+  requiredFields.forEach((field) => {
+    if (!data[field]) {
+      missingFields.push(field);
+    }
+  });
+  if (missingFields.length > 0) {
+    const missingFieldsString = missingFields.join(", ");
+    const errorMsg = `Missing fields: ${missingFieldsString}`;
+    throw new Error(errorMsg);
+  }
+
+  const resPermission = await getUserPermission({
+    text1: "Do you give this application permission to fetch your",
+    highlightedText: `${data.coin} balance`,
+  });
+  const { accepted } = resPermission;
+
+  if (accepted) {
+    let coin = data.coin;
+    const wallet = await getSaveWallet();
+    const address = wallet.address0;
+    const resKeyPair = await getKeyPair();
+    const parsedData = JSON.parse(resKeyPair);
+    if (coin === "QORT") {
+      let qortAddress = address;
+      try {
+        const url = await createEndpoint(`/addresses/balance/${qortAddress}`);
+        const response = await fetch(url);
+        if (!response.ok) throw new Error("Failed to fetch");
+        let res;
+        try {
+          res = await response.clone().json();
+        } catch (e) {
+          res = await response.text();
+        }
+        return res;
+      } catch (error) {
+        throw new Error(
+          error?.message || "Fetch Wallet Failed. Please try again"
+        );
+      }
+    } else {
+      let _url = ``;
+      let _body = null;
+      switch (coin) {
+        case "BTC":
+          _url = await createEndpoint(`/crosschain/btc/walletbalance`);
+
+          _body = parsedData.derivedMasterPublicKey;
+          break;
+        case "LTC":
+          _url = await createEndpoint(`/crosschain/ltc/walletbalance`);
+          _body = parsedData.ltcPublicKey;
+          break;
+        case "DOGE":
+          _url = await createEndpoint(`/crosschain/doge/walletbalance`);
+          _body = parsedData.dogePublicKey;
+          break;
+        case "DGB":
+          _url = await createEndpoint(`/crosschain/dgb/walletbalance`);
+          _body = parsedData.dgbPublicKey;
+          break;
+        case "RVN":
+          _url = await createEndpoint(`/crosschain/rvn/walletbalance`);
+          _body = parsedData.rvnPublicKey;
+          break;
+        case "ARRR":
+          _url = await createEndpoint(`/crosschain/arrr/walletbalance`);
+          _body = parsedData.arrrSeed58;
+          break;
+        default:
+          break;
+      }
+      try {
+        const response = await fetch(_url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: _body,
+        });
+        let res;
+        try {
+          res = await response.clone().json();
+        } catch (e) {
+          res = await response.text();
+        }
+        if (res?.error && res?.message) {
+          throw new Error(res.message);
+        }
+        if (isNaN(Number(res))) {
+          throw new Error("Unable to fetch balance");
+        } else {
+          return (Number(res) / 1e8).toFixed(8);
+        }
+      } catch (error) {
+        throw new Error(error?.message || "Unable to fetch balance");
+      }
+    }
   } else {
     throw new Error("User declined request");
   }
