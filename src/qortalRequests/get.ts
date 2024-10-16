@@ -1470,6 +1470,101 @@ export const getWalletBalance = async (data) => {
   }
 };
 
+const getUserWalletFunc = async (coin) => {
+  let userWallet = {};
+  const wallet = await getSaveWallet();
+  const address = wallet.address0;
+  const resKeyPair = await getKeyPair();
+  const parsedData = JSON.parse(resKeyPair);
+  console.log('coin', coin)
+  switch (coin) {
+    case "QORT":
+      userWallet["address"] = address;
+      userWallet["publickey"] = parsedData.publicKey;
+      break;
+    case "BTC":
+      userWallet["address"] = parsedData.btcAddress;
+      userWallet["publickey"] = parsedData.btcPublicKey;
+      break;
+    case "LTC":
+      userWallet["address"] = parsedData.ltcAddress;
+      userWallet["publickey"] = parsedData.ltcPublicKey;
+      break;
+    case "DOGE":
+      userWallet["address"] = parsedData.dogeAddress;
+      userWallet["publickey"] = parsedData.dogePublicKey;
+      break;
+    case "DGB":
+      userWallet["address"] = parsedData.dgbAddress;
+      userWallet["publickey"] = parsedData.dgbPublicKey;
+      break;
+    case "RVN":
+      userWallet["address"] = parsedData.rvnAddress;
+      userWallet["publickey"] = parsedData.rvnPublicKey;
+      break;
+    case "ARRR":
+      break;
+    default:
+      break;
+  }
+  return userWallet;
+};
+
+export const getUserWalletInfo = async (data) => {
+  const requiredFields = ["coin"];
+  const missingFields: string[] = [];
+  requiredFields.forEach((field) => {
+    if (!data[field]) {
+      missingFields.push(field);
+    }
+  });
+  if (missingFields.length > 0) {
+    const missingFieldsString = missingFields.join(", ");
+    const errorMsg = `Missing fields: ${missingFieldsString}`;
+    throw new Error(errorMsg);
+  }
+  const resPermission = await getUserPermission({
+    text1: "Do you give this application permission to retrieve your wallet information",
+  });
+  const { accepted } = resPermission;
+
+  if (accepted) {
+    let coin = data.coin;
+    let walletKeys = await getUserWalletFunc(coin);
+    console.log('walletKeys', walletKeys)
+    console.log('walletKeys["publickey"]', walletKeys["publickey"])
+    const _url = await createEndpoint(
+      `/crosschain/` + data.coin.toLowerCase() + `/addressinfos`
+    );
+    let _body = { xpub58: walletKeys["publickey"] };
+    try {
+      const response = await fetch(_url, {
+        method: "POST",
+        headers: {
+          Accept: "*/*",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(_body),
+      });
+      if(!response?.ok) throw new Error('Unable to fetch wallet information')
+      let res;
+      try {
+        res = await response.clone().json();
+      } catch (e) {
+        res = await response.text();
+      }
+      if (res?.error && res?.message) {
+        throw new Error(res.message);
+      }
+
+      return res;
+    } catch (error) {
+      throw new Error(error?.message || "Fetch Wallet Failed");
+    }
+  } else {
+    throw new Error("User declined request");
+  }
+};
 export const sendCoin = async () => {
   try {
     const wallet = await getSaveWallet();
