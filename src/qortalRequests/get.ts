@@ -21,6 +21,7 @@ import {
   base64ToUint8Array,
   decryptDeprecatedSingle,
   decryptGroupData,
+  decryptGroupDataQortalRequest,
   encryptDataGroup,
   uint8ArrayStartsWith,
   uint8ArrayToBase64,
@@ -344,6 +345,7 @@ export const encryptData = async (data, sender) => {
   const parsedData = JSON.parse(resKeyPair);
   const privateKey = parsedData.privateKey;
   const userPublicKey = parsedData.publicKey;
+  console.log('data', data)
 
   const encryptDataResponse = encryptDataGroup({
     data64,
@@ -388,7 +390,7 @@ export const decryptData = async (data) => {
     "qortalGroupEncryptedData"
   );
   if (startsWithQortalGroupEncryptedData) {
-    const decryptedData = decryptGroupData(
+    const decryptedData = decryptGroupDataQortalRequest(
       encryptedData,
       parsedData.privateKey
     );
@@ -843,7 +845,7 @@ export const publishMultipleQDNResources = async (data: any, sender) => {
           }
         } catch (error) {
           const errorMsg =
-            error.message || "Upload failed due to failed encryption";
+            error?.message || "Upload failed due to failed encryption";
           failedPublishesIdentifiers.push({
             reason: errorMsg,
             identifier: resource.identifier,

@@ -67,7 +67,7 @@ export const createSymmetricKeyAndNonce = () => {
 
 export const encryptDataGroup = ({ data64, publicKeys, privateKey, userPublicKey }: any) => {
 
-	let combinedPublicKeys = publicKeys
+	let combinedPublicKeys = [...publicKeys, userPublicKey]
 	const decodedPrivateKey = Base58.decode(privateKey)
 	const publicKeysDuplicateFree = [...new Set(combinedPublicKeys)]
 
@@ -275,11 +275,62 @@ export const decodeBase64ForUIChatMessages = (messages)=> {
   
   
   
-  
+  export function decryptGroupDataQortalRequest(data64EncryptedData, privateKey) {
+	const allCombined = base64ToUint8Array(data64EncryptedData)
+	const str = "qortalGroupEncryptedData"
+	const strEncoder = new TextEncoder()
+	const strUint8Array = strEncoder.encode(str)
+	// Extract the nonce
+	const nonceStartPosition = strUint8Array.length
+	const nonceEndPosition = nonceStartPosition + 24 // Nonce is 24 bytes
+	const nonce = allCombined.slice(nonceStartPosition, nonceEndPosition)
+	// Extract the shared keyNonce
+	const keyNonceStartPosition = nonceEndPosition
+	const keyNonceEndPosition = keyNonceStartPosition + 24 // Nonce is 24 bytes
+	const keyNonce = allCombined.slice(keyNonceStartPosition, keyNonceEndPosition)
+	// Extract the sender's public key
+	const senderPublicKeyStartPosition = keyNonceEndPosition
+	const senderPublicKeyEndPosition = senderPublicKeyStartPosition + 32 // Public keys are 32 bytes
+	const senderPublicKey = allCombined.slice(senderPublicKeyStartPosition, senderPublicKeyEndPosition)
+	// Calculate count first
+	const countStartPosition = allCombined.length - 4 // 4 bytes before the end, since count is stored in Uint32 (4 bytes)
+	const countArray = allCombined.slice(countStartPosition, countStartPosition + 4)
+	const count = new Uint32Array(countArray.buffer)[0]
+	// Then use count to calculate encryptedData
+	const encryptedDataStartPosition = senderPublicKeyEndPosition // start position of encryptedData
+	const encryptedDataEndPosition = allCombined.length - ((count * (32 + 16)) + 4)
+	const encryptedData = allCombined.slice(encryptedDataStartPosition, encryptedDataEndPosition)
+	// Extract the encrypted keys
+	// 32+16 = 48
+	const combinedKeys = allCombined.slice(encryptedDataEndPosition, encryptedDataEndPosition + (count * 48))
+	if (!privateKey) {
+		throw new Error("Unable to retrieve keys")
+	}
+	const decodedPrivateKey = Base58.decode(privateKey)
+	const convertedPrivateKey = ed2curve.convertSecretKey(decodedPrivateKey)
+	const convertedSenderPublicKey = ed2curve.convertPublicKey(senderPublicKey)
+	const sharedSecret = new Uint8Array(32)
+	nacl.lowlevel.crypto_scalarmult(sharedSecret, convertedPrivateKey, convertedSenderPublicKey)
+	for (let i = 0; i < count; i++) {
+		const encryptedKey = combinedKeys.slice(i * 48, (i + 1) * 48)
+		// Decrypt the symmetric key.
+		const decryptedKey = nacl.secretbox.open(encryptedKey, keyNonce, sharedSecret)
+		// If decryption was successful, decryptedKey will not be null.
+		if (decryptedKey) {
+			// Decrypt the data using the symmetric key.
+			const decryptedData = nacl.secretbox.open(encryptedData, nonce, decryptedKey)
+			console.log('decryptedData', decryptedData)
+			// If decryption was successful, decryptedData will not be null.
+			if (decryptedData) {
+				return decryptedData
+			}
+		}
+	}
+	throw new Error("Unable to decrypt data")
+}
 
 
 export function decryptGroupData(data64EncryptedData: string, privateKey: string) {
-	
 	const allCombined = base64ToUint8Array(data64EncryptedData)
 	const str = "qortalGroupEncryptedData"
 	const strEncoder = new TextEncoder()

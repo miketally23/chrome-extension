@@ -816,7 +816,7 @@ if (!window.hasAddedQortalListener) {
         if (response.error) {
           eventPort.postMessage({
             result: null,
-            error: response.error,
+            error: response,
           });
         } else {
           eventPort.postMessage({
