@@ -788,6 +788,27 @@ if (!window.hasAddedQortalListener) {
     if (event.source !== window || !event.data || !event.data.action) return;
   
     if (event?.data?.requestedHandler !== 'UI') return;
+
+   await new Promise((res)=> {
+    chrome?.runtime?.sendMessage(
+      {
+        action: "authentication",
+        timeout: 60,
+      },
+      (response) => {
+        if (response.error) {
+          eventPort.postMessage({
+            result: null,
+            error: 'User not authenticated',
+          });
+          res()
+          return
+        } else {
+          res()
+        }
+      }
+    );
+   }) 
   
     const sendMessageToRuntime = (message, eventPort) => {
       chrome?.runtime?.sendMessage(message, (response) => {
