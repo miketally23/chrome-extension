@@ -411,26 +411,13 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
     
       case "SEND_COIN": {
         const data = request.payload;
-        const requiredFields = ["coin", "destinationAddress", "amount"];
-        const missingFields: string[] = [];
-        requiredFields.forEach((field) => {
-          if (!data[field]) {
-            missingFields.push(field);
-          }
-        });
-        if (missingFields.length > 0) {
-          const missingFieldsString = missingFields.join(", ");
-          const errorMsg = `Missing fields: ${missingFieldsString}`;
-          sendResponse({ error: errorMsg });
-          break;
-        }
-        // Example: respond with the version
-        sendCoin()
+      
+        sendCoin(data)
           .then((res) => {
             sendResponse(res);
           })
           .catch((error) => {
-            sendResponse({ error: "Unable to get user account" });
+            sendResponse({ error: error.message });
           });
 
         break;

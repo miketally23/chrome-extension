@@ -10,8 +10,12 @@ import {
   removeDuplicateWindow,
   signChatFunc,
   joinGroup as joinGroupFunc,
+  sendQortFee,
+  sendCoin as sendCoinFunc,
+  isUsingLocal
 } from "../background";
 import { getNameInfo } from "../backgroundFunctions/encryption";
+import { QORT_DECIMALS } from "../constants/constants";
 import Base58 from "../deps/Base58";
 import {
   base64ToUint8Array,
@@ -26,6 +30,14 @@ import { getPermission, setPermission } from "../qortalRequests";
 import { createTransaction } from "../transactions/transactions";
 import { fileToBase64 } from "../utils/fileReading";
 import { mimeToExtensionMap } from "../utils/memeTypes";
+
+
+const btcFeePerByte = 0.00000100
+		const ltcFeePerByte = 0.00000030
+		const dogeFeePerByte = 0.00001000
+		const dgbFeePerByte = 0.00000010
+		const rvnFeePerByte = 0.00001125
+
 
 const _createPoll = async (pollName, pollDescription, options) => {
   const fee = await getFee("CREATE_POLL");
@@ -1375,7 +1387,7 @@ export const getUserWallet = async (data) => {
   }
 };
 
-export const getWalletBalance = async (data) => {
+export const getWalletBalance = async (data, bypassPermission?: boolean) => {
   const requiredFields = ["coin"];
   const missingFields: string[] = [];
   requiredFields.forEach((field) => {
@@ -1388,14 +1400,22 @@ export const getWalletBalance = async (data) => {
     const errorMsg = `Missing fields: ${missingFieldsString}`;
     throw new Error(errorMsg);
   }
+  let resPermission
 
-  const resPermission = await getUserPermission({
-    text1: "Do you give this application permission to fetch your",
-    highlightedText: `${data.coin} balance`,
-  });
+  if(!bypassPermission){
+     resPermission = await getUserPermission({
+        text1: "Do you give this application permission to fetch your",
+        highlightedText: `${data.coin} balance`,
+      });
+  } else {
+    resPermission = {
+        accepted: false
+    }
+  }
+ 
   const { accepted } = resPermission;
 
-  if (accepted) {
+  if (accepted || bypassPermission) {
     let coin = data.coin;
     const wallet = await getSaveWallet();
     const address = wallet.address0;
@@ -1998,16 +2018,415 @@ export const getTxActivitySummary = async (data) => {
     }
   };
   
-export const sendCoin = async () => {
-  try {
+export const sendCoin = async (data) => {
+    const requiredFields = ['coin', 'destinationAddress', 'amount']
+    const missingFields: string[] = []
+    requiredFields.forEach((field) => {
+        if (!data[field]) {
+            missingFields.push(field)
+        }
+    })
+    if (missingFields.length > 0) {
+        const missingFieldsString = missingFields.join(', ')
+        const errorMsg = `Missing fields: ${missingFieldsString}`
+        throw new Error(errorMsg)
+    }
+    let checkCoin = data.coin
     const wallet = await getSaveWallet();
     const address = wallet.address0;
-    const publicKey = wallet.publicKey;
-    return {
-      address,
-      publicKey,
-    };
-  } catch (error) {
-    console.error(error);
-  }
+    const resKeyPair = await getKeyPair();
+    const parsedData = JSON.parse(resKeyPair);
+    const localNodeAvailable = await isUsingLocal()
+    if(checkCoin !== 'QORT' && !localNodeAvailable) throw new Error('Cannot send a non-QORT coin through the gateway. Please use your local node.')
+    if (checkCoin === "QORT") {
+        // Params: data.coin, data.destinationAddress, data.amount, data.fee
+        // TODO: prompt user to send. If they confirm, call `POST /crosschain/:coin/send`, or for QORT, broadcast a PAYMENT transaction
+        // then set the response string from the core to the `response` variable (defined above)
+        // If they decline, send back JSON that includes an `error` key, such as `{"error": "User declined request"}`
+        const amount = Number(data.amount)
+        const recipient = data.destinationAddress
+       
+        const url = await createEndpoint(`/addresses/balance/${address}`);
+    console.log("url", url);
+    const response = await fetch(url);
+    console.log("response", response);
+    if (!response.ok) throw new Error("Failed to fetch");
+    let walletBalance;
+    try {
+        walletBalance = await response.clone().json();
+    } catch (e) {
+        walletBalance = await response.text();
+    }
+        if (isNaN(Number(walletBalance))) {
+            let errorMsg = "Failed to Fetch QORT Balance. Try again!"
+           throw new Error(errorMsg)
+        }
+        
+        const transformDecimals = (Number(walletBalance) * QORT_DECIMALS).toFixed(0)
+        const walletBalanceDecimals = Number(transformDecimals)
+        const amountDecimals = Number(amount) * QORT_DECIMALS
+        const fee: number = await sendQortFee()
+        if (amountDecimals + (fee * QORT_DECIMALS) > walletBalanceDecimals) {
+            let errorMsg = "Insufficient Funds!"
+            throw new Error(errorMsg)
+        }
+        if (amount <= 0) {
+            let errorMsg = "Invalid Amount!"
+           throw new Error(errorMsg)
+        }
+        if (recipient.length === 0) {
+            let errorMsg = "Receiver cannot be empty!"
+            throw new Error(errorMsg)
+        }
+
+        const resPermission = await getUserPermission({
+            text1: "Do you give this application permission to send coins?",
+            text2: `To: ${recipient}`, 
+            highlightedText: `${amount} ${checkCoin}`,
+          });
+          const { accepted } = resPermission;
+        
+          if (accepted) {
+            const makePayment = await sendCoinFunc({amount, password: null, receiver: recipient }, true)
+            return makePayment.res
+          } else {
+            throw new Error("User declined request")
+          }
+      
+    } else if (checkCoin === "BTC") {
+        const amount = Number(data.amount)
+        const recipient = data.destinationAddress
+        const xprv58 = parsedData.btcPrivateKey
+        const feePerByte = data.fee ? data.fee : btcFeePerByte
+        
+        const btcWalletBalance = await getWalletBalance({coin: checkCoin}, true)
+
+        if (isNaN(Number(btcWalletBalance))) {
+            throw new Error('Unable to fetch BTC balance')
+        }
+        const btcWalletBalanceDecimals = Number(btcWalletBalance)
+        const btcAmountDecimals = Number(amount) * QORT_DECIMALS
+        const fee = feePerByte * 500 // default 0.00050000
+        if (btcAmountDecimals + (fee * QORT_DECIMALS) > btcWalletBalanceDecimals) {
+            throw new Error("INSUFFICIENT_FUNDS")
+        }
+       
+        const resPermission = await getUserPermission({
+            text1: "Do you give this application permission to send coins?",
+            text2: `To: ${recipient}`, 
+            highlightedText: `${amount} ${checkCoin}`,
+            fee: fee
+          });
+          const { accepted } = resPermission;
+        
+          if (accepted) {
+            const opts = {
+                xprv58: xprv58,
+                receivingAddress: recipient,
+                bitcoinAmount: amount,
+                feePerByte: feePerByte * QORT_DECIMALS
+            }
+            const url = await createEndpoint(`/crosschain/btc/send`);
+            
+           const response = await  fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(opts)
+            })
+            if (!response.ok) throw new Error("Failed to send");
+            let res;
+            try {
+              res = await response.clone().json();
+            } catch (e) {
+              res = await response.text();
+            }
+            return res;
+         
+          } else {
+            throw new Error("User declined request")
+          }
+
+    } else if (checkCoin === "LTC") {
+    
+        const amount = Number(data.amount)
+        const recipient = data.destinationAddress
+        const xprv58 = parsedData.ltcPrivateKey
+        const feePerByte = data.fee ? data.fee : ltcFeePerByte
+        const ltcWalletBalance = await getWalletBalance({coin: checkCoin}, true)
+
+        if (isNaN(Number(ltcWalletBalance))) {
+            let errorMsg = "Failed to Fetch LTC Balance. Try again!"
+            throw new Error(errorMsg)
+        }
+        const ltcWalletBalanceDecimals = Number(ltcWalletBalance)
+        const ltcAmountDecimals = Number(amount) * QORT_DECIMALS
+        const balance = (Number(ltcWalletBalance) / 1e8).toFixed(8)
+        const fee = feePerByte * 1000 // default 0.00030000
+        if (ltcAmountDecimals + (fee * QORT_DECIMALS) > ltcWalletBalanceDecimals) {
+            throw new Error("Insufficient Funds!")
+        }
+        const resPermission = await getUserPermission({
+            text1: "Do you give this application permission to send coins?",
+            text2: `To: ${recipient}`, 
+            highlightedText: `${amount} ${checkCoin}`,
+            fee: fee
+          });
+          const { accepted } = resPermission;
+        
+          if (accepted) {
+            const url = await createEndpoint(`/crosschain/ltc/send`);
+            const opts = {
+                xprv58: xprv58,
+                receivingAddress: recipient,
+                litecoinAmount: amount,
+                feePerByte: feePerByte * QORT_DECIMALS
+            }
+            const response = await  fetch(url, {
+                 method: 'POST',
+                 headers: {
+                     'Accept': 'application/json',
+                     'Content-Type': 'application/json'
+                 },
+                 body: JSON.stringify(opts)
+             })
+             if (!response.ok) throw new Error("Failed to send");
+             let res;
+             try {
+               res = await response.clone().json();
+             } catch (e) {
+               res = await response.text();
+             }
+             return res;
+          } else {
+            throw new Error("User declined request")
+          }
+        
+    } else if (checkCoin === "DOGE") {
+       
+        const amount = Number(data.amount)
+        const recipient = data.destinationAddress
+        const coin = data.coin
+        const xprv58 = parsedData.dogePrivateKey
+        const feePerByte = data.fee ? data.fee : dogeFeePerByte
+        const dogeWalletBalance = await getWalletBalance({coin: checkCoin}, true)
+        if (isNaN(Number(dogeWalletBalance))) {
+            let errorMsg = "Failed to Fetch DOGE Balance. Try again!"
+            throw new Error(errorMsg)
+        }
+        const dogeWalletBalanceDecimals = Number(dogeWalletBalance)
+        const dogeAmountDecimals = Number(amount) * QORT_DECIMALS
+        const balance = (Number(dogeWalletBalance) / 1e8).toFixed(8)
+        const fee = feePerByte * 5000 // default 0.05000000
+        if (dogeAmountDecimals + (fee * QORT_DECIMALS) > dogeWalletBalanceDecimals) {
+            let errorMsg = "Insufficient Funds!"
+            throw new Error(errorMsg)
+        }
+        
+        const resPermission = await getUserPermission({
+            text1: "Do you give this application permission to send coins?",
+            text2: `To: ${recipient}`, 
+            highlightedText: `${amount} ${checkCoin}`,
+            fee: fee
+          });
+          const { accepted } = resPermission;
+        
+          if (accepted) {
+            const opts = {
+                xprv58: xprv58,
+                receivingAddress: recipient,
+                dogecoinAmount: amount,
+                feePerByte: feePerByte * QORT_DECIMALS
+            }
+            const url = await createEndpoint(`/crosschain/doge/send`);
+            
+            const response = await  fetch(url, {
+                 method: 'POST',
+                 headers: {
+                     'Accept': 'application/json',
+                     'Content-Type': 'application/json'
+                 },
+                 body: JSON.stringify(opts)
+             })
+             if (!response.ok) throw new Error("Failed to send");
+             let res;
+             try {
+               res = await response.clone().json();
+             } catch (e) {
+               res = await response.text();
+             }
+             return res;
+          } else {
+            throw new Error("User declined request")
+          }
+        
+    } else if (checkCoin === "DGB") {
+        const amount = Number(data.amount)
+        const recipient = data.destinationAddress
+        const xprv58 = parsedData.dbgPrivateKey
+        const feePerByte = data.fee ? data.fee : dgbFeePerByte
+        const dgbWalletBalance = await getWalletBalance({coin: checkCoin}, true)
+        if (isNaN(Number(dgbWalletBalance))) {
+            let errorMsg = "Failed to Fetch DGB Balance. Try again!"
+            throw new Error(errorMsg)
+        }
+        const dgbWalletBalanceDecimals = Number(dgbWalletBalance)
+        const dgbAmountDecimals = Number(amount) * QORT_DECIMALS
+        const fee = feePerByte * 500 // default 0.00005000
+        if (dgbAmountDecimals + (fee * QORT_DECIMALS) > dgbWalletBalanceDecimals) {
+            let errorMsg = "Insufficient Funds!"
+            throw new Error(errorMsg)
+        }
+
+        const resPermission = await getUserPermission({
+            text1: "Do you give this application permission to send coins?",
+            text2: `To: ${recipient}`, 
+            highlightedText: `${amount} ${checkCoin}`,
+            fee: fee
+          });
+          const { accepted } = resPermission;
+        
+          if (accepted) {
+            const opts = {
+                xprv58: xprv58,
+                receivingAddress: recipient,
+                digibyteAmount: amount,
+                feePerByte: feePerByte * QORT_DECIMALS
+            }
+            const url = await createEndpoint(`/crosschain/dgb/send`);
+            
+            const response = await  fetch(url, {
+                 method: 'POST',
+                 headers: {
+                     'Accept': 'application/json',
+                     'Content-Type': 'application/json'
+                 },
+                 body: JSON.stringify(opts)
+             })
+             if (!response.ok) throw new Error("Failed to send");
+             let res;
+             try {
+               res = await response.clone().json();
+             } catch (e) {
+               res = await response.text();
+             }
+             return res;
+          } else {
+            throw new Error("User declined request")
+          }
+       
+    } else if (checkCoin === "RVN") {
+        const amount = Number(data.amount)
+        const recipient = data.destinationAddress
+        const coin = data.coin
+        const xprv58 = parsedData.rvnPrivateKey
+        const feePerByte = data.fee ? data.fee : rvnFeePerByte
+        const rvnWalletBalance = await getWalletBalance({coin: checkCoin}, true)
+        if (isNaN(Number(rvnWalletBalance))) {
+            let errorMsg = "Failed to Fetch RVN Balance. Try again!"
+            throw new Error(errorMsg)
+        }
+        const rvnWalletBalanceDecimals = Number(rvnWalletBalance)
+        const rvnAmountDecimals = Number(amount) * QORT_DECIMALS
+        const balance = (Number(rvnWalletBalance) / 1e8).toFixed(8)
+        const fee = feePerByte * 500 // default 0.00562500
+        if (rvnAmountDecimals + (fee * QORT_DECIMALS) > rvnWalletBalanceDecimals) {
+          
+            let errorMsg = "Insufficient Funds!"
+            throw new Error(errorMsg)
+        }
+        
+        const resPermission = await getUserPermission({
+            text1: "Do you give this application permission to send coins?",
+            text2: `To: ${recipient}`, 
+            highlightedText: `${amount} ${checkCoin}`,
+            fee: fee
+          });
+          const { accepted } = resPermission;
+        
+          if (accepted) {
+            const opts = {
+                xprv58: xprv58,
+                receivingAddress: recipient,
+                ravencoinAmount: amount,
+                feePerByte: feePerByte * QORT_DECIMALS
+            }
+            const url = await createEndpoint(`/crosschain/rvn/send`);
+            
+           const response = await  fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(opts)
+            })
+            if (!response.ok) throw new Error("Failed to send");
+            let res;
+            try {
+              res = await response.clone().json();
+            } catch (e) {
+              res = await response.text();
+            }
+            return res;
+          } else {
+            throw new Error("User declined request")
+          }
+    } else if (checkCoin === "ARRR") {
+        const amount = Number(data.amount)
+        const recipient = data.destinationAddress
+        const memo = data.memo
+        const arrrWalletBalance = await getWalletBalance({coin: checkCoin}, true)
+
+        if (isNaN(Number(arrrWalletBalance))) {
+            let errorMsg = "Failed to Fetch ARRR Balance. Try again!"
+            throw new Error(errorMsg)
+        }
+        const arrrWalletBalanceDecimals = Number(arrrWalletBalance)
+        const arrrAmountDecimals = Number(amount) * QORT_DECIMALS
+        const fee = 0.00010000
+        if (arrrAmountDecimals + (fee * QORT_DECIMALS) > arrrWalletBalanceDecimals) {
+            let errorMsg = "Insufficient Funds!"
+            throw new Error(errorMsg)
+        }
+        
+        const resPermission = await getUserPermission({
+            text1: "Do you give this application permission to send coins?",
+            text2: `To: ${recipient}`, 
+            highlightedText: `${amount} ${checkCoin}`,
+            fee: fee
+          });
+          const { accepted } = resPermission;
+        
+          if (accepted) {
+            const opts = {
+                entropy58: parsedData.arrrSeed58,
+                receivingAddress: recipient,
+                arrrAmount: amount,
+                memo: memo
+            }
+            const url = await createEndpoint(`/crosschain/btc/send`);
+            
+           const response = await  fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(opts)
+            })
+            if (!response.ok) throw new Error("Failed to send");
+            let res;
+            try {
+              res = await response.clone().json();
+            } catch (e) {
+              res = await response.text();
+            }
+            return res;
+          } else {
+            throw new Error("User declined request")
+          }
+    }
 };

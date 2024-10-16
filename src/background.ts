@@ -135,6 +135,15 @@ export const getBaseApi = async (customApi?: string) => {
     return groupApi;
   }
 };
+export const isUsingLocal = async () => {
+
+  const apiKey = await getApiKeyFromStorage(); // Retrieve apiKey asynchronously
+  if (apiKey) {
+    return true
+  } else {
+    return false;
+  }
+};
 
 export const createEndpointSocket = async (endpoint) => {
   const apiKey = await getApiKeyFromStorage(); // Retrieve apiKey asynchronously
@@ -1152,7 +1161,7 @@ export const getLastRef = async () => {
   const data = await response.text();
   return data;
 };
-const sendQortFee = async () => {
+export const sendQortFee = async (): Promise<number> => {
   const validApi = await getBaseApi();
   const response = await fetch(
     validApi + "/transactions/unitfee?txType=PAYMENT"
@@ -1355,13 +1364,21 @@ async function decryptWallet({ password, wallet, walletVersion }) {
       arrrSeed58: wallet2._addresses[0].arrrWallet.seed58,
       btcAddress: wallet2._addresses[0].btcWallet.address,
       btcPublicKey: wallet2._addresses[0].btcWallet.derivedMasterPublicKey,
+      btcPrivateKey: wallet2._addresses[0].btcWallet.derivedMasterPrivateKey,
+
       ltcAddress: wallet2._addresses[0].ltcWallet.address,
+
       dogeAddress: wallet2._addresses[0].dogeWallet.address,
       dogePublicKey: wallet2._addresses[0].dogeWallet.derivedMasterPublicKey,
+      dogePrivateKey: wallet2._addresses[0].dogeWallet.derivedMasterPrivateKey,
+
       dgbAddress: wallet2._addresses[0].dgbWallet.address,
       dgbPublicKey: wallet2._addresses[0].dgbWallet.derivedMasterPublicKey,
+      dgbPrivateKey: wallet2._addresses[0].dgbWallet.derivedMasterPrivateKey,
+
       rvnAddress: wallet2._addresses[0].rvnWallet.address,
-      rvnPublicKey: wallet2._addresses[0].rvnWallet.derivedMasterPublicKey
+      rvnPublicKey: wallet2._addresses[0].rvnWallet.derivedMasterPublicKey,
+      rvnPrivateKey: wallet2._addresses[0].rvnWallet.derivedMasterPrivateKey
     };
     const dataString = JSON.stringify(toSave);
     await new Promise((resolve, reject) => {
@@ -2278,7 +2295,7 @@ async function inviteToGroup({ groupId, qortalAddress, inviteTime }) {
   return res;
 }
 
-async function sendCoin({ password, amount, receiver }, skipConfirmPassword) {
+export async function sendCoin({ password, amount, receiver }, skipConfirmPassword) {
   try {
     const confirmReceiver = await getNameOrAddress(receiver);
     if (confirmReceiver.error)
