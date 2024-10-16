@@ -1352,6 +1352,16 @@ async function decryptWallet({ password, wallet, walletVersion }) {
       publicKey: Base58.encode(keyPair.publicKey),
       ltcPrivateKey: ltcPrivateKey,
       ltcPublicKey: ltcPublicKey,
+      arrrSeed58: wallet2._addresses[0].arrrWallet.seed58,
+      btcAddress: wallet2._addresses[0].btcWallet.address,
+      btcPublicKey: wallet2._addresses[0].btcWallet.derivedMasterPublicKey,
+      ltcAddress: wallet2._addresses[0].ltcWallet.address,
+      dogeAddress: wallet2._addresses[0].dogeWallet.address,
+      dogePublicKey: wallet2._addresses[0].dogeWallet.derivedMasterPublicKey,
+      dgbAddress: wallet2._addresses[0].dgbWallet.address,
+      dgbPublicKey: wallet2._addresses[0].dgbWallet.derivedMasterPublicKey,
+      rvnAddress: wallet2._addresses[0].rvnWallet.address,
+      rvnPublicKey: wallet2._addresses[0].rvnWallet.derivedMasterPublicKey
     };
     const dataString = JSON.stringify(toSave);
     await new Promise((resolve, reject) => {

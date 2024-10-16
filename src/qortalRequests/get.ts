@@ -9,7 +9,7 @@ import {
   processTransactionVersion2,
   removeDuplicateWindow,
   signChatFunc,
-  joinGroup as joinGroupFunc
+  joinGroup as joinGroupFunc,
 } from "../background";
 import { getNameInfo } from "../backgroundFunctions/encryption";
 import Base58 from "../deps/Base58";
@@ -70,8 +70,16 @@ const _createPoll = async (pollName, pollDescription, options) => {
   }
 };
 
-const _deployAt= async(name, description, tags, creationBytes, amount, assetId, atType)=> {
-    const fee = await getFee("DEPLOY_AT");
+const _deployAt = async (
+  name,
+  description,
+  tags,
+  creationBytes,
+  amount,
+  assetId,
+  atType
+) => {
+  const fee = await getFee("DEPLOY_AT");
 
   const resPermission = await getUserPermission({
     text1: "Would you like to deploy this AT?",
@@ -84,42 +92,41 @@ const _deployAt= async(name, description, tags, creationBytes, amount, assetId, 
 
   if (accepted) {
     const wallet = await getSaveWallet();
-  const address = wallet.address0;
-  const lastReference = await getLastRef();
-  const resKeyPair = await getKeyPair();
-  const parsedData = JSON.parse(resKeyPair);
-  const uint8PrivateKey = Base58.decode(parsedData.privateKey);
-  const uint8PublicKey = Base58.decode(parsedData.publicKey);
-  const keyPair = {
-    privateKey: uint8PrivateKey,
-    publicKey: uint8PublicKey,
-  };
+    const address = wallet.address0;
+    const lastReference = await getLastRef();
+    const resKeyPair = await getKeyPair();
+    const parsedData = JSON.parse(resKeyPair);
+    const uint8PrivateKey = Base58.decode(parsedData.privateKey);
+    const uint8PublicKey = Base58.decode(parsedData.publicKey);
+    const keyPair = {
+      privateKey: uint8PrivateKey,
+      publicKey: uint8PublicKey,
+    };
 
-  const tx = await createTransaction(16, keyPair, {
-    fee: fee.fee,
-					rName: name,
-					rDescription: description,
-					rTags: tags,
-					rAmount: amount,
-					rAssetId: assetId,
-					rCreationBytes: creationBytes,
-					atType: atType,
-					lastReference: lastReference,
-  });
+    const tx = await createTransaction(16, keyPair, {
+      fee: fee.fee,
+      rName: name,
+      rDescription: description,
+      rTags: tags,
+      rAmount: amount,
+      rAssetId: assetId,
+      rCreationBytes: creationBytes,
+      atType: atType,
+      lastReference: lastReference,
+    });
 
-  const signedBytes = Base58.encode(tx.signedBytes);
+    const signedBytes = Base58.encode(tx.signedBytes);
 
-  const res = await processTransactionVersion2(signedBytes);
-  if (!res?.signature)
-    throw new Error(res?.message || "Transaction was not able to be processed");
-  return res;
+    const res = await processTransactionVersion2(signedBytes);
+    if (!res?.signature)
+      throw new Error(
+        res?.message || "Transaction was not able to be processed"
+      );
+    return res;
   } else {
     throw new Error("User declined transaction");
   }
-  
-    
-    
-}
+};
 
 const _voteOnPoll = async (pollName, optionIndex, optionName) => {
   const fee = await getFee("VOTE_ON_POLL");
@@ -180,14 +187,13 @@ function getFileFromContentScript(fileId, sender) {
   });
 }
 function sendToSaveFilePicker(data, sender) {
-    console.log("sender", sender);
-   
-      chrome.tabs.sendMessage(
-        sender.tab.id,
-        { action: "SHOW_SAVE_FILE_PICKER", data }
-      );
+  console.log("sender", sender);
 
-  }
+  chrome.tabs.sendMessage(sender.tab.id, {
+    action: "SHOW_SAVE_FILE_PICKER",
+    data,
+  });
+}
 
 async function getUserPermission(payload: any) {
   function waitForWindowReady(windowId) {
@@ -316,7 +322,7 @@ export const encryptData = async (data, sender) => {
   let data64 = data.data64;
   let publicKeys = data.publicKeys || [];
   if (data.fileId) {
-    data64 = await getFileFromContentScript(data.fileId, sender)
+    data64 = await getFileFromContentScript(data.fileId, sender);
   }
   if (!data64) {
     throw new Error("Please include data to encrypt");
@@ -980,10 +986,9 @@ export const sendChatMessage = async (data) => {
       version: 3,
     };
     try {
-        JSON.stringify(messageObject);
-
+      JSON.stringify(messageObject);
     } catch (error) {
-        console.log('my error', error)
+      console.log("my error", error);
     }
     const stringifyMessageObject = JSON.stringify(messageObject);
 
@@ -997,20 +1002,20 @@ export const sendChatMessage = async (data) => {
       const response = await fetch(url);
       if (!response.ok)
         throw new Error("Failed to fetch recipient's public key");
-    
-      let key
+
+      let key;
       let hasPublicKey;
-      let res 
+      let res;
       const contentType = response.headers.get("content-type");
-  
-  // If the response is JSON, parse it as JSON
-  if (contentType && contentType.includes("application/json")) {
-    res = await response.json();
-  } else {
-    // Otherwise, treat it as plain text
-    res = await response.text();
-  }
-      console.log('res', res)
+
+      // If the response is JSON, parse it as JSON
+      if (contentType && contentType.includes("application/json")) {
+        res = await response.json();
+      } else {
+        // Otherwise, treat it as plain text
+        res = await response.text();
+      }
+      console.log("res", res);
       if (res?.error === 102) {
         key = "";
         hasPublicKey = false;
@@ -1041,7 +1046,7 @@ export const sendChatMessage = async (data) => {
         privateKey: uint8PrivateKey,
         publicKey: uint8PublicKey,
       };
-     
+
       const difficulty = 8;
       const tx = await createTransaction(18, keyPair, {
         timestamp: sendTimestamp,
@@ -1068,50 +1073,50 @@ export const sendChatMessage = async (data) => {
       }
       return _response;
     } else if (!isRecipient && groupId) {
-        let _reference = new Uint8Array(64);
-        self.crypto.getRandomValues(_reference);
-      
-        let reference = Base58.encode(_reference);
-        const resKeyPair = await getKeyPair();
-        const parsedData = JSON.parse(resKeyPair);
-        const uint8PrivateKey = Base58.decode(parsedData.privateKey);
-        const uint8PublicKey = Base58.decode(parsedData.publicKey);
-        const keyPair = {
-          privateKey: uint8PrivateKey,
-          publicKey: uint8PublicKey,
-        };
-       
-        const difficulty = 8;
-      
-        const txBody = {
-          timestamp: Date.now(),
-          groupID: Number(groupId),
-          hasReceipient: 0,
-          hasChatReference: 0,
-          message: stringifyMessageObject,
-          lastReference: reference,
-          proofOfWorkNonce: 0,
-          isEncrypted: 0, // Set default to not encrypted for groups
-          isText: 1,
-        }
-      
-        const tx = await createTransaction(181, keyPair, txBody);
-      
-        // if (!hasEnoughBalance) {
-        //   throw new Error("Must have at least 4 QORT to send a chat message");
-        // }
-        const path = chrome.runtime.getURL("memory-pow.wasm.full");
-      
-        const { nonce, chatBytesArray } = await computePow({
-          chatBytes: tx.chatBytes,
-          path,
-          difficulty,
-        });
-        let _response = await signChatFunc(chatBytesArray, nonce, null, keyPair);
-        if (_response?.error) {
-          throw new Error(_response?.message);
-        }
-        return _response;
+      let _reference = new Uint8Array(64);
+      self.crypto.getRandomValues(_reference);
+
+      let reference = Base58.encode(_reference);
+      const resKeyPair = await getKeyPair();
+      const parsedData = JSON.parse(resKeyPair);
+      const uint8PrivateKey = Base58.decode(parsedData.privateKey);
+      const uint8PublicKey = Base58.decode(parsedData.publicKey);
+      const keyPair = {
+        privateKey: uint8PrivateKey,
+        publicKey: uint8PublicKey,
+      };
+
+      const difficulty = 8;
+
+      const txBody = {
+        timestamp: Date.now(),
+        groupID: Number(groupId),
+        hasReceipient: 0,
+        hasChatReference: 0,
+        message: stringifyMessageObject,
+        lastReference: reference,
+        proofOfWorkNonce: 0,
+        isEncrypted: 0, // Set default to not encrypted for groups
+        isText: 1,
+      };
+
+      const tx = await createTransaction(181, keyPair, txBody);
+
+      // if (!hasEnoughBalance) {
+      //   throw new Error("Must have at least 4 QORT to send a chat message");
+      // }
+      const path = chrome.runtime.getURL("memory-pow.wasm.full");
+
+      const { nonce, chatBytesArray } = await computePow({
+        chatBytes: tx.chatBytes,
+        path,
+        difficulty,
+      });
+      let _response = await signChatFunc(chatBytesArray, nonce, null, keyPair);
+      if (_response?.error) {
+        throw new Error(_response?.message);
+      }
+      return _response;
     } else {
       throw new Error("Please enter a recipient or groupId");
     }
@@ -1121,142 +1126,241 @@ export const sendChatMessage = async (data) => {
 };
 
 export const joinGroup = async (data) => {
-    const requiredFields = ['groupId']
-					const missingFields: string[] = []
-					requiredFields.forEach((field) => {
-						if (!data[field]) {
-							missingFields.push(field)
-						}
-					})
-					if (missingFields.length > 0) {
-						const missingFieldsString = missingFields.join(', ')
-						const errorMsg = `Missing fields: ${missingFieldsString}`
-						throw new Error(errorMsg)
-					}
-                    let groupInfo = null
-					try {
-						
-                        const url = await createEndpoint(`/groups/${data.groupId}`);
+  const requiredFields = ["groupId"];
+  const missingFields: string[] = [];
+  requiredFields.forEach((field) => {
+    if (!data[field]) {
+      missingFields.push(field);
+    }
+  });
+  if (missingFields.length > 0) {
+    const missingFieldsString = missingFields.join(", ");
+    const errorMsg = `Missing fields: ${missingFieldsString}`;
+    throw new Error(errorMsg);
+  }
+  let groupInfo = null;
+  try {
+    const url = await createEndpoint(`/groups/${data.groupId}`);
     const response = await fetch(url);
     if (!response.ok) throw new Error("Failed to fetch group");
 
     groupInfo = await response.json();
-					} catch (error) {
-						const errorMsg = (error && error.message) || 'Group not found'
-						throw new Error(errorMsg)
-					}
-                    const fee = await getFee("JOIN_GROUP");
+  } catch (error) {
+    const errorMsg = (error && error.message) || "Group not found";
+    throw new Error(errorMsg);
+  }
+  const fee = await getFee("JOIN_GROUP");
 
-                    const resPermission = await getUserPermission({
-                        text1: "Confirm joining the group:",
-                        highlightedText: `${groupInfo.groupName}`,
-                        fee: fee.fee
-                      });
-                      const { accepted } = resPermission;
+  const resPermission = await getUserPermission({
+    text1: "Confirm joining the group:",
+    highlightedText: `${groupInfo.groupName}`,
+    fee: fee.fee,
+  });
+  const { accepted } = resPermission;
 
-                      if(accepted){
-                        const groupId = data.groupId
-				
-					if (!groupInfo || groupInfo.error) {
-						const errorMsg = (groupInfo && groupInfo.message) || 'Group not found'
-						throw new Error(errorMsg)
-					}
-					try {
-						const resJoinGroup = await joinGroupFunc({groupId})
-						return resJoinGroup
-					} catch (error) {
-			
-						throw new Error(error?.message || 'Failed to join the group.')
-					} 
-                      } else {
-                        throw new Error("User declined to join group");
-                      }
-					
-  };
+  if (accepted) {
+    const groupId = data.groupId;
 
-  export const saveFile = async (data, sender) => {
-    try {
-        const requiredFields = ['filename', 'fileId']
-        const missingFields: string[] = []
-        requiredFields.forEach((field) => {
-            if (!data[field]) {
-                missingFields.push(field)
-            }
-        })
-        if (missingFields.length > 0) {
-            const missingFieldsString = missingFields.join(', ')
-            const errorMsg = `Missing fields: ${missingFieldsString}`
-            throw new Error(errorMsg)
-        }
-        const filename = data.filename
-        const blob = data.blob
-        const fileId = data.fileId
-        const resPermission = await getUserPermission({
-            text1: "Would you like to download:",
-            highlightedText: `${filename}`,
-          });
-          const { accepted } = resPermission;
-
-          if(accepted){
-           
-            const mimeType = blob.type || data.mimeType
-            let backupExention = filename.split('.').pop()
-            if (backupExention) {
-                backupExention = '.' + backupExention
-            }
-            const fileExtension = mimeToExtensionMap[mimeType] || backupExention
-            let fileHandleOptions = {}
-            if (!mimeType) {
-              
-                throw new Error('A mimeType could not be derived')
-            }
-            if (!fileExtension) {
-                const obj = {}
-                throw new Error('A file extension could not be derived')
-            }
-            if (fileExtension && mimeType) {
-                fileHandleOptions = {
-                    accept: {
-                        [mimeType]: [fileExtension]
-                    }
-                }
-            }
-            sendToSaveFilePicker( {
-                filename, mimeType, blob, fileId,  fileHandleOptions
-            } ,sender)
-            return true
-          } else {
-            throw new Error("User declined to save file");
-
-          }
-       
-    } catch (error) {
-        
-        throw new Error(error?.message || 'Failed to initiate download')
+    if (!groupInfo || groupInfo.error) {
+      const errorMsg = (groupInfo && groupInfo.message) || "Group not found";
+      throw new Error(errorMsg);
     }
-    
-  };
+    try {
+      const resJoinGroup = await joinGroupFunc({ groupId });
+      return resJoinGroup;
+    } catch (error) {
+      throw new Error(error?.message || "Failed to join the group.");
+    }
+  } else {
+    throw new Error("User declined to join group");
+  }
+};
 
-export const deployAt = async (data)=> {
-    const requiredFields = ['name', 'description', 'tags', 'creationBytes', 'amount', 'assetId', 'type']
-					const missingFields: string[] = []
-					requiredFields.forEach((field) => {
-						if (!data[field] && data[field] !== 0) {
-							missingFields.push(field)
-						}
-					})
-					if (missingFields.length > 0) {
-						const missingFieldsString = missingFields.join(', ')
-						const errorMsg = `Missing fields: ${missingFieldsString}`
-						throw new Error(errorMsg)
-					}
-					try {
-						const resDeployAt = await _deployAt(data.name, data.description, data.tags, data.creationBytes, data.amount, data.assetId, data.type)
-						return resDeployAt
-					} catch (error) {
-                        throw new Error(error?.message || 'Failed to join the group.')
-					}
-}
+export const saveFile = async (data, sender) => {
+  try {
+    const requiredFields = ["filename", "fileId"];
+    const missingFields: string[] = [];
+    requiredFields.forEach((field) => {
+      if (!data[field]) {
+        missingFields.push(field);
+      }
+    });
+    if (missingFields.length > 0) {
+      const missingFieldsString = missingFields.join(", ");
+      const errorMsg = `Missing fields: ${missingFieldsString}`;
+      throw new Error(errorMsg);
+    }
+    const filename = data.filename;
+    const blob = data.blob;
+    const fileId = data.fileId;
+    const resPermission = await getUserPermission({
+      text1: "Would you like to download:",
+      highlightedText: `${filename}`,
+    });
+    const { accepted } = resPermission;
+
+    if (accepted) {
+      const mimeType = blob.type || data.mimeType;
+      let backupExention = filename.split(".").pop();
+      if (backupExention) {
+        backupExention = "." + backupExention;
+      }
+      const fileExtension = mimeToExtensionMap[mimeType] || backupExention;
+      let fileHandleOptions = {};
+      if (!mimeType) {
+        throw new Error("A mimeType could not be derived");
+      }
+      if (!fileExtension) {
+        const obj = {};
+        throw new Error("A file extension could not be derived");
+      }
+      if (fileExtension && mimeType) {
+        fileHandleOptions = {
+          accept: {
+            [mimeType]: [fileExtension],
+          },
+        };
+      }
+      sendToSaveFilePicker(
+        {
+          filename,
+          mimeType,
+          blob,
+          fileId,
+          fileHandleOptions,
+        },
+        sender
+      );
+      return true;
+    } else {
+      throw new Error("User declined to save file");
+    }
+  } catch (error) {
+    throw new Error(error?.message || "Failed to initiate download");
+  }
+};
+
+export const deployAt = async (data) => {
+  const requiredFields = [
+    "name",
+    "description",
+    "tags",
+    "creationBytes",
+    "amount",
+    "assetId",
+    "type",
+  ];
+  const missingFields: string[] = [];
+  requiredFields.forEach((field) => {
+    if (!data[field] && data[field] !== 0) {
+      missingFields.push(field);
+    }
+  });
+  if (missingFields.length > 0) {
+    const missingFieldsString = missingFields.join(", ");
+    const errorMsg = `Missing fields: ${missingFieldsString}`;
+    throw new Error(errorMsg);
+  }
+  try {
+    const resDeployAt = await _deployAt(
+      data.name,
+      data.description,
+      data.tags,
+      data.creationBytes,
+      data.amount,
+      data.assetId,
+      data.type
+    );
+    return resDeployAt;
+  } catch (error) {
+    throw new Error(error?.message || "Failed to join the group.");
+  }
+};
+
+export const getUserWallet = async (data) => {
+  const requiredFields = ["coin"];
+  const missingFields: string[] = [];
+  requiredFields.forEach((field) => {
+    if (!data[field]) {
+      missingFields.push(field);
+    }
+  });
+  if (missingFields.length > 0) {
+    const missingFieldsString = missingFields.join(", ");
+    const errorMsg = `Missing fields: ${missingFieldsString}`;
+    throw new Error(errorMsg);
+  }
+  const resPermission = await getUserPermission({
+    text1: "Do you give this application permission to get your wallet information?",
+  });
+  const { accepted } = resPermission;
+
+  if (accepted) {
+    let coin = data.coin;
+    let userWallet = {};
+    let arrrAddress = "";
+    const wallet = await getSaveWallet();
+    const address = wallet.address0;
+    const resKeyPair = await getKeyPair();
+    const parsedData = JSON.parse(resKeyPair);
+    const arrrSeed58 = parsedData.arrrSeed58;
+    if (coin === "ARRR") {
+      const bodyToString = arrrSeed58
+      const url = await createEndpoint(`/crosschain/arrr/walletaddress`);
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: bodyToString,
+      });
+      let res;
+      try {
+        res = await response.clone().json();
+      } catch (e) {
+        res = await response.text();
+      }
+      if(res?.error && res?.message){
+        throw new Error(res.message)
+      }
+      arrrAddress = res;
+    }
+    switch (coin) {
+      case "QORT":
+        userWallet["address"] = address;
+        userWallet["publickey"] = parsedData.publicKey;
+        break;
+      case "BTC":
+        userWallet["address"] = parsedData.btcAddress;
+        userWallet["publickey"] = parsedData.derivedMasterPublicKey;
+        break;
+      case "LTC":
+        userWallet["address"] = parsedData.ltcAddress;
+        userWallet["publickey"] = parsedData.ltcPublicKey;
+        break;
+      case "DOGE":
+        userWallet["address"] = parsedData.dogeAddress;
+        userWallet["publickey"] = parsedData.dogePublicKey;
+        break;
+      case "DGB":
+        userWallet["address"] = parsedData.dgbAddress;
+        userWallet["publickey"] = parsedData.dgbPublicKey;
+        break;
+      case "RVN":
+        userWallet["address"] = parsedData.rvnAddress;
+        userWallet["publickey"] = parsedData.rvnPublicKey;
+        break;
+      case "ARRR":
+        userWallet["address"] = arrrAddress;
+        break;
+      default:
+        break;
+    }
+    return userWallet;
+  } else {
+    throw new Error("User declined request");
+  }
+};
 
 export const sendCoin = async () => {
   try {
