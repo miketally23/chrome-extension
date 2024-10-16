@@ -594,9 +594,15 @@ export const publishQDNResource = async (data: any, sender) => {
   }
   if (data.encrypt) {
     try {
+        const resKeyPair = await getKeyPair()
+        const parsedData = JSON.parse(resKeyPair)
+        const privateKey = parsedData.privateKey
+        const userPublicKey = parsedData.publicKey
       const encryptDataResponse = encryptDataGroup({
         data64,
         publicKeys: data.publicKeys,
+        privateKey,
+        userPublicKey
       });
       if (encryptDataResponse) {
         data64 = encryptDataResponse;
@@ -810,9 +816,15 @@ export const publishMultipleQDNResources = async (data: any, sender) => {
       }
       if (data.encrypt) {
         try {
+            const resKeyPair = await getKeyPair()
+        const parsedData = JSON.parse(resKeyPair)
+        const privateKey = parsedData.privateKey
+        const userPublicKey = parsedData.publicKey
           const encryptDataResponse = encryptDataGroup({
             data64,
             publicKeys: data.publicKeys,
+            privateKey,
+            userPublicKey
           });
           if (encryptDataResponse) {
             data64 = encryptDataResponse;

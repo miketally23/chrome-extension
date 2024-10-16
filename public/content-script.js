@@ -835,6 +835,7 @@ if (!window.hasAddedQortalListener) {
         event.ports[0]
       );
     } else if (event?.data?.action === 'PUBLISH_MULTIPLE_QDN_RESOURCES' || event?.data?.action === 'PUBLISH_QDN_RESOURCE' || event?.data?.action === 'ENCRYPT_DATA' || event?.data?.action === 'SAVE_FILE') {
+      console.log('event?.data?', event?.data)
       let data;
       try {
         data = await storeFilesInIndexedDB(event.data);
