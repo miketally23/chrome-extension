@@ -1,4 +1,4 @@
-import { addListItems, createPoll, decryptData, deleteListItems, encryptData, getListItems, getUserAccount, joinGroup, publishMultipleQDNResources, publishQDNResource, saveFile, sendChatMessage, sendCoin, voteOnPoll } from "./qortalRequests/get";
+import { addListItems, createPoll, decryptData, deleteListItems, deployAt, encryptData, getListItems, getUserAccount, joinGroup, publishMultipleQDNResources, publishQDNResource, saveFile, sendChatMessage, sendCoin, voteOnPoll } from "./qortalRequests/get";
 
 
 
@@ -222,6 +222,19 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
         const data = request.payload;
       
         saveFile(data, sender)
+          .then((res) => {
+            sendResponse(res);
+          })
+          .catch((error) => {
+            sendResponse({ error: error.message });
+          });
+
+        break;
+      }
+      case "DEPLOY_AT": {
+        const data = request.payload;
+      
+        deployAt(data, sender)
           .then((res) => {
             sendResponse(res);
           })

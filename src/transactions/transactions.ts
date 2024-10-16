@@ -16,6 +16,7 @@ import RemoveGroupAdminTransaction from './RemoveGroupAdminTransaction.js'
 import RegisterNameTransaction from './RegisterNameTransaction.js'
 import VoteOnPollTransaction from './VoteOnPollTransaction.js'
 import CreatePollTransaction from './CreatePollTransaction.js'
+import DeployAtTransaction from './DeployAtTransaction.js'
 
 
 export const transactionTypes = {
@@ -23,6 +24,7 @@ export const transactionTypes = {
 	2: PaymentTransaction,
 	8: CreatePollTransaction,
 	9: VoteOnPollTransaction,
+	16: DeployAtTransaction,
 	18: ChatTransaction,
 	181: GroupChatTransaction,
 	22: CreateGroupTransaction,

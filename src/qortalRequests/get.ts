@@ -70,6 +70,57 @@ const _createPoll = async (pollName, pollDescription, options) => {
   }
 };
 
+const _deployAt= async(name, description, tags, creationBytes, amount, assetId, atType)=> {
+    const fee = await getFee("DEPLOY_AT");
+
+  const resPermission = await getUserPermission({
+    text1: "Would you like to deploy this AT?",
+    text2: `Name: ${name}`,
+    text3: `Description: ${description}`,
+    fee: fee.fee,
+  });
+
+  const { accepted } = resPermission;
+
+  if (accepted) {
+    const wallet = await getSaveWallet();
+  const address = wallet.address0;
+  const lastReference = await getLastRef();
+  const resKeyPair = await getKeyPair();
+  const parsedData = JSON.parse(resKeyPair);
+  const uint8PrivateKey = Base58.decode(parsedData.privateKey);
+  const uint8PublicKey = Base58.decode(parsedData.publicKey);
+  const keyPair = {
+    privateKey: uint8PrivateKey,
+    publicKey: uint8PublicKey,
+  };
+
+  const tx = await createTransaction(16, keyPair, {
+    fee: fee.fee,
+					rName: name,
+					rDescription: description,
+					rTags: tags,
+					rAmount: amount,
+					rAssetId: assetId,
+					rCreationBytes: creationBytes,
+					atType: atType,
+					lastReference: lastReference,
+  });
+
+  const signedBytes = Base58.encode(tx.signedBytes);
+
+  const res = await processTransactionVersion2(signedBytes);
+  if (!res?.signature)
+    throw new Error(res?.message || "Transaction was not able to be processed");
+  return res;
+  } else {
+    throw new Error("User declined transaction");
+  }
+  
+    
+    
+}
+
 const _voteOnPoll = async (pollName, optionIndex, optionName) => {
   const fee = await getFee("VOTE_ON_POLL");
 
@@ -484,7 +535,7 @@ export const deleteListItems = async (data) => {
     }
     return res;
   } else {
-    throw new Error("User declined add to list");
+    throw new Error("User declined delete from list");
   }
 };
 
@@ -1065,7 +1116,7 @@ export const sendChatMessage = async (data) => {
       throw new Error("Please enter a recipient or groupId");
     }
   } else {
-    throw new Error("User declined add to list");
+    throw new Error("User declined to send message");
   }
 };
 
@@ -1118,7 +1169,7 @@ export const joinGroup = async (data) => {
 						throw new Error(error?.message || 'Failed to join the group.')
 					} 
                       } else {
-                        throw new Error("User declined add to list");
+                        throw new Error("User declined to join group");
                       }
 					
   };
@@ -1175,7 +1226,7 @@ export const joinGroup = async (data) => {
             } ,sender)
             return true
           } else {
-            throw new Error("User declined add to list");
+            throw new Error("User declined to save file");
 
           }
        
@@ -1185,6 +1236,27 @@ export const joinGroup = async (data) => {
     }
     
   };
+
+export const deployAt = async (data)=> {
+    const requiredFields = ['name', 'description', 'tags', 'creationBytes', 'amount', 'assetId', 'type']
+					const missingFields: string[] = []
+					requiredFields.forEach((field) => {
+						if (!data[field] && data[field] !== 0) {
+							missingFields.push(field)
+						}
+					})
+					if (missingFields.length > 0) {
+						const missingFieldsString = missingFields.join(', ')
+						const errorMsg = `Missing fields: ${missingFieldsString}`
+						throw new Error(errorMsg)
+					}
+					try {
+						const resDeployAt = await _deployAt(data.name, data.description, data.tags, data.creationBytes, data.amount, data.assetId, data.type)
+						return resDeployAt
+					} catch (error) {
+                        throw new Error(error?.message || 'Failed to join the group.')
+					}
+}
 
 export const sendCoin = async () => {
   try {
