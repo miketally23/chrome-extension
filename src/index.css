@@ -35,6 +35,7 @@
   --bg-2: #27282c;
   --bg-3: rgba(0, 0, 0, 0.1);
   --unread: rgba(255, 0, 0, 1);
+  --apps-circle: #1F2023
 }
 
 body {

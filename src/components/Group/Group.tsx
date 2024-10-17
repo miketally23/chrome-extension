@@ -88,6 +88,7 @@ import { ExitIcon } from "../../assets/Icons/ExitIcon";
 import { HomeDesktop } from "./HomeDesktop";
 import { DesktopFooter } from "../Desktop/DesktopFooter";
 import { DesktopHeader } from "../Desktop/DesktopHeader";
+import { Apps } from "../Apps/Apps";
 
 // let touchStartY = 0;
 // let disablePullToRefresh = false;
@@ -2733,6 +2734,9 @@ export const Group = ({
               setMobileViewMode={setMobileViewMode}
             />
           )}
+          {isMobile && mobileViewMode === "apps" && (
+            <Apps />
+          )}
           {
           !isMobile && !selectedGroup &&
           groupSection === "home" && (
@@ -2958,7 +2962,7 @@ export const Group = ({
         />
       </div>
      
-      {isMobile && mobileViewMode === "home" && !mobileViewModeKeepOpen && (
+      {(isMobile && mobileViewMode === "home" || isMobile && mobileViewMode === "apps") && !mobileViewModeKeepOpen && (
         <>
           <div
             style={{

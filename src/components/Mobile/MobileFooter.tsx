@@ -2,11 +2,14 @@ import * as React from "react";
 import {
   BottomNavigation,
   BottomNavigationAction,
+  ButtonBase,
   Typography,
 } from "@mui/material";
 import { Home, Groups, Message, ShowChart } from "@mui/icons-material";
 import Box from "@mui/material/Box";
 import BottomLogo from "../../assets/svgs/BottomLogo5.svg";
+import LogoSelected from "../../assets/svgs/LogoSelected.svg";
+
 import { CustomSvg } from "../../common/CustomSvg";
 import { WalletIcon } from "../../assets/Icons/WalletIcon";
 import { HubsIcon } from "../../assets/Icons/HubsIcon";
@@ -132,6 +135,15 @@ export const MobileFooter = ({
           zIndex: 3,
         }}
       >
+        <ButtonBase onClick={()=> {
+          if(mobileViewMode === 'home'){
+            setMobileViewMode('apps')
+
+          } else {
+            setMobileViewMode('home')
+
+          }
+        }}>
         <Box
           sx={{
             width: "49px", // Slightly smaller inner circle
@@ -144,8 +156,9 @@ export const MobileFooter = ({
           }}
         >
           {/* Custom Center Icon */}
-          <img src={BottomLogo} alt="center-icon"  />
+          <img src={mobileViewMode === 'apps' ? LogoSelected : BottomLogo} alt="center-icon"  />
         </Box>
+        </ButtonBase>
       </Box>
 
       <BottomNavigation
