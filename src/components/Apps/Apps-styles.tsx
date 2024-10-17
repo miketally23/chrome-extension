@@ -6,6 +6,7 @@ import {
     Box,
     TextField,
     InputLabel,
+    ButtonBase,
   } from "@mui/material";
   import { styled } from "@mui/system";
   
@@ -15,7 +16,7 @@ import {
       flexDirection: "column",
       height: "100%",
       alignItems: "center",
-        overflow: 'auto',
+      overflow: 'auto',
         // For WebKit-based browsers (Chrome, Safari, etc.)
     "::-webkit-scrollbar": {
         width: "0px", // Set the width to 0 to hide the scrollbar
@@ -35,6 +36,7 @@ import {
     gap: '24px',
     flexWrap: 'wrap',
     alignItems: 'flex-start',
+    alignSelf: 'center'
   
   }));
   export const AppsLibraryContainer = styled(Box)(({ theme }) => ({
@@ -59,13 +61,16 @@ import {
     width: "90%",
     justifyContent: 'flex-start',
     alignItems: 'center',
-    gap: '10px'
+    gap: '10px',
+    flexGrow: 1,
+    flexShrink: 0
   }));
   export const AppsSearchRight = styled(Box)(({ theme }) => ({
     display: "flex",
     width: "90%",
     justifyContent: 'flex-end',
     alignItems: 'center',
+    flexShrink: 1
   }));
   export const AppCircleContainer = styled(Box)(({ theme }) => ({
     display: "flex",
@@ -105,4 +110,85 @@ import {
       borderRadius: '50%',
       backgroundColor: "var(--apps-circle)",
       border: '1px solid #FFFFFF'
+  }));
+
+  export const AppInfoSnippetContainer = styled(Box)(({ theme }) => ({
+    display: "flex",
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%'
+  }));
+
+  export const AppInfoSnippetLeft = styled(Box)(({ theme }) => ({
+    display: "flex",
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    gap: '12px'
+  }));
+  export const AppInfoSnippetRight = styled(Box)(({ theme }) => ({
+    display: "flex",
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+  }));
+
+  export const AppDownloadButton = styled(ButtonBase)(({ theme }) => ({
+    backgroundColor: "#247C0E",
+    width: '101px',
+    height: '29px',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: '25px'
+  }));
+
+  export const AppDownloadButtonText = styled(Typography)(({ theme }) => ({
+    fontSize: '14px',
+    fontWeight: 500,
+    lineHeight: 1.2,
+  }));
+
+
+
+  export const AppInfoSnippetMiddle = styled(Box)(({ theme }) => ({
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+  }));
+
+  export const AppInfoAppName = styled(Typography)(({ theme }) => ({
+    fontSize: '16px',
+    fontWeight: 500,
+    lineHeight: 1.2,
+  }));
+  export const AppInfoUserName = styled(Typography)(({ theme }) => ({
+    fontSize: '13px',
+    fontWeight: 400,
+    lineHeight: 1.2,
+    color: '#8D8F93'
+  }));
+
+
+  export const AppsNavBarParent = styled(Box)(({ theme }) => ({
+    display: "flex",
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    height: '60px',
+    backgroundColor: '#1F2023',
+    padding: '0px 10px',
+    position: "fixed",
+    bottom: 0,
+    zIndex: 1,
+  }));
+
+  export const AppsNavBarLeft = styled(Box)(({ theme }) => ({
+    display: "flex",
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+  }));
+  export const AppsNavBarRight = styled(Box)(({ theme }) => ({
+    display: "flex",
+    justifyContent: 'flex-end',
+    alignItems: 'center',
   }));

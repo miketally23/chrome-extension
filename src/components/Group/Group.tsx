@@ -89,6 +89,7 @@ import { HomeDesktop } from "./HomeDesktop";
 import { DesktopFooter } from "../Desktop/DesktopFooter";
 import { DesktopHeader } from "../Desktop/DesktopHeader";
 import { Apps } from "../Apps/Apps";
+import { AppsNavBar } from "../Apps/AppsNavBar";
 
 // let touchStartY = 0;
 // let disablePullToRefresh = false;
@@ -432,6 +433,7 @@ export const Group = ({
   const { clearStatesMessageQueueProvider } = useMessageQueue();
   const initiatedGetMembers = useRef(false);
   const [groupChatTimestamps, setGroupChatTimestamps] = React.useState({});
+  const [appsMode, setAppsMode] = useState('viewer')
 
   useEffect(()=> {
     timestampEnterDataRef.current = timestampEnterData
@@ -2229,7 +2231,7 @@ export const Group = ({
          isThin={
            mobileViewMode === "groups" ||
            mobileViewMode === "group" ||
-           mobileViewModeKeepOpen === "messaging"
+           mobileViewModeKeepOpen === "messaging" || (mobileViewMode === "apps" && appsMode !== 'home')
          }
          logoutFunc={logoutFunc}
          goToHome={goToHome}
@@ -2735,7 +2737,7 @@ export const Group = ({
             />
           )}
           {isMobile && mobileViewMode === "apps" && (
-            <Apps />
+            <Apps mode={appsMode} setMode={setAppsMode} />
           )}
           {
           !isMobile && !selectedGroup &&
@@ -2962,7 +2964,7 @@ export const Group = ({
         />
       </div>
      
-      {(isMobile && mobileViewMode === "home" || isMobile && mobileViewMode === "apps") && !mobileViewModeKeepOpen && (
+      {(isMobile && mobileViewMode === "home" || (isMobile && mobileViewMode === "apps" && appsMode === 'home')) &&  !mobileViewModeKeepOpen && (
         <>
           <div
             style={{
@@ -3002,6 +3004,11 @@ export const Group = ({
               myName={userInfo?.name || null}
             />
           )}
+        </>
+      )}
+       {(isMobile && isMobile && mobileViewMode === "apps" && appsMode !== 'home') &&  !mobileViewModeKeepOpen && (
+        <>
+          <AppsNavBar />
         </>
       )}
     </>

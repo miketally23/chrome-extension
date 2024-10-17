@@ -12,7 +12,6 @@ import {
   AppInfoSnippetRight,
   AppInfoUserName,
   AppsLibraryContainer,
-  AppsParent,
 } from "./Apps-styles";
 import { Avatar, Box, ButtonBase, InputBase } from "@mui/material";
 import { Add } from "@mui/icons-material";
@@ -22,32 +21,34 @@ import LogoSelected from "../../assets/svgs/LogoSelected.svg";
 import { Spacer } from "../../common/Spacer";
 import { executeEvent } from "../../utils/events";
 
-export const AppInfo = ({ app }) => {
-  
+export const AppInfoSnippet = ({ app }) => {
+
 
   const isInstalled = app?.status?.status === 'READY'
   return (
-      <AppsLibraryContainer>
     <AppInfoSnippetContainer>
-      <AppInfoSnippetLeft sx={{
-        flexGrow: 1,
-        gap: '18px'
-      }}>
-     
-        <AppCircleContainer sx={{
-          width: 'auto'
-        }}>
+      <AppInfoSnippetLeft>
+      <ButtonBase
+        sx={{
+          height: "80px",
+          width: "60px",
+        }}
+        onClick={()=> {
+          executeEvent("selectedAppInfo", {
+            data: app,
+          });
+        }}
+      >
+        <AppCircleContainer>
           <AppCircle
             sx={{
               border: "none",
-              height: '100px',
-              width: '100px'
             }}
           >
             <Avatar
               sx={{
-                height: "43px",
-                width: "43px",
+                height: "31px",
+                width: "31px",
                 '& img': { 
                   objectFit: 'fill',
                 }
@@ -59,7 +60,7 @@ export const AppInfo = ({ app }) => {
             >
               <img
                 style={{
-                  width: "43px",
+                  width: "31px",
                   height: "auto",
                 }}
                 src={LogoSelected}
@@ -68,35 +69,32 @@ export const AppInfo = ({ app }) => {
             </Avatar>
           </AppCircle>
         </AppCircleContainer>
-        <AppInfoSnippetMiddle>
-      
+      </ButtonBase>
+      <AppInfoSnippetMiddle>
+        <ButtonBase onClick={()=> {
+          executeEvent("selectedAppInfo", {
+            data: app,
+          });
+        }}>
         <AppInfoAppName   >
         {app?.metadata?.title || app?.name}
         </AppInfoAppName>
+        </ButtonBase>
         <Spacer height="6px" />
         <AppInfoUserName>
         { app?.name}
           </AppInfoUserName>
           <Spacer height="3px" />
-       
       </AppInfoSnippetMiddle>
-
       </AppInfoSnippetLeft>
       <AppInfoSnippetRight>
-       
-      </AppInfoSnippetRight>
-    </AppInfoSnippetContainer>
-    <Spacer height="11px" />
-    <AppDownloadButton sx={{
+        <AppDownloadButton sx={{
           backgroundColor: isInstalled ? '#0091E1' : '#247C0E',
-          width: '100%',
-          maxWidth: '320px',
-          height: '29px'
+        
         }}>
           <AppDownloadButtonText>{isInstalled ? 'Open' : 'Download'}</AppDownloadButtonText>
         </AppDownloadButton>
-    </AppsLibraryContainer>
-
-
+      </AppInfoSnippetRight>
+    </AppInfoSnippetContainer>
   );
 };
