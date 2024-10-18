@@ -3,7 +3,7 @@ import { AppViewer } from './AppViewer'
 import Frame from 'react-frame-component';
 import { MyContext } from '../../App';
 
-const AppViewerContainer = ({app, isSelected}) => {
+const AppViewerContainer = ({app, isSelected, hide}) => {
     const { rootHeight } = useContext(MyContext);
     const frameRef = useRef(null);
 
@@ -32,7 +32,7 @@ const AppViewerContainer = ({app, isSelected}) => {
           height: `calc(${rootHeight} - 60px - 45px)`,
           border: 'none',
           width: '100%',
-          display: !isSelected && 'none'
+          display: (!isSelected || hide) && 'none'
         }} ><AppViewer app={app}  /></Frame>
   )
 }

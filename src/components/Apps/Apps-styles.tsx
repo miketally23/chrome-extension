@@ -186,9 +186,23 @@ import {
     display: "flex",
     justifyContent: 'flex-start',
     alignItems: 'center',
+    flexGrow: 1
   }));
   export const AppsNavBarRight = styled(Box)(({ theme }) => ({
     display: "flex",
     justifyContent: 'flex-end',
     alignItems: 'center',
   }));
+
+  export const TabParent = styled(Box)(({ theme }) => ({
+    height: '36px',
+    width: '36px',
+    backgroundColor: '#434343',
+    position: 'relative',
+    borderRadius: '50%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center'
+  }));
+
+ 

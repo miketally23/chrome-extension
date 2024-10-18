@@ -4,7 +4,7 @@ import { Spacer } from '../../common/Spacer'
 import { MyContext, getBaseApiReact } from '../../App'
 import { AppsLibrary } from './AppsLibrary'
 import { AppInfo } from './AppInfo'
-import { subscribeToEvent, unsubscribeFromEvent } from '../../utils/events'
+import { executeEvent, subscribeToEvent, unsubscribeFromEvent } from '../../utils/events'
 import { AppsNavBar } from './AppsNavBar'
 import { AppsParent } from './Apps-styles'
 import { AppViewer } from './AppViewer'
@@ -14,13 +14,24 @@ import ShortUniqueId from "short-unique-id";
 const uid = new ShortUniqueId({ length: 8 });
 
 
-export const Apps = ({mode, setMode}) => {
+export const Apps = ({mode, setMode, show}) => {
     const [availableQapps, setAvailableQapps] = useState([])
     const [downloadedQapps, setDownloadedQapps] = useState([])
     const [selectedAppInfo, setSelectedAppInfo] = useState(null)
     const [tabs, setTabs] = useState([])
     const [selectedTab, setSelectedTab] = useState(null)
-    
+    const [isNewTabWindow, setIsNewTabWindow] = useState(false)
+
+    useEffect(()=> {
+        setTimeout(() => {
+            executeEvent('setTabsToNav', {
+                data: {
+                    tabs: tabs,
+                selectedTab: selectedTab
+                }
+            })
+        }, 100);
+    }, [show, tabs, selectedTab])
 
     const getQapps = React.useCallback(
         async () => {
@@ -85,8 +96,8 @@ export const Apps = ({mode, setMode}) => {
         } else if(mode === 'library'){
             setMode('home')
         } else {
-
-            const iframe = document.getElementById('browser-iframe2');
+            const iframeId = `browser-iframe-${selectedTab?.tabId}`
+            const iframe = document.getElementById(iframeId);
             console.log('iframe', iframe)
 // Go Back in the iframe's history
 if (iframe) {
@@ -108,7 +119,7 @@ if (iframe) {
         return () => {
           unsubscribeFromEvent("navigateBack", navigateBackFunc);
         };
-      }, [mode]);
+      }, [mode, selectedTab]);
 
 
       const addTabFunc = (e) => {
@@ -119,6 +130,9 @@ if (iframe) {
         }
         setTabs((prev)=> [...prev, newTab])
         setSelectedTab(newTab)
+        setMode('viewer')
+      
+        setIsNewTabWindow(false)
       };
     
       useEffect(() => {
@@ -127,10 +141,76 @@ if (iframe) {
         return () => {
           unsubscribeFromEvent("addTab", addTabFunc);
         };
-      }, [mode]);
+      }, [tabs]);
 
-
+      const setSelectedTabFunc = (e) => {
+        const data = e.detail?.data;
+        
+       
+        setSelectedTab(data)
+        setTimeout(() => {
+            executeEvent('setTabsToNav', {
+                data: {
+                    tabs: tabs,
+                selectedTab: data
+                }
+            })
+        }, 100);
+        setIsNewTabWindow(false)
+      };
     
+      useEffect(() => {
+        subscribeToEvent("setSelectedTab", setSelectedTabFunc);
+    
+        return () => {
+          unsubscribeFromEvent("setSelectedTab", setSelectedTabFunc);
+        };
+      }, [tabs]);
+
+      const removeTabFunc = (e) => {
+        const data = e.detail?.data;
+        const copyTabs = [...tabs].filter((tab)=> tab?.tabId !== data?.tabId)
+        if(copyTabs?.length === 0){
+            setMode('home')
+        }
+        else{
+            setSelectedTab(copyTabs[0])
+        }
+        setTabs(copyTabs)
+        setSelectedTab(copyTabs[0])
+        setTimeout(() => {
+            executeEvent('setTabsToNav', {
+                data: {
+                    tabs: copyTabs,
+                selectedTab: copyTabs[0]
+                }
+            })
+        }, 400);
+        
+      };
+    
+      useEffect(() => {
+        subscribeToEvent("removeTab", removeTabFunc);
+    
+        return () => {
+          unsubscribeFromEvent("removeTab", removeTabFunc);
+        };
+      }, [tabs]);
+
+      const setNewTabWindowFunc = (e) => {
+        setIsNewTabWindow(true)
+        
+      };
+    
+      useEffect(() => {
+        subscribeToEvent("newTabWindow", setNewTabWindowFunc);
+    
+        return () => {
+          unsubscribeFromEvent("newTabWindow", setNewTabWindowFunc);
+        };
+      }, [tabs]);
+
+    if(!show) return null
 
   return (
        <AppsParent>
@@ -141,14 +221,14 @@ if (iframe) {
     {mode === 'home' && <AppsHome downloadedQapps={downloadedQapps} setMode={setMode} />}
     {mode === 'library' && <AppsLibrary downloadedQapps={downloadedQapps} availableQapps={availableQapps} />}
     {mode === 'appInfo' && <AppInfo app={selectedAppInfo}  />}
-    {mode === 'viewer' && (
-        <>
+   
         {tabs.map((tab)=> {
-            return <AppViewerContainer isSelected={tab?.tabId === selectedTab?.tabId} app={tab} />
+            return <AppViewerContainer hide={isNewTabWindow} isSelected={tab?.tabId === selectedTab?.tabId} app={tab} />
         })}
-        </>
-    ) }
-    
+  
+    {isNewTabWindow && (
+        <AppsHome downloadedQapps={downloadedQapps} setMode={setMode} />
+    )}
     {mode !== 'viewer' && (
             <Spacer height="180px" />
 

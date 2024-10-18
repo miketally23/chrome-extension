@@ -433,7 +433,7 @@ export const Group = ({
   const { clearStatesMessageQueueProvider } = useMessageQueue();
   const initiatedGetMembers = useRef(false);
   const [groupChatTimestamps, setGroupChatTimestamps] = React.useState({});
-  const [appsMode, setAppsMode] = useState('viewer')
+  const [appsMode, setAppsMode] = useState('home')
 
   useEffect(()=> {
     timestampEnterDataRef.current = timestampEnterData
@@ -2736,8 +2736,8 @@ export const Group = ({
               setMobileViewMode={setMobileViewMode}
             />
           )}
-          {isMobile && mobileViewMode === "apps" && (
-            <Apps mode={appsMode} setMode={setAppsMode} />
+          {isMobile  && (
+            <Apps mode={appsMode} setMode={setAppsMode} show={mobileViewMode === "apps"} />
           )}
           {
           !isMobile && !selectedGroup &&
