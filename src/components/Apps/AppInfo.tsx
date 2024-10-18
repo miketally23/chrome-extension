@@ -87,7 +87,11 @@ export const AppInfo = ({ app }) => {
       </AppInfoSnippetRight>
     </AppInfoSnippetContainer>
     <Spacer height="11px" />
-    <AppDownloadButton sx={{
+    <AppDownloadButton onClick={()=> {
+                executeEvent("addTab", {
+                  data: app
+                })
+              }} sx={{
           backgroundColor: isInstalled ? '#0091E1' : '#247C0E',
           width: '100%',
           maxWidth: '320px',

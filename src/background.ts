@@ -2830,6 +2830,8 @@ async function getChatHeadsDirect() {
 chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
   if (request) {
 
+    console.log('REQUEST MESSAGE', request)
+
     switch (request.action) {
       case "version":
         // Example: respond with the version

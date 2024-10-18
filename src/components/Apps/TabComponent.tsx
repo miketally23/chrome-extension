@@ -36,8 +36,8 @@ const TabComponent = ({isSelected, app}) => {
         ) }
          <Avatar
                           sx={{
-                            height: "31px",
-                            width: "31px",
+                            height: "28px",
+                            width: "28px",
                           }}
                           alt={app?.name}
                           src={`${getBaseApiReact()}/arbitrary/THUMBNAIL/${
@@ -46,7 +46,7 @@ const TabComponent = ({isSelected, app}) => {
                         >
                           <img
                             style={{
-                              width: "31px",
+                              width: "28px",
                               height: "auto",
                             }}
                             src={LogoSelected}

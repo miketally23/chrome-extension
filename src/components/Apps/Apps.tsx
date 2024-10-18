@@ -210,10 +210,13 @@ if (iframe) {
         };
       }, [tabs]);
 
-    if(!show) return null
+ 
+     
 
   return (
-       <AppsParent>
+       <AppsParent sx={{
+        display: !show && 'none'
+       }}>
     {mode !== 'viewer' && (
             <Spacer height="30px" />
 

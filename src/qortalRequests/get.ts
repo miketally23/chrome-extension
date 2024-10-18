@@ -1208,6 +1208,7 @@ export const joinGroup = async (data) => {
 
 export const saveFile = async (data, sender) => {
   try {
+    console.log('save file', data)
     const requiredFields = ["filename", "fileId"];
     const missingFields: string[] = [];
     requiredFields.forEach((field) => {

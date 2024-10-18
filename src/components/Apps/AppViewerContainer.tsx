@@ -1,4 +1,4 @@
-import React, { useContext, useRef } from 'react'
+import React, { useContext, useEffect, useRef } from 'react'
 import { AppViewer } from './AppViewer'
 import Frame from 'react-frame-component';
 import { MyContext } from '../../App';
@@ -7,6 +7,7 @@ const AppViewerContainer = ({app, isSelected, hide}) => {
     const { rootHeight } = useContext(MyContext);
     const frameRef = useRef(null);
 
+ 
   return (
     <Frame  id={`browser-iframe-${app?.tabId}` }      ref={frameRef} head={
         <>

@@ -88,7 +88,11 @@ export const AppInfoSnippet = ({ app }) => {
       </AppInfoSnippetMiddle>
       </AppInfoSnippetLeft>
       <AppInfoSnippetRight>
-        <AppDownloadButton sx={{
+        <AppDownloadButton onClick={()=> {
+                executeEvent("addTab", {
+                  data: app
+                })
+              }}  sx={{
           backgroundColor: isInstalled ? '#0091E1' : '#247C0E',
         
         }}>
