@@ -10,6 +10,12 @@ import {
   AppsSearchContainer,
   AppsSearchLeft,
   AppsSearchRight,
+  AppsWidthLimiter,
+  PublishQAppCTAButton,
+  PublishQAppCTALeft,
+  PublishQAppCTAParent,
+  PublishQAppCTARight,
+  PublishQAppDotsBG,
 } from "./Apps-styles";
 import { Avatar, Box, ButtonBase, InputBase, styled } from "@mui/material";
 import { Add } from "@mui/icons-material";
@@ -17,10 +23,13 @@ import { MyContext, getBaseApiReact } from "../../App";
 import LogoSelected from "../../assets/svgs/LogoSelected.svg";
 import IconSearch from "../../assets/svgs/Search.svg";
 import IconClearInput from "../../assets/svgs/ClearInput.svg";
+import qappDevelopText from "../../assets/svgs/qappDevelopText.svg";
+import qappDots from "../../assets/svgs/qappDots.svg";
 
 import { Spacer } from "../../common/Spacer";
 import { AppInfoSnippet } from "./AppInfoSnippet";
 import { Virtuoso } from "react-virtuoso";
+import { executeEvent } from "../../utils/events";
 const officialAppList = [
   "q-tube",
   "q-blog",
@@ -47,7 +56,7 @@ const ScrollerStyled = styled('div')({
   });
   
 
-export const AppsLibrary = ({ downloadedQapps, availableQapps }) => {
+export const AppsLibrary = ({ downloadedQapps, availableQapps, setMode }) => {
   const [searchValue, setSearchValue] = useState("");
   const virtuosoRef = useRef();
   const { rootHeight } = useContext(MyContext);
@@ -113,6 +122,7 @@ export const AppsLibrary = ({ downloadedQapps, availableQapps }) => {
 
   return (
       <AppsLibraryContainer>
+        <AppsWidthLimiter>
         <Box
           sx={{
             display: "flex",
@@ -148,8 +158,10 @@ export const AppsLibrary = ({ downloadedQapps, availableQapps }) => {
             </AppsSearchRight>
           </AppsSearchContainer>
         </Box>
+        </AppsWidthLimiter>
         <Spacer height="25px" />
         {searchedList?.length > 0 ? (
+           <AppsWidthLimiter>
           <StyledVirtuosoContainer>
             <Virtuoso
               ref={virtuosoRef}
@@ -162,8 +174,10 @@ export const AppsLibrary = ({ downloadedQapps, availableQapps }) => {
               }}
             />
           </StyledVirtuosoContainer>
+          </AppsWidthLimiter>
         ) : (
           <>
+            <AppsWidthLimiter>
             <AppLibrarySubTitle>Official Apps</AppLibrarySubTitle>
             <Spacer height="18px" />
             <AppsContainer>
@@ -173,6 +187,11 @@ export const AppsLibrary = ({ downloadedQapps, availableQapps }) => {
                     sx={{
                       height: "80px",
                       width: "60px",
+                    }}
+                    onClick={()=> {
+                      executeEvent("addTab", {
+                        data: qapp
+                      })
                     }}
                   >
                     <AppCircleContainer>
@@ -209,11 +228,33 @@ export const AppsLibrary = ({ downloadedQapps, availableQapps }) => {
                 );
               })}
             </AppsContainer>
+            <Spacer height="30px" />
+            <AppLibrarySubTitle>Create Apps!</AppLibrarySubTitle>
             <Spacer height="18px" />
-            <AppLibrarySubTitle>Featured</AppLibrarySubTitle>
+            </AppsWidthLimiter>
+            <PublishQAppCTAParent>
+              <PublishQAppCTALeft>
+                <PublishQAppDotsBG>
 
+              <img src={qappDots} />
+              </PublishQAppDotsBG>
+                <Spacer width="29px" />
+              <img src={qappDevelopText} />
+              </PublishQAppCTALeft>
+              <PublishQAppCTARight onClick={()=> {
+                setMode('publish')
+              }}>
+                <PublishQAppCTAButton>
+                  Publish
+                </PublishQAppCTAButton>
+                <Spacer width="20px" />
+                </PublishQAppCTARight>
+            </PublishQAppCTAParent>
+            <AppsWidthLimiter>
+           
             <Spacer height="18px" />
             <AppLibrarySubTitle>Categories</AppLibrarySubTitle>
+            </AppsWidthLimiter>
           </>
         )}
       </AppsLibraryContainer>

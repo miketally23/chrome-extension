@@ -41,6 +41,13 @@ import {
   }));
   export const AppsLibraryContainer = styled(Box)(({ theme }) => ({
     display: "flex",
+    width: "100%",
+    flexDirection: 'column',
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+  }));
+  export const AppsWidthLimiter = styled(Box)(({ theme }) => ({
+    display: "flex",
     width: "90%",
     flexDirection: 'column',
     justifyContent: 'flex-start',
@@ -138,7 +145,8 @@ import {
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: '25px'
+    borderRadius: '25px',
+    alignSelf: 'center'
   }));
 
   export const AppDownloadButtonText = styled(Typography)(({ theme }) => ({
@@ -147,6 +155,13 @@ import {
     lineHeight: 1.2,
   }));
 
+  export const AppPublishTagsContainer = styled(Box)(({theme})=> ({
+    gap: '10px',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-start',
+    width: '100%',
+    display: 'flex'
+  }))
 
 
   export const AppInfoSnippetMiddle = styled(Box)(({ theme }) => ({
@@ -205,4 +220,59 @@ import {
     justifyContent: 'center'
   }));
 
- 
+  export const PublishQAppCTAParent = styled(Box)(({ theme }) => ({
+    display: "flex",
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    backgroundColor: '#181C23'
+  }));
+
+  export const PublishQAppCTALeft = styled(Box)(({ theme }) => ({
+    display: "flex",
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+  }));
+  export const PublishQAppCTARight = styled(Box)(({ theme }) => ({
+    display: "flex",
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+  }));
+
+  export const PublishQAppCTAButton = styled(ButtonBase)(({ theme }) => ({
+    width: '101px',
+    height: '29px',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: '25px',
+    border: '1px solid #FFFFFF'
+  }));
+  export const PublishQAppDotsBG = styled(Box)(({ theme }) => ({
+    display: "flex",
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '60px',
+    height: '60px',
+    backgroundColor: '#4BBCFE'
+  }));
+  
+  export const PublishQAppInfo = styled(Typography)(({ theme }) => ({
+    fontSize: '10px',
+    fontWeight: 400,
+    lineHeight: 1.2,
+    fontStyle: 'italic'
+  }));
+
+  export const PublishQAppChoseFile = styled(ButtonBase)(({ theme }) => ({
+    width: '101px',
+    height: '30px',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: '5px',
+    backgroundColor: '#0091E1',
+    color: 'white',
+    fontWeight: 600,
+    fontSize: '10px'
+  }));

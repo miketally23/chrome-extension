@@ -3,7 +3,7 @@ import Button from '@mui/material/Button';
 import Snackbar, { SnackbarCloseReason } from '@mui/material/Snackbar';
 import Alert from '@mui/material/Alert';
 
-export const  CustomizedSnackbars = ({open, setOpen, info, setInfo}) => {
+export const  CustomizedSnackbars = ({open, setOpen, info, setInfo, duration}) => {
 
 
 
@@ -19,9 +19,10 @@ export const  CustomizedSnackbars = ({open, setOpen, info, setInfo}) => {
     setInfo(null)
   };
 
+  if(!open) return null
   return (
     <div>
-      <Snackbar anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }} open={open} autoHideDuration={6000} onClose={handleClose}>
+      <Snackbar anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }} open={open} autoHideDuration={duration || 6000} onClose={handleClose}>
         <Alert
                 
 

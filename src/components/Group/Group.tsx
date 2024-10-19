@@ -2737,7 +2737,7 @@ export const Group = ({
             />
           )}
           {isMobile  && (
-            <Apps mode={appsMode} setMode={setAppsMode} show={mobileViewMode === "apps"} />
+            <Apps mode={appsMode} setMode={setAppsMode} show={mobileViewMode === "apps"} myName={userInfo?.name} />
           )}
           {
           !isMobile && !selectedGroup &&

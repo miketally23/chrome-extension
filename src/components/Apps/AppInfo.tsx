@@ -13,6 +13,7 @@ import {
   AppInfoUserName,
   AppsLibraryContainer,
   AppsParent,
+  AppsWidthLimiter,
 } from "./Apps-styles";
 import { Avatar, Box, ButtonBase, InputBase } from "@mui/material";
 import { Add } from "@mui/icons-material";
@@ -28,6 +29,7 @@ export const AppInfo = ({ app }) => {
   const isInstalled = app?.status?.status === 'READY'
   return (
       <AppsLibraryContainer>
+        <AppsWidthLimiter>
     <AppInfoSnippetContainer>
       <AppInfoSnippetLeft sx={{
         flexGrow: 1,
@@ -99,6 +101,7 @@ export const AppInfo = ({ app }) => {
         }}>
           <AppDownloadButtonText>{isInstalled ? 'Open' : 'Download'}</AppDownloadButtonText>
         </AppDownloadButton>
+        </AppsWidthLimiter>
     </AppsLibraryContainer>
 
 

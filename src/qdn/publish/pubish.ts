@@ -61,7 +61,25 @@ export const publishData = async ({
 	tag5,
 	feeAmount
 }: any) => {
-	
+	console.log({
+		registeredName,
+	file,
+	service,
+	identifier,
+	uploadType,
+	isBase64,
+	filename,
+	withFee,
+	title,
+	description,
+	category,
+	tag1,
+	tag2,
+	tag3,
+	tag4,
+	tag5,
+	feeAmount
+	})
 	const validateName = async (receiverName: string) => {
 		return await reusableGet(`/names/${receiverName}`) 
 	}
@@ -153,7 +171,7 @@ export const publishData = async ({
 			fee = feeAmount
 		} else if (withFee) {
 			const res = await getArbitraryFee()
-
+			console.log('res', res)
 			if (res.fee) {
 				fee = res.fee
 			} else {
@@ -162,9 +180,9 @@ export const publishData = async ({
 		}
 		
 		let transactionBytes = await uploadData(registeredName, file, fee)
-
-		if (transactionBytes.error) {
-			throw new Error(transactionBytes.message || 'Error when uploading')
+		console.log('transactionBytes', transactionBytes)
+		if (!transactionBytes || transactionBytes.error) {
+			throw new Error(transactionBytes?.message || 'Error when uploading')
 		} else if (transactionBytes.includes('Error 500 Internal Server Error')) {
 			throw new Error('Error when uploading')
 		}
@@ -183,7 +201,8 @@ export const publishData = async ({
 	}
 
 	const uploadData = async (registeredName: string, file:any, fee: number) => {
-		if (identifier != null && identifier.trim().length > 0) {
+		console.log('uploadData', registeredName, file, fee)
+
 			let postBody = ''
 			let urlSuffix = ''
 
@@ -211,8 +230,8 @@ export const publishData = async ({
 			}
 			
 			let uploadDataUrl = `/arbitrary/${service}/${registeredName}${urlSuffix}`
-
-			if (identifier.trim().length > 0) {
+			console.log('uploadDataUrl', uploadDataUrl)
+			if (identifier?.trim().length > 0) {
 				uploadDataUrl = `/arbitrary/${service}/${registeredName}/${identifier}${urlSuffix}`
 			}
 			
@@ -254,14 +273,16 @@ export const publishData = async ({
 			if (tag5 != null && tag5 != 'undefined') {
 				uploadDataUrl = uploadDataUrl + '&tags=' + encodeURIComponent(tag5)
 			}
+			console.log('uploadDataUrl2', uploadDataUrl)
 
             return await reusablePost(uploadDataUrl, postBody)
-		}
+		
 	}
 
 	try {
 		return await validate()
 	} catch (error: any) {
+		console.log('error2', error)
 		throw new Error(error?.message)
 	}
 }

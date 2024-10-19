@@ -152,23 +152,40 @@ export const publishGroupEncryptedResource = async ({encryptedData, identifier})
       throw new Error(error.message);
   }
 }
-export const publishOnQDN = async ({data, identifier, service}) => {
-  try {
-  
-      if(data && identifier && service){
+export const publishOnQDN = async ({data, identifier, service, title,
+	description,
+	category,
+	tag1,
+	tag2,
+	tag3,
+	tag4,
+	tag5,
+  uploadType = 'file'
+}) => {
+
+      if(data &&  service){
           const registeredName = await getNameInfo()
           if(!registeredName) throw new Error('You need a name to publish')
-          const res = await publishData({
-              registeredName, file: data, service, identifier, uploadType: 'file', isBase64: true, withFee: true
+         
+            const res = await publishData({
+              registeredName, file: data, service, identifier, uploadType, isBase64: true, withFee: true, title,
+              description,
+              category,
+              tag1,
+              tag2,
+              tag3,
+              tag4,
+              tag5
+              
           })
           return res
+
+        
           
       } else {
-          throw new Error('Cannot encrypt content')
+          throw new Error('Cannot publish content')
       }
-  } catch (error: any) {
-      throw new Error(error.message);
-  }
+
 }
 
 export function uint8ArrayToBase64(uint8Array: any) {

@@ -3905,19 +3905,35 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
         break;
       }
       case "publishOnQDN": {
-        const { data, identifier, service } = request.payload;
+        const { data, identifier, service, title,
+          description,
+          category,
+          tag1,
+          tag2,
+          tag3,
+          tag4,
+          tag5, uploadType } = request.payload;
 
         publishOnQDN({
           data,
           identifier,
-          service
+          service,
+          title,
+          description,
+          category,
+          tag1,
+          tag2,
+          tag3,
+          tag4,
+          tag5,
+          uploadType
         })
           .then((data) => {
             sendResponse(data);
           })
           .catch((error) => {
-            console.error(error.message);
-            sendResponse({ error: error.message });
+            console.error(error?.message);
+            sendResponse({ error: error?.message || 'Unable to publish' });
           });
         return true;
         break;

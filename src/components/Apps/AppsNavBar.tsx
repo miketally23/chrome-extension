@@ -14,7 +14,7 @@ import TabComponent from "./TabComponent";
 export const AppsNavBar = () => {
   const [tabs, setTabs] = useState([])
   const [selectedTab, setSelectedTab] = useState([])
-
+  const [isNewTabWindow, setIsNewTabWindow] = useState(false)
   const tabsRef = useRef(null);
 
   useEffect(() => {
@@ -30,10 +30,11 @@ export const AppsNavBar = () => {
   }, [tabs.length]); // Dependency on the number of tabs
 
   const setTabsToNav = (e) => {
-    const {tabs, selectedTab} = e.detail?.data;
+    const {tabs, selectedTab, isNewTabWindow} = e.detail?.data;
    
     setTabs([...tabs])
     setSelectedTab({...selectedTab})
+    setIsNewTabWindow(isNewTabWindow)
   };
 
   useEffect(() => {
@@ -68,7 +69,7 @@ export const AppsNavBar = () => {
       {tabs?.map((tab) => (
         <Tab
           key={tab.tabId}
-          label={<TabComponent isSelected={tab?.tabId === selectedTab?.tabId} app={tab} />} // Pass custom component
+          label={<TabComponent isSelected={tab?.tabId === selectedTab?.tabId && !isNewTabWindow} app={tab} />} // Pass custom component
           sx={{
             "&.Mui-selected": {
               color: "white",
