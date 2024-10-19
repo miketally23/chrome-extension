@@ -20,8 +20,9 @@ import LogoSelected from "../../assets/svgs/LogoSelected.svg";
 
 import { Spacer } from "../../common/Spacer";
 import { executeEvent } from "../../utils/events";
+import { AppRating } from "./AppRating";
 
-export const AppInfoSnippet = ({ app }) => {
+export const AppInfoSnippet = ({ app, myName }) => {
 
 
   const isInstalled = app?.status?.status === 'READY'
@@ -85,6 +86,7 @@ export const AppInfoSnippet = ({ app }) => {
         { app?.name}
           </AppInfoUserName>
           <Spacer height="3px" />
+          <AppRating app={app} myName={myName} />
       </AppInfoSnippetMiddle>
       </AppInfoSnippetLeft>
       <AppInfoSnippetRight>

@@ -263,6 +263,8 @@ export const Apps = ({ mode, setMode, show , myName}) => {
           downloadedQapps={downloadedQapps}
           availableQapps={availableQapps}
           setMode={setMode}
+          myName={myName}
+          hasPublishApp={!!(myApp || myWebsite)}
         />
       )}
       {mode === "appInfo" && <AppInfo app={selectedAppInfo} />}

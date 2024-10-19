@@ -74,7 +74,7 @@ const _createPoll = async (pollName, pollDescription, options) => {
     const signedBytes = Base58.encode(tx.signedBytes);
     const res = await processTransactionVersion2(signedBytes);
     if (!res?.signature)
-      throw new Error("Transaction was not able to be processed");
+      throw new Error(res?.message || "Transaction was not able to be processed");
     return res;
   } else {
     throw new Error("User declined request");
@@ -172,8 +172,9 @@ const _voteOnPoll = async (pollName, optionIndex, optionName) => {
     });
     const signedBytes = Base58.encode(tx.signedBytes);
     const res = await processTransactionVersion2(signedBytes);
+    console.log('res', res)
     if (!res?.signature)
-      throw new Error("Transaction was not able to be processed");
+      throw new Error(res?.message || "Transaction was not able to be processed");
     return res;
   } else {
     throw new Error("User declined request");

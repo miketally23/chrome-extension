@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
   AppCircle,
   AppCircleContainer,
@@ -55,12 +55,42 @@ const ScrollerStyled = styled('div')({
     "-ms-overflow-style": "none",
   });
   
+  const StyledVirtuosoContainer = styled('div')({
+    position: 'relative',
+    width: '100%',
+    display: 'flex',
+    flexDirection: 'column',
+    
+    // Hide scrollbar for WebKit browsers (Chrome, Safari)
+    "::-webkit-scrollbar": {
+      width: "0px",
+      height: "0px",
+    },
+    
+    // Hide scrollbar for Firefox
+    scrollbarWidth: "none",
+  
+    // Hide scrollbar for IE and older Edge
+    "-ms-overflow-style": "none",
+  });
 
-export const AppsLibrary = ({ downloadedQapps, availableQapps, setMode }) => {
+export const AppsLibrary = ({ downloadedQapps, availableQapps, setMode, myName, hasPublishApp }) => {
   const [searchValue, setSearchValue] = useState("");
   const virtuosoRef = useRef();
   const { rootHeight } = useContext(MyContext);
+  const [appStates, setAppStates] = useState({});
 
+  const handleStateChange = (appId, newState) => {
+    setAppStates((prevState) => ({
+      ...prevState,
+      [appId]: {
+        ...(prevState[appId] || {}), // Preserve existing state for the app
+        ...newState,         // Merge in the new state properties
+      },
+    }));
+  };
+  
+  console.log('appStates', appStates)
   const officialApps = useMemo(() => {
     return availableQapps.filter(
       (app) =>
@@ -75,7 +105,7 @@ export const AppsLibrary = ({ downloadedQapps, availableQapps, setMode }) => {
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedValue(searchValue);
-    }, 250);
+    }, 350);
 
     // Cleanup timeout if searchValue changes before the timeout completes
     return () => {
@@ -97,28 +127,10 @@ export const AppsLibrary = ({ downloadedQapps, availableQapps, setMode }) => {
    
     let app = searchedList[index];
     console.log('appi', app)
-    return <AppInfoSnippet key={`${app?.service}-${app?.name}`} app={app} />;
+    return <AppInfoSnippet key={`${app?.service}-${app?.name}`} app={app} myName={myName} />;
   };
 
-  const StyledVirtuosoContainer = styled('div')({
-    position: 'relative',
-    height: rootHeight,
-    width: '100%',
-    display: 'flex',
-    flexDirection: 'column',
-    
-    // Hide scrollbar for WebKit browsers (Chrome, Safari)
-    "::-webkit-scrollbar": {
-      width: "0px",
-      height: "0px",
-    },
-    
-    // Hide scrollbar for Firefox
-    scrollbarWidth: "none",
-  
-    // Hide scrollbar for IE and older Edge
-    "-ms-overflow-style": "none",
-  });
+
 
   return (
       <AppsLibraryContainer>
@@ -162,7 +174,9 @@ export const AppsLibrary = ({ downloadedQapps, availableQapps, setMode }) => {
         <Spacer height="25px" />
         {searchedList?.length > 0 ? (
            <AppsWidthLimiter>
-          <StyledVirtuosoContainer>
+          <StyledVirtuosoContainer sx={{
+            height: rootHeight
+          }}>
             <Virtuoso
               ref={virtuosoRef}
               data={searchedList}
@@ -229,7 +243,7 @@ export const AppsLibrary = ({ downloadedQapps, availableQapps, setMode }) => {
               })}
             </AppsContainer>
             <Spacer height="30px" />
-            <AppLibrarySubTitle>Create Apps!</AppLibrarySubTitle>
+            <AppLibrarySubTitle>{hasPublishApp ? 'Update Apps!' : 'Create Apps!'}</AppLibrarySubTitle>
             <Spacer height="18px" />
             </AppsWidthLimiter>
             <PublishQAppCTAParent>
@@ -245,7 +259,7 @@ export const AppsLibrary = ({ downloadedQapps, availableQapps, setMode }) => {
                 setMode('publish')
               }}>
                 <PublishQAppCTAButton>
-                  Publish
+                  {hasPublishApp ? 'Update' : 'Publish'}
                 </PublishQAppCTAButton>
                 <Spacer width="20px" />
                 </PublishQAppCTARight>

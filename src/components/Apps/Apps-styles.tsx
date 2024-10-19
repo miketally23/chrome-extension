@@ -175,12 +175,14 @@ import {
     fontSize: '16px',
     fontWeight: 500,
     lineHeight: 1.2,
+    textAlign: 'start'
   }));
   export const AppInfoUserName = styled(Typography)(({ theme }) => ({
     fontSize: '13px',
     fontWeight: 400,
     lineHeight: 1.2,
-    color: '#8D8F93'
+    color: '#8D8F93',
+    textAlign: 'start'
   }));
 
 
