@@ -278,3 +278,34 @@ import {
     fontWeight: 600,
     fontSize: '10px'
   }));
+
+
+  export const AppsCategoryInfo =  styled(Box)(({ theme }) => ({
+    display: "flex",
+    alignItems: 'center',
+    width: '100%',
+  }));
+
+  export const AppsCategoryInfoSub =  styled(Box)(({ theme }) => ({
+    display: "flex",
+    flexDirection: 'column',
+  }));
+  export const AppsCategoryInfoLabel =  styled(Typography)(({ theme }) => ({
+    fontSize: '12px',
+    fontWeight: 700,
+    lineHeight: 1.2,
+    color: '#8D8F93',
+  }));
+  export const AppsCategoryInfoValue =  styled(Typography)(({ theme }) => ({
+    fontSize: '12px',
+    fontWeight: 500,
+    lineHeight: 1.2,
+    color: '#8D8F93',
+  }));
+  export const AppsInfoDescription =  styled(Typography)(({ theme }) => ({
+    fontSize: '13px',
+    fontWeight: 300,
+    lineHeight: 1.2,
+    width: '90%',
+    textAlign: 'start'
+  }));

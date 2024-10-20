@@ -267,7 +267,7 @@ export const Apps = ({ mode, setMode, show , myName}) => {
           hasPublishApp={!!(myApp || myWebsite)}
         />
       )}
-      {mode === "appInfo" && <AppInfo app={selectedAppInfo} />}
+      {mode === "appInfo" && <AppInfo app={selectedAppInfo} myName={myName} />}
       {mode === "publish" && <AppPublish names={myName ?  [myName] : []} categories={categories} />}
 
       {tabs.map((tab) => {
