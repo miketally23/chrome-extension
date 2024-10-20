@@ -122,35 +122,25 @@ const Header = ({
           >
             {/* Right Logout Icon */}
 
-            <IconButton
+            <ButtonBase
               onClick={() => {
                 setMobileViewModeKeepOpen("messaging");
               }}
-              edge="end"
-              color="inherit"
-              aria-label="logout"
-
-              // onClick={onLogoutClick}
             >
               <MessagingIcon2    height={20}              color={hasUnreadDirects ? "var(--unread)" : "rgba(145, 145, 147, 1)"}
                 
               />
-            </IconButton>
+            </ButtonBase>
             <Save />
-            <IconButton
+            <ButtonBase
               onClick={logoutFunc}
-              edge="end"
-              color="inherit"
-              aria-label="logout"
-
-              // onClick={onLogoutClick}
             >
               <LogoutIcon
                 height={20}
                 width={21}
                 color="rgba(145, 145, 147, 1)"
               />
-            </IconButton>
+            </ButtonBase>
           </Box>
         </Toolbar>
         <Menu

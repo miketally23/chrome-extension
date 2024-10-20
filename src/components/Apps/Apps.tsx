@@ -236,6 +236,7 @@ export const Apps = ({ mode, setMode, show , myName}) => {
 
   const setNewTabWindowFunc = (e) => {
     setIsNewTabWindow(true);
+    setSelectedTab(null)
   };
 
   useEffect(() => {
@@ -252,18 +253,19 @@ export const Apps = ({ mode, setMode, show , myName}) => {
         display: !show && "none",
       }}
     >
-      {mode !== "viewer" && <Spacer height="30px" />}
+      {mode !== "viewer" && !selectedTab  && <Spacer height="30px" />}
       {mode === "home" && (
         <AppsHome availableQapps={availableQapps}  setMode={setMode} myApp={myApp} myWebsite={myWebsite} />
       )}
-      {mode === "library" && (
+    
         <AppsLibrary
+        isShow={mode === "library" && !selectedTab}
           availableQapps={availableQapps}
           setMode={setMode}
           myName={myName}
           hasPublishApp={!!(myApp || myWebsite)}
         />
-      )}
+   
       {mode === "appInfo" && <AppInfo app={selectedAppInfo} myName={myName} />}
       {mode === "publish" && <AppPublish names={myName ?  [myName] : []} categories={categories} />}
 
@@ -283,7 +285,7 @@ export const Apps = ({ mode, setMode, show , myName}) => {
           <AppsHome availableQapps={availableQapps} setMode={setMode} myApp={myApp} myWebsite={myWebsite} />
         </>
       )}
-      {mode !== "viewer" && <Spacer height="180px" />}
+      {mode !== "viewer" && !selectedTab  && <Spacer height="180px" />}
     </AppsParent>
   );
 };

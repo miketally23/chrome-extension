@@ -74,7 +74,7 @@ const ScrollerStyled = styled('div')({
     "-ms-overflow-style": "none",
   });
 
-export const AppsLibrary = ({  availableQapps, setMode, myName, hasPublishApp }) => {
+export const AppsLibrary = ({  availableQapps, setMode, myName, hasPublishApp, isShow }) => {
   const [searchValue, setSearchValue] = useState("");
   const virtuosoRef = useRef();
   const { rootHeight } = useContext(MyContext);
@@ -133,7 +133,9 @@ export const AppsLibrary = ({  availableQapps, setMode, myName, hasPublishApp })
 
 
   return (
-      <AppsLibraryContainer>
+      <AppsLibraryContainer sx={{
+        display: !isShow && 'none'
+      }}>
         <AppsWidthLimiter>
         <Box
           sx={{

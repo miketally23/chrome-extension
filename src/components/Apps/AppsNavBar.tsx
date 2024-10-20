@@ -124,6 +124,7 @@ export const AppsNavBar = () => {
           }} src={NavAdd} />
         </ButtonBase>
         <ButtonBase onClick={(e)=> {
+          if(!selectedTab) return
           handleClick(e)
         }}>
           <img style={{

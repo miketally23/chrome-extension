@@ -42,7 +42,7 @@ const AppViewerContainer = ({app, isSelected, hide}) => {
           </style>
         </>
       } style={{
-          height: `calc(${rootHeight} - 60px - 45px)`,
+          height: `calc(${rootHeight} - 60px - 45px  - 20px)`,
           border: 'none',
           width: '100%',
           display: (!isSelected || hide) && 'none'
