@@ -2,12 +2,24 @@ import React, { useContext, useEffect, useRef } from 'react'
 import { AppViewer } from './AppViewer'
 import Frame from 'react-frame-component';
 import { MyContext } from '../../App';
+import { subscribeToEvent, unsubscribeFromEvent } from '../../utils/events';
 
 const AppViewerContainer = ({app, isSelected, hide}) => {
     const { rootHeight } = useContext(MyContext);
     const frameRef = useRef(null);
 
- 
+    const refreshAppFunc = (e) => {
+      console.log('getting refresh', e)
+    };
+  
+    // useEffect(() => {
+    //   subscribeToEvent("refreshAPp", refreshAppFunc);
+  
+    //   return () => {
+    //     unsubscribeFromEvent("refreshApp", refreshAppFunc);
+    //   };
+    // }, []);
+  
   return (
     <Frame  id={`browser-iframe-${app?.tabId}` }      ref={frameRef} head={
         <>

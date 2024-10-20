@@ -19,6 +19,7 @@ import { ArrowDownIcon } from "../../assets/Icons/ArrowDownIcon";
 import { MessagingIcon } from "../../assets/Icons/MessagingIcon";
 import { MessagingIcon2 } from "../../assets/Icons/MessagingIcon2";
 import { HubsIcon } from "../../assets/Icons/HubsIcon";
+import { Save } from "../Save/Save";
 
 const Header = ({
   logoutFunc,
@@ -135,6 +136,7 @@ const Header = ({
                 
               />
             </IconButton>
+            <Save />
             <IconButton
               onClick={logoutFunc}
               edge="end"

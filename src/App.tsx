@@ -98,6 +98,7 @@ import { DrawerComponent } from "./components/Drawer/Drawer";
 import { AddressQRCode } from "./components/AddressQRCode";
 import { Settings } from "./components/Group/Settings";
 import { MainAvatar } from "./components/MainAvatar";
+import { useRetrieveDataLocalStorage } from "./useRetrieveDataLocalStorage";
 
 type extStates =
   | "not-authenticated"
@@ -322,6 +323,7 @@ function App() {
   const [rootHeight, setRootHeight] = useState("100%");
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const qortalRequestCheckbox1Ref = useRef(null);
+  useRetrieveDataLocalStorage()
   useEffect(() => {
     if (!isMobile) return;
     // Function to set the height of the app to the viewport height

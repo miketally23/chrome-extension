@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useRef, useState } from "react";
+import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { AppsHome } from "./AppsHome";
 import { Spacer } from "../../common/Spacer";
 import { MyContext, getBaseApiReact } from "../../App";
@@ -15,19 +15,27 @@ import { AppViewer } from "./AppViewer";
 import AppViewerContainer from "./AppViewerContainer";
 import ShortUniqueId from "short-unique-id";
 import { AppPublish } from "./AppPublish";
+import { useRecoilState } from "recoil";
 
 const uid = new ShortUniqueId({ length: 8 });
 
 export const Apps = ({ mode, setMode, show , myName}) => {
   const [availableQapps, setAvailableQapps] = useState([]);
-  const [downloadedQapps, setDownloadedQapps] = useState([]);
   const [selectedAppInfo, setSelectedAppInfo] = useState(null);
   const [tabs, setTabs] = useState([]);
   const [selectedTab, setSelectedTab] = useState(null);
   const [isNewTabWindow, setIsNewTabWindow] = useState(false);
   const [categories, setCategories] = useState([])
-  const [myApp, setMyApp] = useState(null)
-  const [myWebsite, setMyWebsite] = useState(null)
+
+
+  const myApp = useMemo(()=> {
+   
+   return availableQapps.find((app)=> app.name === myName && app.service === 'APP')
+  }, [myName, availableQapps])
+  const myWebsite = useMemo(()=> {
+   
+    return availableQapps.find((app)=> app.name === myName && app.service === 'WEBSITE')
+   }, [myName, availableQapps])
 
   useEffect(() => {
     setTimeout(() => {
@@ -62,12 +70,12 @@ export const Apps = ({ mode, setMode, show , myName}) => {
     }
   }, []);
 
-  const getQapps = React.useCallback(async (myName) => {
+  const getQapps = React.useCallback(async () => {
     try {
       let apps = [];
       let websites = [];
       // dispatch(setIsLoadingGlobal(true))
-      const url = `${getBaseApiReact()}/arbitrary/resources/search?service=APP&mode=ALL&includestatus=true&limit=0&includemetadata=true`;
+      const url = `${getBaseApiReact()}/arbitrary/resources/search?service=APP&mode=ALL&limit=0&includestatus=true&includemetadata=true`;
 
       const response = await fetch(url, {
         method: "GET",
@@ -77,7 +85,8 @@ export const Apps = ({ mode, setMode, show , myName}) => {
       });
       if (!response?.ok) return;
       const responseData = await response.json();
-      const urlWebsites = `${getBaseApiReact()}/arbitrary/resources/search?service=WEBSITE&mode=ALL&includestatus=true&limit=0&includemetadata=true`;
+      console.log('responseData', responseData)
+      const urlWebsites = `${getBaseApiReact()}/arbitrary/resources/search?service=WEBSITE&mode=ALL&limit=0&includestatus=true&includemetadata=true`;
 
       const responseWebsites = await fetch(urlWebsites, {
         method: "GET",
@@ -87,31 +96,20 @@ export const Apps = ({ mode, setMode, show , myName}) => {
       });
       if (!responseWebsites?.ok) return;
       const responseDataWebsites = await responseWebsites.json();
-      const findMyWebsite = responseDataWebsites.find((web)=> web.name === myName)
-      if(findMyWebsite){
-        setMyWebsite(findMyWebsite)
-      }
-      const findMyApp = responseData.find((web)=> web.name === myName)
-      console.log('findMyApp', findMyApp)
-      if(findMyApp){
-        setMyWebsite(findMyApp)
-      }
+    
       apps = responseData;
       websites = responseDataWebsites;
       const combine = [...apps, ...websites];
       setAvailableQapps(combine);
-      setDownloadedQapps(
-        combine.filter((qapp) => qapp?.status?.status === "READY")
-      );
     } catch (error) {
     } finally {
       // dispatch(setIsLoadingGlobal(false))
     }
   }, []);
   useEffect(() => {
-    getQapps(myName);
+    getQapps();
     getCategories()
-  }, [getQapps, getCategories, myName]);
+  }, [getQapps, getCategories]);
 
   const selectedAppInfoFunc = (e) => {
     const data = e.detail?.data;
@@ -256,11 +254,10 @@ export const Apps = ({ mode, setMode, show , myName}) => {
     >
       {mode !== "viewer" && <Spacer height="30px" />}
       {mode === "home" && (
-        <AppsHome myName={myName} downloadedQapps={downloadedQapps} setMode={setMode} myApp={myApp} myWebsite={myWebsite} />
+        <AppsHome availableQapps={availableQapps}  setMode={setMode} myApp={myApp} myWebsite={myWebsite} />
       )}
       {mode === "library" && (
         <AppsLibrary
-          downloadedQapps={downloadedQapps}
           availableQapps={availableQapps}
           setMode={setMode}
           myName={myName}
@@ -283,7 +280,7 @@ export const Apps = ({ mode, setMode, show , myName}) => {
       {isNewTabWindow && mode === "viewer" && (
         <>
           <Spacer height="30px" />
-          <AppsHome downloadedQapps={downloadedQapps} setMode={setMode} />
+          <AppsHome availableQapps={availableQapps} setMode={setMode} myApp={myApp} myWebsite={myWebsite} />
         </>
       )}
       {mode !== "viewer" && <Spacer height="180px" />}

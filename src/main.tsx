@@ -6,7 +6,7 @@ import './index.css'
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import { CssBaseline } from '@mui/material';
 import { MessageQueueProvider } from './MessageQueueContext.tsx';
-
+import { RecoilRoot } from 'recoil';
 const theme = createTheme({
   palette: {
     primary: {
@@ -50,7 +50,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       <ThemeProvider theme={theme}>
       <CssBaseline />
   <MessageQueueProvider>
+  <RecoilRoot>
     <App />
+    </RecoilRoot>
     </MessageQueueProvider>
     </ThemeProvider>
   </React.StrictMode>,

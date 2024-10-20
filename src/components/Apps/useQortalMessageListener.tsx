@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 class Semaphore {
 	constructor(count) {
@@ -313,6 +313,7 @@ const UIQortalRequests = [
   }
 
 export const useQortalMessageListener = (frameWindow) => {
+  const [path, setPath] = useState('')
   useEffect(() => {
     console.log("Listener added react");
 
@@ -376,7 +377,11 @@ export const useQortalMessageListener = (frameWindow) => {
             error: 'Failed to prepare data for publishing',
           });
         }
-      } 
+      } else if(event?.data?.action === 'LINK_TO_QDN_RESOURCE' ||
+      event?.data?.action === 'QDN_RESOURCE_DISPLAYED'){
+        const pathUrl = event?.data?.path != null ? (event?.data?.path.startsWith('/') ? '' : '/') + event?.data?.path : null
+        setPath(pathUrl)
+      }
     };
 
     // Add the listener for messages coming from the frameWindow
@@ -401,5 +406,7 @@ export const useQortalMessageListener = (frameWindow) => {
       return true; // Keep the message channel open for async response
     }
   });
+
+  return {path}
 };
 
