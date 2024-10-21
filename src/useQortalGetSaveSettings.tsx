@@ -28,7 +28,7 @@ const getPublishRecord = async (myName) => {
     }
     const publishData = await response.json();
 
-    if(publishData?.length > 0) return {hasPublishRecord: false,  timestamp: publishData[0]?.updated || publishData[0].created}
+    if(publishData?.length > 0) return {hasPublishRecord: true,  timestamp: publishData[0]?.updated || publishData[0].created}
 
     return {hasPublishRecord: false}
   };
