@@ -28,7 +28,7 @@ const SortableItem = ({ id, name, app }) => {
     };
 
     return (
-      <ContextMenuPinnedApps app={app}>
+      <ContextMenuPinnedApps app={app} isMine={!!app?.isMine}>
         <ButtonBase
         ref={setNodeRef} {...attributes} {...listeners}
               sx={{
@@ -85,26 +85,51 @@ export const SortablePinnedApps = ({  myWebsite, myApp, availableQapps = [] }) =
     const [pinnedApps, setPinnedApps] = useRecoilState(sortablePinnedAppsAtom);
     const setSettingsLocalLastUpdated = useSetRecoilState(settingsLocalLastUpdatedAtom);
 
-    const transformPinnedApps = useMemo(()=> {
-        console.log({myWebsite, myApp, availableQapps, pinnedApps})
-        let pinned = [...pinnedApps]
-        const findMyWebsite = pinned?.find((item)=> item?.service === myWebsite?.service && item?.name === myWebsite?.name)
-        const findMyApp = pinned?.find((item)=> item?.service === myApp?.service && item?.name === myApp?.name)
-
-        if(myWebsite && !findMyWebsite){
-            pinned.unshift(myWebsite)
-        }
-        if(myApp && !findMyApp){
-            pinned.unshift(myApp)
-        }
-        pinned = pinned.map((pin)=> {
-            const findIndex = availableQapps?.findIndex((item)=> item?.service === pin?.service && item?.name === pin?.name)
-            if(findIndex !== -1) return availableQapps[findIndex]
-
-            return pin
-        })
-        return pinned
-    }, [myApp, myWebsite, pinnedApps, availableQapps])
+    const transformPinnedApps = useMemo(() => {
+      console.log({ myWebsite, myApp, availableQapps, pinnedApps });
+  
+      // Clone the existing pinned apps list
+      let pinned = [...pinnedApps];
+  
+      // Function to add or update `isMine` property
+      const addOrUpdateIsMine = (pinnedList, appToCheck) => {
+          if (!appToCheck) return pinnedList;
+  
+          const existingIndex = pinnedList.findIndex(
+              (item) => item?.service === appToCheck?.service && item?.name === appToCheck?.name
+          );
+            
+          if (existingIndex !== -1) {
+              // If the app is already in the list, update it with `isMine: true`
+              pinnedList[existingIndex] = { ...pinnedList[existingIndex], isMine: true };
+          } else {
+              // If not in the list, add it with `isMine: true` at the beginning
+              pinnedList.unshift({ ...appToCheck, isMine: true });
+          }
+  
+          return pinnedList;
+      };
+  
+      // Update or add `myWebsite` and `myApp` while preserving their positions
+      pinned = addOrUpdateIsMine(pinned, myWebsite);
+      pinned = addOrUpdateIsMine(pinned, myApp);
+  
+      // Update pinned list based on availableQapps
+      pinned = pinned.map((pin) => {
+          const findIndex = availableQapps?.findIndex(
+              (item) => item?.service === pin?.service && item?.name === pin?.name
+          );
+          if (findIndex !== -1) return {
+            ...availableQapps[findIndex],
+            ...pin
+          }
+  
+          return pin;
+      });
+  
+      return pinned;
+  }, [myApp, myWebsite, pinnedApps, availableQapps]);
+  
     console.log('transformPinnedApps', transformPinnedApps)
     // const hasSetPinned = useRef(false)
     // useEffect(() => {

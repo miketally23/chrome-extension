@@ -68,10 +68,11 @@ export const useQortalGetSaveSettings = (myName) => {
             console.log('settings', settings, timestamp, settingsLocalLastUpdated )
             if(settings?.sortablePinnedApps && timestamp > settingsLocalLastUpdated){
                 setSortablePinnedApps(settings.sortablePinnedApps)
-                setOldPinnedApps(settings.sortablePinnedApps)
+              
                 setSettingsQDNLastUpdated(timestamp || 0)
             } else if(settings?.sortablePinnedApps){
                 setSettingsQDNLastUpdated(timestamp || 0)
+                setOldPinnedApps(settings.sortablePinnedApps)
             }
             if(!settings){
                 // set -100 to indicate that it couldn't fetch the publish

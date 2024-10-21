@@ -22,7 +22,7 @@ const CustomStyledMenu = styled(Menu)(({ theme }) => ({
     },
 }));
 
-export const ContextMenuPinnedApps = ({ children, app, setEnableDrag }) => {
+export const ContextMenuPinnedApps = ({ children, app, isMine }) => {
     const [menuPosition, setMenuPosition] = useState(null);
     const longPressTimeout = useRef(null);
     const maxHoldTimeout = useRef(null);
@@ -31,6 +31,7 @@ export const ContextMenuPinnedApps = ({ children, app, setEnableDrag }) => {
     const [sortablePinnedApps, setSortablePinnedApps] = useRecoilState(sortablePinnedAppsAtom);
 
     const handleContextMenu = (event) => {
+        if(isMine) return
         event.preventDefault();
         event.stopPropagation();
         preventClick.current = true;
@@ -41,12 +42,14 @@ export const ContextMenuPinnedApps = ({ children, app, setEnableDrag }) => {
     };
 
     const handleTouchStart = (event) => {
+        if(isMine) return
+
         const { clientX, clientY } = event.touches[0];
         startTouchPosition.current = { x: clientX, y: clientY };
 
         longPressTimeout.current = setTimeout(() => {
             preventClick.current = true;
-            setEnableDrag(false);
+          
             event.stopPropagation();
             setMenuPosition({
                 mouseX: clientX,
@@ -61,6 +64,8 @@ export const ContextMenuPinnedApps = ({ children, app, setEnableDrag }) => {
     };
 
     const handleTouchMove = (event) => {
+        if(isMine) return
+
         const { clientX, clientY } = event.touches[0];
         const { x, y } = startTouchPosition.current;
 
@@ -74,9 +79,10 @@ export const ContextMenuPinnedApps = ({ children, app, setEnableDrag }) => {
     };
 
     const handleTouchEnd = (event) => {
+        if(isMine) return
+
         clearTimeout(longPressTimeout.current);
         clearTimeout(maxHoldTimeout.current);
-        setEnableDrag(true);
         if (preventClick.current) {
             event.preventDefault();
             event.stopPropagation();
@@ -85,6 +91,8 @@ export const ContextMenuPinnedApps = ({ children, app, setEnableDrag }) => {
     };
 
     const handleClose = (e) => {
+        if(isMine) return
+
         e.preventDefault();
         e.stopPropagation();
         setMenuPosition(null);
