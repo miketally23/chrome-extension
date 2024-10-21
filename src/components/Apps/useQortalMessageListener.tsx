@@ -344,7 +344,7 @@ export const useQortalMessageListener = (frameWindow) => {
       if (UIQortalRequests.includes(event.data.action)) {
         console.log('event?.data', event?.data);
         sendMessageToRuntime(
-          { action: event.data.action, type: 'qortalRequest', payload: event.data },
+          { action: event.data.action, type: 'qortalRequest', payload: event.data, isExtension: true },
           event.ports[0]
         );
       } else if (
@@ -368,7 +368,7 @@ export const useQortalMessageListener = (frameWindow) => {
         console.log('data after', data)
         if (data) {
           sendMessageToRuntime(
-            { action: event.data.action, type: 'qortalRequest', payload: data },
+            { action: event.data.action, type: 'qortalRequest', payload: data, isExtension: true },
             event.ports[0]
           );
         } else {

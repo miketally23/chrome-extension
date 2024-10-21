@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect } from 'react'
 import { useRecoilState, useSetRecoilState } from 'recoil';
-import { canSaveSettingToQdnAtom, settingsLocalLastUpdatedAtom, settingsQDNLastUpdatedAtom, sortablePinnedAppsAtom } from './atoms/global';
+import { canSaveSettingToQdnAtom, oldPinnedAppsAtom, settingsLocalLastUpdatedAtom, settingsQDNLastUpdatedAtom, sortablePinnedAppsAtom } from './atoms/global';
 import { getArbitraryEndpointReact, getBaseApiReact } from './App';
 import { decryptResource } from './components/Group/Group';
 import { base64ToUint8Array, uint8ArrayToObject } from './backgroundFunctions/encryption';
@@ -58,13 +58,19 @@ export const useQortalGetSaveSettings = (myName) => {
     const setCanSave = useSetRecoilState(canSaveSettingToQdnAtom);
     const setSettingsQDNLastUpdated = useSetRecoilState(settingsQDNLastUpdatedAtom);
     const [settingsLocalLastUpdated] = useRecoilState(settingsLocalLastUpdatedAtom);
+    const [oldPinnedApps, setOldPinnedApps] =  useRecoilState(oldPinnedAppsAtom)
+
     const getSavedSettings = useCallback(async (myName, settingsLocalLastUpdated)=> {
         try {
          const {hasPublishRecord, timestamp} =    await getPublishRecord(myName)
          if(hasPublishRecord){
             const settings = await getPublish(myName)
+            console.log('settings', settings, timestamp, settingsLocalLastUpdated )
             if(settings?.sortablePinnedApps && timestamp > settingsLocalLastUpdated){
                 setSortablePinnedApps(settings.sortablePinnedApps)
+                setOldPinnedApps(settings.sortablePinnedApps)
+                setSettingsQDNLastUpdated(timestamp || 0)
+            } else if(settings?.sortablePinnedApps){
                 setSettingsQDNLastUpdated(timestamp || 0)
             }
             if(!settings){

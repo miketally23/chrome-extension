@@ -100,6 +100,8 @@ import { Settings } from "./components/Group/Settings";
 import { MainAvatar } from "./components/MainAvatar";
 import { useRetrieveDataLocalStorage } from "./useRetrieveDataLocalStorage";
 import { useQortalGetSaveSettings } from "./useQortalGetSaveSettings";
+import { useResetRecoilState } from "recoil";
+import { canSaveSettingToQdnAtom, oldPinnedAppsAtom, settingsLocalLastUpdatedAtom, settingsQDNLastUpdatedAtom, sortablePinnedAppsAtom } from "./atoms/global";
 
 type extStates =
   | "not-authenticated"
@@ -326,6 +328,21 @@ function App() {
   const qortalRequestCheckbox1Ref = useRef(null);
   useRetrieveDataLocalStorage()
   useQortalGetSaveSettings(userInfo?.name)
+
+  //resets for recoil
+  const resetAtomSortablePinnedAppsAtom = useResetRecoilState(sortablePinnedAppsAtom);
+  const resetAtomCanSaveSettingToQdnAtom = useResetRecoilState(canSaveSettingToQdnAtom);
+  const resetAtomSettingsQDNLastUpdatedAtom = useResetRecoilState(settingsQDNLastUpdatedAtom);
+  const resetAtomSettingsLocalLastUpdatedAtom = useResetRecoilState(settingsLocalLastUpdatedAtom);
+  const resetAtomOldPinnedAppsAtom = useResetRecoilState(oldPinnedAppsAtom);
+
+  const resetAllRecoil = () => {
+    resetAtomSortablePinnedAppsAtom();
+    resetAtomCanSaveSettingToQdnAtom();
+    resetAtomSettingsQDNLastUpdatedAtom();
+    resetAtomSettingsLocalLastUpdatedAtom();
+    resetAtomOldPinnedAppsAtom();
+  };
   useEffect(() => {
     if (!isMobile) return;
     // Function to set the height of the app to the viewport height
@@ -595,6 +612,20 @@ function App() {
       }
     }
   };
+  const qortalRequestPermissonFromExtension = async (message, sender, sendResponse) => {
+    if (message.action === "QORTAL_REQUEST_PERMISSION" && isMainWindow) {
+      try {
+        console.log("payloadbefore", message.payload);
+
+        await show('do you accept?');
+       
+        sendResponse({ accepted: true });
+      } catch (error) {
+        console.log("error", error);
+        sendResponse({ accepted: false });
+      } 
+    }
+  };
 
   useEffect(() => {
     // Listen for messages from the background script
@@ -667,7 +698,12 @@ function App() {
         console.log("isMainWindow", isMainWindow, window?.location?.href);
         return true; // Return true to indicate an async response is coming
       }
+      if (message.action === "QORTAL_REQUEST_PERMISSION" && isMainWindow && message?.isFromExtension) {
+        qortalRequestPermissonFromExtension(message, sender, sendResponse);
+        return true;
+      }
       if (message.action === "QORTAL_REQUEST_PERMISSION" && isMainWindow) {
+      
         return;
       }
     };
@@ -1014,6 +1050,7 @@ function App() {
     setConfirmUseOfLocal(false);
     setTxList([]);
     setMemberGroups([]);
+    resetAllRecoil()
   };
 
   function roundUpToDecimals(number, decimals = 8) {

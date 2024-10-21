@@ -205,9 +205,12 @@ export const AppsLibrary = ({  availableQapps, setMode, myName, hasPublishApp, i
                       width: "60px",
                     }}
                     onClick={()=> {
-                      executeEvent("addTab", {
-                        data: qapp
-                      })
+                      // executeEvent("addTab", {
+                      //   data: qapp
+                      // })
+                      executeEvent("selectedAppInfo", {
+                        data: qapp,
+                      });
                     }}
                   >
                     <AppCircleContainer>

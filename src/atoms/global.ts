@@ -20,3 +20,8 @@ export const settingsLocalLastUpdatedAtom = atom({
   key: 'settingsLocalLastUpdatedAtom', 
   default: 0, 
 });
+
+export const oldPinnedAppsAtom = atom({
+  key: 'oldPinnedAppsAtom', 
+  default: [], 
+});

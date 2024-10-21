@@ -139,7 +139,7 @@ const _deployAt = async (
   }
 };
 
-const _voteOnPoll = async (pollName, optionIndex, optionName) => {
+const _voteOnPoll = async ({pollName, optionIndex, optionName}, isFromExtension) => {
   const fee = await getFee("VOTE_ON_POLL");
 
   const resPermission = await getUserPermission({
@@ -147,7 +147,7 @@ const _voteOnPoll = async (pollName, optionIndex, optionName) => {
     text2: `Poll: ${pollName}`,
     text3: `Option: ${optionName}`,
     fee: fee.fee,
-  });
+  }, isFromExtension);
   const { accepted } = resPermission;
 
   if (accepted) {
@@ -207,7 +207,22 @@ function sendToSaveFilePicker(data, sender) {
   });
 }
 
-async function getUserPermission(payload: any) {
+async function responseFromExtension() {
+  return new Promise((resolve) => {
+  
+    // Send message to the content script to check focus
+    chrome.runtime.sendMessage({ action: "QORTAL_REQUEST_PERMISSION", payloa }, (response) => {
+
+      if (chrome.runtime.lastError) {
+        resolve(false); // Error occurred, assume not focused
+      } else {
+        resolve(response); // Resolve based on the response
+      }
+    });
+  });
+}
+
+async function getUserPermission(payload: any, isFromExtension?: boolean) {
   function waitForWindowReady(windowId) {
     return new Promise((resolve) => {
       const checkInterval = setInterval(() => {
@@ -224,6 +239,33 @@ async function getUserPermission(payload: any) {
     });
   }
 
+  console.log('isFromExtension', isFromExtension)
+  if(isFromExtension){
+
+
+    return new Promise((resolve) => {
+      // Set a timeout for 1 second
+      const timeout = setTimeout(() => {
+        resolve(false); 
+      }, 30000);
+  
+      // Send message to the content script to check focus
+      chrome.runtime.sendMessage(
+        { action: "QORTAL_REQUEST_PERMISSION", payload, isFromExtension },
+        (response) => {
+          console.log("permission response", response);
+          if (response === undefined) return;
+          clearTimeout(timeout); // Clear the timeout if we get a response
+  
+          if (chrome.runtime.lastError) {
+            resolve(false); // Error occurred, assume not focused
+          } else {
+            resolve(response); // Resolve based on the response
+          }
+        }
+      );
+    });
+  }
   await new Promise((res) => {
     const popupUrl = chrome.runtime.getURL("index.html?secondary=true");
     console.log("popupUrl", popupUrl);
@@ -294,7 +336,7 @@ async function getUserPermission(payload: any) {
   return new Promise((resolve) => {
     // Set a timeout for 1 second
     const timeout = setTimeout(() => {
-      resolve(false); // No response within 10 second, assume not focused
+      resolve(false); 
     }, 30000);
 
     // Send message to the content script to check focus
@@ -909,7 +951,7 @@ export const publishMultipleQDNResources = async (data: any, sender) => {
   return true;
 };
 
-export const voteOnPoll = async (data) => {
+export const voteOnPoll = async (data, isFromExtension) => {
   const requiredFields = ["pollName", "optionIndex"];
   const missingFields: string[] = [];
   requiredFields.forEach((field) => {
@@ -941,7 +983,7 @@ export const voteOnPoll = async (data) => {
   }
   try {
     const optionName = pollInfo.pollOptions[optionIndex].optionName;
-    const resVoteOnPoll = await _voteOnPoll(pollName, optionIndex, optionName);
+    const resVoteOnPoll = await _voteOnPoll({pollName, optionIndex, optionName}, isFromExtension);
     return resVoteOnPoll;
   } catch (error) {
     throw new Error(error?.message || "Failed to vote on the poll.");

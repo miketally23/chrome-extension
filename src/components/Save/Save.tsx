@@ -1,7 +1,7 @@
 import React, { useContext, useMemo, useState } from 'react'
 import { useRecoilState } from 'recoil';
 import isEqual from 'lodash/isEqual'; // Import deep comparison utility
-import { canSaveSettingToQdnAtom, settingsLocalLastUpdatedAtom, settingsQDNLastUpdatedAtom, sortablePinnedAppsAtom } from '../../atoms/global';
+import { canSaveSettingToQdnAtom, oldPinnedAppsAtom, settingsLocalLastUpdatedAtom, settingsQDNLastUpdatedAtom, sortablePinnedAppsAtom } from '../../atoms/global';
 import { ButtonBase } from '@mui/material';
 import { objectToBase64 } from '../../qdn/encryption/group-encryption';
 import { MyContext } from '../../App';
@@ -17,7 +17,7 @@ export const Save = () => {
     const [openSnack, setOpenSnack] = useState(false);
     const [isLoading, setIsLoading] = useState(false)
   const [infoSnack, setInfoSnack] = useState(null);
-    const [oldPinnedApps, setOldPinnedApps] = useState(pinnedApps)
+  const [oldPinnedApps, setOldPinnedApps] =  useRecoilState(oldPinnedAppsAtom)
     console.log('oldpin', {oldPinnedApps, pinnedApps}, settingsQdnLastUpdated,  settingsLocalLastUpdated, settingsQdnLastUpdated < settingsLocalLastUpdated,)
     const { show } = useContext(MyContext);
 
@@ -40,7 +40,7 @@ export const Save = () => {
       }
       console.log('!isEqual(oldChanges, newChanges)', !isEqual(oldChanges, newChanges))
       if(settingsQdnLastUpdated === -100) return false
-        return !isEqual(oldChanges, newChanges) || settingsQdnLastUpdated < settingsLocalLastUpdated
+        return !isEqual(oldChanges, newChanges) && settingsQdnLastUpdated < settingsLocalLastUpdated
     }, [oldPinnedApps, pinnedApps, settingsQdnLastUpdated,  settingsLocalLastUpdated])
 
     const saveToQdn = async ()=> {

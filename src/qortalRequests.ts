@@ -63,6 +63,8 @@ function getLocalStorage(key) {
   
 chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
   if (request) {
+    console.log('rquest', request)
+    const isFromExtension = request?.isExtension
     switch (request.action) {
       case "GET_USER_ACCOUNT": {
         getUserAccount()
@@ -169,7 +171,7 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
       case "VOTE_ON_POLL": {
         const data = request.payload;
         
-        voteOnPoll(data)
+        voteOnPoll(data, isFromExtension)
           .then((res) => {
             sendResponse(res);
           })
