@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect } from 'react'
-import { useSetRecoilState } from 'recoil';
-import { canSaveSettingToQdnAtom, sortablePinnedAppsAtom } from './atoms/global';
+import { useRecoilState, useSetRecoilState } from 'recoil';
+import { canSaveSettingToQdnAtom, settingsLocalLastUpdatedAtom, settingsQDNLastUpdatedAtom, sortablePinnedAppsAtom } from './atoms/global';
 import { getArbitraryEndpointReact, getBaseApiReact } from './App';
 import { decryptResource } from './components/Group/Group';
 import { base64ToUint8Array, uint8ArrayToObject } from './backgroundFunctions/encryption';
@@ -28,12 +28,13 @@ const getPublishRecord = async (myName) => {
     }
     const publishData = await response.json();
 
-    if(publishData?.length > 0) return true
+    if(publishData?.length > 0) return {hasPublishRecord: false,  timestamp: publishData[0]?.updated || publishData[0].created}
 
-    return false
+    return {hasPublishRecord: false}
   };
   const getPublish = async (myName) => {
-    let data
+    try {
+        let data
     const res = await fetch(
         `${getBaseApiReact()}/arbitrary/DOCUMENT_PRIVATE/${myName}/ext_saved_settings?encoding=base64`
       );
@@ -47,22 +48,32 @@ const getPublishRecord = async (myName) => {
     const dataint8Array = base64ToUint8Array(decryptedKey.data);
     const decryptedKeyToObject = uint8ArrayToObject(dataint8Array);
     return decryptedKeyToObject
+    } catch (error) {
+        return null
+    }
   };
 
 export const useQortalGetSaveSettings = (myName) => {
     const setSortablePinnedApps = useSetRecoilState(sortablePinnedAppsAtom);
     const setCanSave = useSetRecoilState(canSaveSettingToQdnAtom);
-
-    
-    const getSavedSettings = useCallback(async (myName)=> {
+    const setSettingsQDNLastUpdated = useSetRecoilState(settingsQDNLastUpdatedAtom);
+    const [settingsLocalLastUpdated] = useRecoilState(settingsLocalLastUpdatedAtom);
+    const getSavedSettings = useCallback(async (myName, settingsLocalLastUpdated)=> {
         try {
-         const hasPublishRecord =    await getPublishRecord(myName)
+         const {hasPublishRecord, timestamp} =    await getPublishRecord(myName)
          if(hasPublishRecord){
             const settings = await getPublish(myName)
-            if(settings?.sortablePinnedApps){
-                fetchFromLocalStorage('sortablePinnedApps', settings.sortablePinnedApps)
+            if(settings?.sortablePinnedApps && timestamp > settingsLocalLastUpdated){
                 setSortablePinnedApps(settings.sortablePinnedApps)
+                setSettingsQDNLastUpdated(timestamp || 0)
             }
+            if(!settings){
+                // set -100 to indicate that it couldn't fetch the publish
+                setSettingsQDNLastUpdated(-100)
+
+            }
+         } else {
+            setSettingsQDNLastUpdated( 0)
          }
          setCanSave(true)
         } catch (error) {
@@ -70,8 +81,8 @@ export const useQortalGetSaveSettings = (myName) => {
         }
     }, [])
     useEffect(()=> {
-        if(!myName) return
-        getSavedSettings(myName)
-    }, [getSavedSettings, myName])
+        if(!myName || !settingsLocalLastUpdated) return
+        getSavedSettings(myName, settingsLocalLastUpdated)
+    }, [getSavedSettings, myName, settingsLocalLastUpdated])
  
 }

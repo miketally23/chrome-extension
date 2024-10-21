@@ -7,9 +7,10 @@ import { Avatar, ButtonBase } from '@mui/material';
 import { AppCircle, AppCircleContainer, AppCircleLabel } from './Apps-styles';
 import { getBaseApiReact } from '../../App';
 import { executeEvent } from '../../utils/events';
-import { sortablePinnedAppsAtom } from '../../atoms/global';
-import { useRecoilState } from 'recoil';
+import { settingsLocalLastUpdatedAtom, sortablePinnedAppsAtom } from '../../atoms/global';
+import { useRecoilState, useSetRecoilState } from 'recoil';
 import { saveToLocalStorage } from './AppsNavBar';
+import { ContextMenuPinnedApps } from '../ContextMenuPinnedApps';
 
 const SortableItem = ({ id, name, app }) => {
     const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id });
@@ -27,6 +28,7 @@ const SortableItem = ({ id, name, app }) => {
     };
 
     return (
+      <ContextMenuPinnedApps app={app}>
         <ButtonBase
         ref={setNodeRef} {...attributes} {...listeners}
               sx={{
@@ -75,11 +77,13 @@ const SortableItem = ({ id, name, app }) => {
                 </AppCircleLabel>
               </AppCircleContainer>
             </ButtonBase>
+            </ContextMenuPinnedApps>
     );
 };
 
 export const SortablePinnedApps = ({  myWebsite, myApp, availableQapps = [] }) => {
     const [pinnedApps, setPinnedApps] = useRecoilState(sortablePinnedAppsAtom);
+    const setSettingsLocalLastUpdated = useSetRecoilState(settingsLocalLastUpdatedAtom);
 
     const transformPinnedApps = useMemo(()=> {
         console.log({myWebsite, myApp, availableQapps, pinnedApps})
@@ -149,8 +153,8 @@ export const SortablePinnedApps = ({  myWebsite, myApp, availableQapps = [] }) =
 
             const newOrder = arrayMove(transformPinnedApps, oldIndex, newIndex);
             setPinnedApps(newOrder);
-            saveToLocalStorage('sortablePinnedApps', newOrder)
-
+            saveToLocalStorage('ext_saved_settings','sortablePinnedApps',  newOrder)
+            setSettingsLocalLastUpdated(Date.now())
         }
     };
     return (

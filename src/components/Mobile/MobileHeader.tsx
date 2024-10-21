@@ -239,16 +239,22 @@ const Header = ({
           }}
         >
           {/* Left Home Icon */}
-          <IconButton
-            edge="start"
-            color="inherit"
-            aria-label="home"
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: "18px",
+              width: "75px",
+            }}
+          >
+          <ButtonBase
+
             onClick={goToHome}
             // onClick={onHomeClick}
           >
             <HomeIcon color="rgba(145, 145, 147, 1)" />
-          </IconButton>
-
+          </ButtonBase>
+            </Box>
           {/* Center Title */}
           <Typography
             variant="h6"
@@ -261,18 +267,26 @@ const Header = ({
           >
             QORTAL
           </Typography>
-
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: "30px",
+              width: "75px",
+              justifyContent: "flex-end",
+            }}
+          >
           {/* Right Logout Icon */}
-          <IconButton
+           <Save />
+          <ButtonBase
             onClick={logoutFunc}
-            edge="end"
-            color="inherit"
-            aria-label="logout"
+
 
             // onClick={onLogoutClick}
           >
             <LogoutIcon color="rgba(145, 145, 147, 1)" />
-          </IconButton>
+          </ButtonBase>
+          </Box>
         </Toolbar>
       </AppBar>
 

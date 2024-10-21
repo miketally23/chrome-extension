@@ -10,3 +10,13 @@ export const canSaveSettingToQdnAtom = atom({
   key: 'canSaveSettingToQdnAtom', 
   default: false, 
 });
+
+export const settingsQDNLastUpdatedAtom = atom({
+  key: 'settingsQDNLastUpdatedAtom', 
+  default: -100, 
+});
+
+export const settingsLocalLastUpdatedAtom = atom({
+  key: 'settingsLocalLastUpdatedAtom', 
+  default: 0, 
+});

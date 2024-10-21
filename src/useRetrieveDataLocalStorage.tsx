@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect } from 'react'
 import { useSetRecoilState } from 'recoil';
-import { sortablePinnedAppsAtom } from './atoms/global';
+import { settingsLocalLastUpdatedAtom, sortablePinnedAppsAtom } from './atoms/global';
 
 function fetchFromLocalStorage(key) {
     try {
@@ -18,13 +18,14 @@ function fetchFromLocalStorage(key) {
 
 export const useRetrieveDataLocalStorage = () => {
     const setSortablePinnedApps = useSetRecoilState(sortablePinnedAppsAtom);
-
+    const setSettingsLocalLastUpdated = useSetRecoilState(settingsLocalLastUpdatedAtom);
     
     const getSortablePinnedApps = useCallback(()=> {
-        const pinnedAppsLocal = fetchFromLocalStorage('sortablePinnedApps')
-        if(pinnedAppsLocal){
-            setSortablePinnedApps(pinnedAppsLocal)
+        const pinnedAppsLocal = fetchFromLocalStorage('ext_saved_settings')
+        if(pinnedAppsLocal?.sortablePinnedApps){
+            setSortablePinnedApps(pinnedAppsLocal?.sortablePinnedApps)
         }
+        setSettingsLocalLastUpdated(pinnedAppsLocal?.timestamp || -1)
     }, [])
     useEffect(()=> {
       

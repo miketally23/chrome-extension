@@ -12,28 +12,52 @@ import { executeEvent, subscribeToEvent, unsubscribeFromEvent } from "../../util
 import TabComponent from "./TabComponent";
 import PushPinIcon from '@mui/icons-material/PushPin';
 import RefreshIcon from '@mui/icons-material/Refresh';
-import { useRecoilState } from "recoil";
-import {  sortablePinnedAppsAtom } from "../../atoms/global";
+import { useRecoilState, useSetRecoilState } from "recoil";
+import {  settingsLocalLastUpdatedAtom, sortablePinnedAppsAtom } from "../../atoms/global";
 
-export function saveToLocalStorage(key, value) {
+export function saveToLocalStorage(key, subKey, newValue) {
   try {
-      const serializedValue = JSON.stringify(value);
-      localStorage.setItem(key, serializedValue);
-      console.log(`Data saved to localStorage with key: ${key}`);
+    // Fetch existing data
+    const existingData = localStorage.getItem(key);
+    let combinedData = {};
+
+    if (existingData) {
+      // Parse the existing data
+      const parsedData = JSON.parse(existingData);
+      // Merge with the new data under the subKey
+      combinedData = {
+        ...parsedData,
+        timestamp: Date.now(), // Update the root timestamp
+        [subKey]: newValue // Assuming the data is an array
+      };
+    } else {
+      // If no existing data, just use the new data under the subKey
+      combinedData = {
+        timestamp: Date.now(), // Set the initial root timestamp
+        [subKey]: newValue
+      };
+    }
+
+    // Save combined data back to localStorage
+    const serializedValue = JSON.stringify(combinedData);
+    localStorage.setItem(key, serializedValue);
+    console.log(`Data saved to localStorage with key: ${key} and subKey: ${subKey}`);
   } catch (error) {
-      console.error('Error saving to localStorage:', error);
+    console.error('Error saving to localStorage:', error);
   }
 }
 
 
+
 export const AppsNavBar = () => {
   const [tabs, setTabs] = useState([])
-  const [selectedTab, setSelectedTab] = useState([])
+  const [selectedTab, setSelectedTab] = useState(null)
   const [isNewTabWindow, setIsNewTabWindow] = useState(false)
   const tabsRef = useRef(null);
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
   const [sortablePinnedApps, setSortablePinnedApps] = useRecoilState(sortablePinnedAppsAtom);
+  const setSettingsLocalLastUpdated = useSetRecoilState(settingsLocalLastUpdatedAtom);
 
   const handleClick = (event) => {
     setAnchorEl(event.currentTarget);
@@ -59,7 +83,7 @@ export const AppsNavBar = () => {
     const {tabs, selectedTab, isNewTabWindow} = e.detail?.data;
    
     setTabs([...tabs])
-    setSelectedTab({...selectedTab})
+    setSelectedTab(!selectedTab ? nulll : {...selectedTab})
     setIsNewTabWindow(isNewTabWindow)
   };
 
@@ -70,6 +94,8 @@ export const AppsNavBar = () => {
       unsubscribeFromEvent("setTabsToNav", setTabsToNav);
     };
   }, []);
+
+  console.log('selectedTab', selectedTab)
 
   const isSelectedAppPinned = !!sortablePinnedApps?.find((item)=> item?.name === selectedTab?.name && item?.service === selectedTab?.service)
   return (
@@ -115,6 +141,7 @@ export const AppsNavBar = () => {
         gap: '10px'
       }}>
         <ButtonBase onClick={()=> {
+          setSelectedTab(null)
           executeEvent("newTabWindow", {
           });
         }}>
@@ -186,10 +213,11 @@ export const AppsNavBar = () => {
                     }];
                 }
         
-                saveToLocalStorage('sortablePinnedApps', updatedApps)
+                saveToLocalStorage('ext_saved_settings', 'sortablePinnedApps', updatedApps)
                 return updatedApps;
             });
-        
+            setSettingsLocalLastUpdated(Date.now())
+
             handleClose();
         }}
         >
