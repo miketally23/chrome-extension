@@ -1,8 +1,7 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React from "react";
 import {
   AppCircle,
   AppCircleContainer,
-  AppCircleLabel,
   AppDownloadButton,
   AppDownloadButtonText,
   AppInfoAppName,
@@ -11,10 +10,8 @@ import {
   AppInfoSnippetMiddle,
   AppInfoSnippetRight,
   AppInfoUserName,
-  AppsLibraryContainer,
 } from "./Apps-styles";
-import { Avatar, Box, ButtonBase, InputBase } from "@mui/material";
-import { Add } from "@mui/icons-material";
+import { Avatar,  ButtonBase } from "@mui/material";
 import { getBaseApiReact } from "../../App";
 import LogoSelected from "../../assets/svgs/LogoSelected.svg";
 
@@ -22,8 +19,7 @@ import { Spacer } from "../../common/Spacer";
 import { executeEvent } from "../../utils/events";
 import { AppRating } from "./AppRating";
 
-export const AppInfoSnippet = ({ app, myName }) => {
-
+export const AppInfoSnippet = ({ app, myName, isFromCategory }) => {
 
   const isInstalled = app?.status?.status === 'READY'
   return (
@@ -35,6 +31,12 @@ export const AppInfoSnippet = ({ app, myName }) => {
           width: "60px",
         }}
         onClick={()=> {
+          if(isFromCategory){
+            executeEvent("selectedAppInfoCategory", {
+              data: app,
+            });
+            return
+          }
           executeEvent("selectedAppInfo", {
             data: app,
           });
@@ -73,6 +75,12 @@ export const AppInfoSnippet = ({ app, myName }) => {
       </ButtonBase>
       <AppInfoSnippetMiddle>
         <ButtonBase onClick={()=> {
+           if(isFromCategory){
+            executeEvent("selectedAppInfoCategory", {
+              data: app,
+            });
+            return
+          }
           executeEvent("selectedAppInfo", {
             data: app,
           });
@@ -91,6 +99,7 @@ export const AppInfoSnippet = ({ app, myName }) => {
       </AppInfoSnippetLeft>
       <AppInfoSnippetRight>
         <AppDownloadButton onClick={()=> {
+          
                 executeEvent("addTab", {
                   data: app
                 })

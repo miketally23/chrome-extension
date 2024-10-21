@@ -63,7 +63,6 @@ function getLocalStorage(key) {
   
 chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
   if (request) {
-    console.log('rquest', request)
     const isFromExtension = request?.isExtension
     switch (request.action) {
       case "GET_USER_ACCOUNT": {
@@ -106,7 +105,7 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
       case "GET_LIST_ITEMS": {
         const data = request.payload;
         
-        getListItems(data)
+        getListItems(data, isFromExtension)
           .then((res) => {
             sendResponse(res);
           })
@@ -119,7 +118,7 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
       case "ADD_LIST_ITEMS": {
         const data = request.payload;
         
-        addListItems(data)
+        addListItems(data, isFromExtension)
           .then((res) => {
             sendResponse(res);
           })
@@ -132,7 +131,7 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
       case "DELETE_LIST_ITEM": {
         const data = request.payload;
         
-        deleteListItems(data)
+        deleteListItems(data, isFromExtension)
           .then((res) => {
             sendResponse(res);
           })
@@ -145,7 +144,7 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
       case "PUBLISH_QDN_RESOURCE": {
         const data = request.payload;
         
-        publishQDNResource(data, sender)
+        publishQDNResource(data, sender, isFromExtension)
           .then((res) => {
             sendResponse(res);
           })
@@ -158,7 +157,7 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
       case "PUBLISH_MULTIPLE_QDN_RESOURCES": {
         const data = request.payload;
         
-        publishMultipleQDNResources(data, sender)
+        publishMultipleQDNResources(data, sender, isFromExtension)
           .then((res) => {
             sendResponse(res);
           })
@@ -184,7 +183,7 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
       case "CREATE_POLL": {
         const data = request.payload;
         
-        createPoll(data)
+        createPoll(data, isFromExtension)
           .then((res) => {
             sendResponse(res);
           })
@@ -196,8 +195,7 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
       }
       case "SEND_CHAT_MESSAGE": {
         const data = request.payload;
-        console.log('data', data)
-        sendChatMessage(data)
+        sendChatMessage(data, isFromExtension)
           .then((res) => {
             sendResponse(res);
           })
@@ -210,7 +208,7 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
       case "JOIN_GROUP": {
         const data = request.payload;
       
-        joinGroup(data)
+        joinGroup(data, isFromExtension)
           .then((res) => {
             sendResponse(res);
           })
@@ -223,7 +221,7 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
       case "SAVE_FILE": {
         const data = request.payload;
       
-        saveFile(data, sender)
+        saveFile(data, sender, isFromExtension)
           .then((res) => {
             sendResponse(res);
           })
@@ -236,7 +234,7 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
       case "DEPLOY_AT": {
         const data = request.payload;
       
-        deployAt(data)
+        deployAt(data, isFromExtension)
           .then((res) => {
             sendResponse(res);
           })
@@ -249,7 +247,7 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
       case "GET_USER_WALLET": {
         const data = request.payload;
       
-        getUserWallet(data)
+        getUserWallet(data, isFromExtension)
           .then((res) => {
             sendResponse(res);
           })
@@ -262,7 +260,7 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
       case "GET_WALLET_BALANCE": {
         const data = request.payload;
       
-        getWalletBalance(data)
+        getWalletBalance(data, false, isFromExtension)
           .then((res) => {
             sendResponse(res);
           })
@@ -276,7 +274,7 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
       case "GET_USER_WALLET_INFO": {
         const data = request.payload;
       
-        getUserWalletInfo(data)
+        getUserWalletInfo(data, isFromExtension)
           .then((res) => {
             sendResponse(res);
           })
@@ -414,7 +412,7 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
       case "SEND_COIN": {
         const data = request.payload;
       
-        sendCoin(data)
+        sendCoin(data, isFromExtension)
           .then((res) => {
             sendResponse(res);
           })

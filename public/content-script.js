@@ -576,7 +576,6 @@ const showSaveFilePicker = async (data) => {
 }
 
 chrome.runtime?.onMessage.addListener( function (message, sender, sendResponse) {
-  console.log('message', message)
   if (message.type === "LOGOUT") {
     // Notify the web page
     window.postMessage(
@@ -812,7 +811,6 @@ if (!window.hasAddedQortalListener) {
   
     const sendMessageToRuntime = (message, eventPort) => {
       chrome?.runtime?.sendMessage(message, (response) => {
-        console.log('response', response);
         if (response.error) {
           eventPort.postMessage({
             result: null,
@@ -829,13 +827,11 @@ if (!window.hasAddedQortalListener) {
   
     // Check if action is included in the predefined list of UI requests
     if (UIQortalRequests.includes(event.data.action)) {
-      console.log('event?.data', event?.data);
       sendMessageToRuntime(
         { action: event.data.action, type: 'qortalRequest', payload: event.data },
         event.ports[0]
       );
     } else if (event?.data?.action === 'PUBLISH_MULTIPLE_QDN_RESOURCES' || event?.data?.action === 'PUBLISH_QDN_RESOURCE' || event?.data?.action === 'ENCRYPT_DATA' || event?.data?.action === 'SAVE_FILE') {
-      console.log('event?.data?', event?.data)
       let data;
       try {
         data = await storeFilesInIndexedDB(event.data);

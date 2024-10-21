@@ -2,7 +2,6 @@ import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } 
 import { AppsHome } from "./AppsHome";
 import { Spacer } from "../../common/Spacer";
 import { MyContext, getBaseApiReact } from "../../App";
-import { AppsLibrary } from "./AppsLibrary";
 import { AppInfo } from "./AppInfo";
 import {
   executeEvent,
@@ -16,12 +15,15 @@ import AppViewerContainer from "./AppViewerContainer";
 import ShortUniqueId from "short-unique-id";
 import { AppPublish } from "./AppPublish";
 import { useRecoilState } from "recoil";
+import { AppsCategory } from "./AppsCategory";
+import { AppsLibrary } from "./AppsLibrary";
 
 const uid = new ShortUniqueId({ length: 8 });
 
 export const Apps = ({ mode, setMode, show , myName}) => {
   const [availableQapps, setAvailableQapps] = useState([]);
   const [selectedAppInfo, setSelectedAppInfo] = useState(null);
+  const [selectedCategory, setSelectedCategory] = useState(null)
   const [tabs, setTabs] = useState([]);
   const [selectedTab, setSelectedTab] = useState(null);
   const [isNewTabWindow, setIsNewTabWindow] = useState(false);
@@ -85,7 +87,6 @@ export const Apps = ({ mode, setMode, show , myName}) => {
       });
       if (!response?.ok) return;
       const responseData = await response.json();
-      console.log('responseData', responseData)
       const urlWebsites = `${getBaseApiReact()}/arbitrary/resources/search?service=WEBSITE&mode=ALL&limit=0&includestatus=true&includemetadata=true`;
 
       const responseWebsites = await fetch(urlWebsites, {
@@ -125,8 +126,44 @@ export const Apps = ({ mode, setMode, show , myName}) => {
     };
   }, []);
 
+  const selectedAppInfoCategoryFunc = (e) => {
+    const data = e.detail?.data;
+    setSelectedAppInfo(data);
+    setMode("appInfo-from-category");
+  };
+
+  useEffect(() => {
+    subscribeToEvent("selectedAppInfoCategory", selectedAppInfoCategoryFunc);
+
+    return () => {
+      unsubscribeFromEvent("selectedAppInfoCategory", selectedAppInfoCategoryFunc);
+    };
+  }, []);
+
+  
+
+  const selectedCategoryFunc = (e) => {
+    const data = e.detail?.data;
+    setSelectedCategory(data);
+    setMode("category");
+  };
+
+  useEffect(() => {
+    subscribeToEvent("selectedCategory", selectedCategoryFunc);
+
+    return () => {
+      unsubscribeFromEvent("selectedCategory", selectedCategoryFunc);
+    };
+  }, []);
+
+  
   const navigateBackFunc = (e) => {
-    if (mode === "appInfo") {
+    if(mode === 'category'){
+      setMode("library");
+      setSelectedCategory(null)
+    } else if (mode === "appInfo-from-category") {
+      setMode("category");
+    } else if (mode === "appInfo") {
       setMode("library");
     } else if (mode === "library") {
       if (isNewTabWindow) {
@@ -139,10 +176,8 @@ export const Apps = ({ mode, setMode, show , myName}) => {
     } else {
       const iframeId = `browser-iframe-${selectedTab?.tabId}`;
       const iframe = document.getElementById(iframeId);
-      console.log("iframe", iframe);
       // Go Back in the iframe's history
       if (iframe) {
-        console.log(iframe.contentWindow);
         if (iframe && iframe.contentWindow) {
           const iframeWindow = iframe.contentWindow;
           if (iframeWindow && iframeWindow.history) {
@@ -247,6 +282,7 @@ export const Apps = ({ mode, setMode, show , myName}) => {
     };
   }, [tabs]);
 
+
   return (
     <AppsParent
       sx={{
@@ -264,9 +300,12 @@ export const Apps = ({ mode, setMode, show , myName}) => {
           setMode={setMode}
           myName={myName}
           hasPublishApp={!!(myApp || myWebsite)}
+          categories={categories}
         />
    
       {mode === "appInfo" && <AppInfo app={selectedAppInfo} myName={myName} />}
+      {mode === "appInfo-from-category" && <AppInfo app={selectedAppInfo} myName={myName} />}
+      <AppsCategory  availableQapps={availableQapps} isShow={mode === 'category' && !selectedTab} category={selectedCategory} myName={myName} />
       {mode === "publish" && <AppPublish names={myName ?  [myName] : []} categories={categories} />}
 
       {tabs.map((tab) => {
@@ -282,7 +321,7 @@ export const Apps = ({ mode, setMode, show , myName}) => {
       {isNewTabWindow && mode === "viewer" && (
         <>
           <Spacer height="30px" />
-          <AppsHome availableQapps={availableQapps} setMode={setMode} myApp={myApp} myWebsite={myWebsite} />
+          <AppsHome availableQapps={availableQapps} setMode={setMode} myApp={myApp} myWebsite={myWebsite}  />
         </>
       )}
       {mode !== "viewer" && !selectedTab  && <Spacer height="180px" />}

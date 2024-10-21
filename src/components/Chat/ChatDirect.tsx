@@ -127,7 +127,6 @@ export const ChatDirect = ({ myAddress, isNewChat, selectedDirect, setSelectedDi
 
     const forceCloseWebSocket = () => {
       if (socketRef.current) {
-        console.log('Force closing the WebSocket');
         clearTimeout(timeoutIdRef.current);
         clearTimeout(groupSocketTimeoutRef.current);
         socketRef.current.close(1000, 'forced');
@@ -161,7 +160,6 @@ export const ChatDirect = ({ myAddress, isNewChat, selectedDirect, setSelectedDi
       socketRef.current = new WebSocket(socketLink);
   
       socketRef.current.onopen = () => {
-        console.log('WebSocket connection opened');
         setTimeout(pingWebSocket, 50); // Initial ping
       };
   

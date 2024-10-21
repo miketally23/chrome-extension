@@ -65,7 +65,6 @@ export const useQortalGetSaveSettings = (myName) => {
          const {hasPublishRecord, timestamp} =    await getPublishRecord(myName)
          if(hasPublishRecord){
             const settings = await getPublish(myName)
-            console.log('settings', settings, timestamp, settingsLocalLastUpdated )
             if(settings?.sortablePinnedApps && timestamp > settingsLocalLastUpdated){
                 setSortablePinnedApps(settings.sortablePinnedApps)
               

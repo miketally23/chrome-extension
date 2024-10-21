@@ -20,6 +20,10 @@ import { MessagingIcon } from "../../assets/Icons/MessagingIcon";
 import { MessagingIcon2 } from "../../assets/Icons/MessagingIcon2";
 import { HubsIcon } from "../../assets/Icons/HubsIcon";
 import { Save } from "../Save/Save";
+import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
+import { useRecoilState } from "recoil";
+import { fullScreenAtom, hasSettingsChangedAtom } from "../../atoms/global";
+import { useAppFullScreen } from "../../useAppFullscreen";
 
 const Header = ({
   logoutFunc,
@@ -33,16 +37,11 @@ const Header = ({
   myName,
   setSelectedDirect,
   setNewChat
-  // selectedGroup,
-  // onHomeClick,
-  // onLogoutClick,
-  // onGroupChange,
-  // onWalletClick,
-  // onNotificationClick,
 }) => {
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
-
+  const [fullScreen, setFullScreen] = useRecoilState(fullScreenAtom);
+  const {exitFullScreen} = useAppFullScreen(setFullScreen)
   const handleClick = (event) => {
     setAnchorEl(event.currentTarget);
   };
@@ -77,10 +76,10 @@ const Header = ({
               width: "75px",
             }}
           >
-            <IconButton
-              edge="start"
-              color="inherit"
-              aria-label="home"
+            <ButtonBase
+              
+           
+            
               onClick={() => {
                 setMobileViewModeKeepOpen("");
                 goToHome();
@@ -88,15 +87,24 @@ const Header = ({
               // onClick={onHomeClick}
             >
               <HomeIcon height={20} width={27} color="rgba(145, 145, 147, 1)" />
-            </IconButton>
-            <IconButton
-              edge="start"
-              color="inherit"
-              aria-label="home"
+            </ButtonBase>
+            <ButtonBase
+             
               onClick={handleClick}
             >
               <NotificationIcon height={20} width={21} color={hasUnreadDirects || hasUnreadGroups ? "var(--unread)" : "rgba(145, 145, 147, 1)"} />
-            </IconButton>
+            </ButtonBase>
+            {fullScreen && (
+               <ButtonBase onClick={()=> {
+                exitFullScreen()
+                setFullScreen(false)
+               }}>
+               <CloseFullscreenIcon sx={{
+                 color: 'rgba(145, 145, 147, 1)'
+               }} />
+             </ButtonBase>
+            )}
+           
           </Box>
 
           {/* Center Title */}
@@ -254,6 +262,16 @@ const Header = ({
           >
             <HomeIcon color="rgba(145, 145, 147, 1)" />
           </ButtonBase>
+          {fullScreen && (
+               <ButtonBase onClick={()=> {
+                exitFullScreen()
+                setFullScreen(false)
+               }}>
+               <CloseFullscreenIcon sx={{
+                 color: 'rgba(145, 145, 147, 1)'
+               }} />
+             </ButtonBase>
+            )}
             </Box>
           {/* Center Title */}
           <Typography

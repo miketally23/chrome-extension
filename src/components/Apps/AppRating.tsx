@@ -25,9 +25,7 @@ export const AppRating = ({ app, myName, ratingCountPosition = "right" }) => {
   const [openSnack, setOpenSnack] = useState(false);
   const [infoSnack, setInfoSnack] = useState(null);
   const hasCalledRef = useRef(false);
-  console.log(`pollinfo-${app?.service}-${app?.name}`, value);
 
-  console.log("hasPublishedRating", hasPublishedRating);
   const getRating = useCallback(async (name, service) => {
     try {
       hasCalledRef.current = true;
@@ -42,7 +40,6 @@ export const AppRating = ({ app, myName, ratingCountPosition = "right" }) => {
       });
 
       const responseData = await response.json();
-      console.log("responseData", responseData);
       if (responseData?.message?.includes("POLL_NO_EXISTS")) {
         setHasPublishedRating(false);
       } else if (responseData?.pollName) {
@@ -67,14 +64,12 @@ export const AppRating = ({ app, myName, ratingCountPosition = "right" }) => {
         const initialValueVote = voteCount.find((vote) =>
           vote.optionName.startsWith("initialValue-")
         );
-        console.log("initialValueVote", initialValueVote);
         if (initialValueVote) {
           // Convert "initialValue-X" to just "X" and add it to the ratingVotes array
           const initialRating = parseInt(
             initialValueVote.optionName.split("-")[1],
             10
           );
-          console.log("initialRating", initialRating);
           ratingVotes.push({
             optionName: initialRating.toString(),
             voteCount: 1,
@@ -91,14 +86,12 @@ export const AppRating = ({ app, myName, ratingCountPosition = "right" }) => {
           totalScore += rating * count; // Weighted score
           totalVotes += count; // Total number of votes
         });
-        console.log("ratingVotes", ratingVotes, totalScore, totalVotes);
 
         // Calculate average rating (ensure no division by zero)
         const averageRating = totalVotes > 0 ? totalScore / totalVotes : 0;
         setValue(averageRating);
       }
     } catch (error) {
-      console.log("error rating", error);
       if (error?.message?.includes("POLL_NO_EXISTS")) {
         setHasPublishedRating(false);
       }
@@ -114,7 +107,6 @@ export const AppRating = ({ app, myName, ratingCountPosition = "right" }) => {
     try {
       if (!myName) throw new Error("You need a name to rate.");
       if (!app?.name) return;
-      console.log("newValue", newValue);
       const fee = await getFee("ARBITRARY");
 
       await show({
@@ -138,7 +130,6 @@ export const AppRating = ({ app, myName, ratingCountPosition = "right" }) => {
               },
             },
             (response) => {
-              console.log("response", response);
               if (response.error) {
                 rej(response?.message);
                 return;
@@ -172,7 +163,6 @@ export const AppRating = ({ app, myName, ratingCountPosition = "right" }) => {
               },
             },
             (response) => {
-              console.log("response", response);
               if (response.error) {
                 rej(response?.message);
                 return;
@@ -197,11 +187,7 @@ export const AppRating = ({ app, myName, ratingCountPosition = "right" }) => {
       setOpenSnack(true);
     }
   };
-  console.log(
-    "vvotes",
-    (votesInfo?.totalVotes ?? 0) + votesInfo?.voteCounts?.length === 6 ? 1 : 0,
-    votesInfo
-  );
+
   return (
     <div>
       <Box

@@ -38,7 +38,7 @@ const dgbFeePerByte = 0.00000010
 const rvnFeePerByte = 0.00001125
 
 
-const _createPoll = async (pollName, pollDescription, options) => {
+const _createPoll = async ({pollName, pollDescription, options}, isFromExtension) => {
   const fee = await getFee("CREATE_POLL");
 
   const resPermission = await getUserPermission({
@@ -47,7 +47,7 @@ const _createPoll = async (pollName, pollDescription, options) => {
     text3: `Description: ${pollDescription}`,
     text4: `Options: ${options?.join(", ")}`,
     fee: fee.fee,
-  });
+  }, isFromExtension);
   const { accepted } = resPermission;
 
   if (accepted) {
@@ -82,13 +82,13 @@ const _createPoll = async (pollName, pollDescription, options) => {
 };
 
 const _deployAt = async (
-  name,
+  {name,
   description,
   tags,
   creationBytes,
   amount,
   assetId,
-  atType
+  atType}, isFromExtension
 ) => {
   const fee = await getFee("DEPLOY_AT");
 
@@ -97,7 +97,7 @@ const _deployAt = async (
     text2: `Name: ${name}`,
     text3: `Description: ${description}`,
     fee: fee.fee,
-  });
+  }, isFromExtension);
 
   const { accepted } = resPermission;
 
@@ -172,7 +172,6 @@ const _voteOnPoll = async ({pollName, optionIndex, optionName}, isFromExtension)
     });
     const signedBytes = Base58.encode(tx.signedBytes);
     const res = await processTransactionVersion2(signedBytes);
-    console.log('res', res)
     if (!res?.signature)
       throw new Error(res?.message || "Transaction was not able to be processed");
     return res;
@@ -182,13 +181,11 @@ const _voteOnPoll = async ({pollName, optionIndex, optionName}, isFromExtension)
 };
 
 function getFileFromContentScript(fileId, sender) {
-  console.log("sender", sender);
   return new Promise((resolve, reject) => {
     chrome.tabs.sendMessage(
       sender.tab.id,
       { action: "getFileFromIndexedDB", fileId: fileId },
       (response) => {
-        console.log("response2", response);
         if (response && response.result) {
           resolve(response.result);
         } else {
@@ -199,7 +196,6 @@ function getFileFromContentScript(fileId, sender) {
   });
 }
 function sendToSaveFilePicker(data, sender) {
-  console.log("sender", sender);
 
   chrome.tabs.sendMessage(sender.tab.id, {
     action: "SHOW_SAVE_FILE_PICKER",
@@ -239,7 +235,6 @@ async function getUserPermission(payload: any, isFromExtension?: boolean) {
     });
   }
 
-  console.log('isFromExtension', isFromExtension)
   if(isFromExtension){
 
 
@@ -253,7 +248,6 @@ async function getUserPermission(payload: any, isFromExtension?: boolean) {
       chrome.runtime.sendMessage(
         { action: "QORTAL_REQUEST_PERMISSION", payload, isFromExtension },
         (response) => {
-          console.log("permission response", response);
           if (response === undefined) return;
           clearTimeout(timeout); // Clear the timeout if we get a response
   
@@ -268,11 +262,9 @@ async function getUserPermission(payload: any, isFromExtension?: boolean) {
   }
   await new Promise((res) => {
     const popupUrl = chrome.runtime.getURL("index.html?secondary=true");
-    console.log("popupUrl", popupUrl);
     chrome.windows.getAll(
       { populate: true, windowTypes: ["popup"] },
       (windows) => {
-        console.log("windows", windows);
         // Attempt to find an existing popup window that has a tab with the correct URL
         const existingPopup = windows.find(
           (w) =>
@@ -340,11 +332,9 @@ async function getUserPermission(payload: any, isFromExtension?: boolean) {
     }, 30000);
 
     // Send message to the content script to check focus
-    console.log("send msg");
     chrome.runtime.sendMessage(
       { action: "QORTAL_REQUEST_PERMISSION", payload },
       (response) => {
-        console.log("permission response", response);
         if (response === undefined) return;
         clearTimeout(timeout); // Clear the timeout if we get a response
 
@@ -386,7 +376,6 @@ export const encryptData = async (data, sender) => {
   const parsedData = JSON.parse(resKeyPair);
   const privateKey = parsedData.privateKey;
   const userPublicKey = parsedData.publicKey;
-  console.log('data', data)
 
   const encryptDataResponse = encryptDataGroup({
     data64,
@@ -441,7 +430,7 @@ export const decryptData = async (data) => {
   throw new Error("Unable to decrypt");
 };
 
-export const getListItems = async (data) => {
+export const getListItems = async (data, isFromExtension) => {
     const localNodeAvailable = await isUsingLocal()
     if(!localNodeAvailable) throw new Error('Please use your local node.')
   const requiredFields = ["list_name"];
@@ -474,7 +463,7 @@ export const getListItems = async (data) => {
         value: value,
         label: "Always allow lists to be retrieved automatically",
       },
-    });
+    }, isFromExtension);
     const { accepted, checkbox1 } = resPermission;
     acceptedVar = accepted;
     checkbox1Var = checkbox1;
@@ -483,20 +472,17 @@ export const getListItems = async (data) => {
 
   if (acceptedVar || skip) {
     const url = await createEndpoint(`/lists/${data.list_name}`);
-    console.log("url", url);
     const response = await fetch(url);
-    console.log("response", response);
     if (!response.ok) throw new Error("Failed to fetch");
 
     const list = await response.json();
-    console.log("list", list);
     return list;
   } else {
     throw new Error("User declined to share list");
   }
 };
 
-export const addListItems = async (data) => {
+export const addListItems = async (data, isFromExtension) => {
     const localNodeAvailable = await isUsingLocal()
     if(!localNodeAvailable) throw new Error('Please use your local node.')
   const requiredFields = ["list_name", "items"];
@@ -519,12 +505,11 @@ export const addListItems = async (data) => {
     text1: "Do you give this application permission to",
     text2: `Add the following to the list ${list_name}:`,
     highlightedText: items.join(", "),
-  });
+  }, isFromExtension);
   const { accepted } = resPermission;
 
   if (accepted) {
     const url = await createEndpoint(`/lists/${list_name}`);
-    console.log("url", url);
     const body = {
       items: items,
     };
@@ -537,7 +522,6 @@ export const addListItems = async (data) => {
       body: bodyToString,
     });
 
-    console.log("response", response);
     if (!response.ok) throw new Error("Failed to add to list");
     let res;
     try {
@@ -551,7 +535,7 @@ export const addListItems = async (data) => {
   }
 };
 
-export const deleteListItems = async (data) => {
+export const deleteListItems = async (data, isFromExtension) => {
     const localNodeAvailable = await isUsingLocal()
     if(!localNodeAvailable) throw new Error('Please use your local node.')
   const requiredFields = ["list_name", "item"];
@@ -574,12 +558,11 @@ export const deleteListItems = async (data) => {
     text1: "Do you give this application permission to",
     text2: `Remove the following from the list ${list_name}:`,
     highlightedText: item,
-  });
+  }, isFromExtension);
   const { accepted } = resPermission;
 
   if (accepted) {
     const url = await createEndpoint(`/lists/${list_name}`);
-    console.log("url", url);
     const body = {
       items: [item],
     };
@@ -592,7 +575,6 @@ export const deleteListItems = async (data) => {
       body: bodyToString,
     });
 
-    console.log("response", response);
     if (!response.ok) throw new Error("Failed to add to list");
     let res;
     try {
@@ -606,7 +588,7 @@ export const deleteListItems = async (data) => {
   }
 };
 
-export const publishQDNResource = async (data: any, sender) => {
+export const publishQDNResource = async (data: any, sender, isFromExtension) => {
   const requiredFields = ["service"];
   const missingFields: string[] = [];
   requiredFields.forEach((field) => {
@@ -683,7 +665,7 @@ export const publishQDNResource = async (data: any, sender) => {
     text3: `identifier: ${identifier || null}`,
     highlightedText: `isEncrypted: ${!!data.encrypt}`,
     fee: fee.fee,
-  });
+  }, isFromExtension);
   const { accepted } = resPermission;
   if (accepted) {
     if (data.fileId && !data.encrypt) {
@@ -718,7 +700,7 @@ export const publishQDNResource = async (data: any, sender) => {
   }
 };
 
-export const publishMultipleQDNResources = async (data: any, sender) => {
+export const publishMultipleQDNResources = async (data: any, sender, isFromExtension) => {
   const requiredFields = ["resources"];
   const missingFields: string[] = [];
   let feeAmount = null;
@@ -815,14 +797,12 @@ export const publishMultipleQDNResources = async (data: any, sender) => {
       `,
     highlightedText: `isEncrypted: ${!!data.encrypt}`,
     fee: fee.fee * resources.length,
-  });
+  }, isFromExtension);
   const { accepted } = resPermission;
-  console.log("accepted", accepted);
   if (!accepted) {
     throw new Error("User declined request");
   }
   let failedPublishesIdentifiers = [];
-  console.log("resources", resources);
   for (const resource of resources) {
     try {
       const requiredFields = ["service"];
@@ -934,7 +914,6 @@ export const publishMultipleQDNResources = async (data: any, sender) => {
         });
       }
     } catch (error) {
-      console.log("error", error);
       failedPublishesIdentifiers.push({
         reason: "Unknown error",
         identifier: resource.identifier,
@@ -990,7 +969,7 @@ export const voteOnPoll = async (data, isFromExtension) => {
   }
 };
 
-export const createPoll = async (data) => {
+export const createPoll = async (data, isFromExtension) => {
   const requiredFields = [
     "pollName",
     "pollDescription",
@@ -1014,10 +993,12 @@ export const createPoll = async (data) => {
   const pollOwnerAddress = data.pollOwnerAddress;
   try {
     const resCreatePoll = await _createPoll(
-      pollName,
+      {
+        pollName,
       pollDescription,
-      pollOptions,
-      pollOwnerAddress
+      options: pollOptions,
+    },
+    isFromExtension
     );
     return resCreatePoll;
   } catch (error) {
@@ -1025,7 +1006,7 @@ export const createPoll = async (data) => {
   }
 };
 
-export const sendChatMessage = async (data) => {
+export const sendChatMessage = async (data, isFromExtension) => {
   const message = data.message;
   const recipient = data.destinationAddress;
   const groupId = data.groupId;
@@ -1034,7 +1015,7 @@ export const sendChatMessage = async (data) => {
     text1: "Do you give this application permission to send this chat message?",
     text2: `To: ${isRecipient ? recipient : `group ${groupId}`}`,
     text3: `${message?.slice(0, 25)}${message?.length > 25 ? "..." : ""}`,
-  });
+  }, isFromExtension);
 
   const { accepted } = resPermission;
   if (accepted) {
@@ -1058,11 +1039,7 @@ export const sendChatMessage = async (data) => {
       repliedTo: "",
       version: 3,
     };
-    try {
-      JSON.stringify(messageObject);
-    } catch (error) {
-      console.log("my error", error);
-    }
+   
     const stringifyMessageObject = JSON.stringify(messageObject);
 
     const balance = await getBalanceInfo();
@@ -1088,7 +1065,6 @@ export const sendChatMessage = async (data) => {
         // Otherwise, treat it as plain text
         res = await response.text();
       }
-      console.log("res", res);
       if (res?.error === 102) {
         key = "";
         hasPublicKey = false;
@@ -1198,7 +1174,7 @@ export const sendChatMessage = async (data) => {
   }
 };
 
-export const joinGroup = async (data) => {
+export const joinGroup = async (data, isFromExtension) => {
   const requiredFields = ["groupId"];
   const missingFields: string[] = [];
   requiredFields.forEach((field) => {
@@ -1228,7 +1204,7 @@ export const joinGroup = async (data) => {
     text1: "Confirm joining the group:",
     highlightedText: `${groupInfo.groupName}`,
     fee: fee.fee,
-  });
+  }, isFromExtension);
   const { accepted } = resPermission;
 
   if (accepted) {
@@ -1249,9 +1225,8 @@ export const joinGroup = async (data) => {
   }
 };
 
-export const saveFile = async (data, sender) => {
+export const saveFile = async (data, sender, isFromExtension) => {
   try {
-    console.log('save file', data)
     const requiredFields = ["filename", "fileId"];
     const missingFields: string[] = [];
     requiredFields.forEach((field) => {
@@ -1270,7 +1245,7 @@ export const saveFile = async (data, sender) => {
     const resPermission = await getUserPermission({
       text1: "Would you like to download:",
       highlightedText: `${filename}`,
-    });
+    }, isFromExtension);
     const { accepted } = resPermission;
 
     if (accepted) {
@@ -1314,7 +1289,7 @@ export const saveFile = async (data, sender) => {
   }
 };
 
-export const deployAt = async (data) => {
+export const deployAt = async (data, isFromExtension) => {
   const requiredFields = [
     "name",
     "description",
@@ -1337,13 +1312,16 @@ export const deployAt = async (data) => {
   }
   try {
     const resDeployAt = await _deployAt(
-      data.name,
-      data.description,
-      data.tags,
-      data.creationBytes,
-      data.amount,
-      data.assetId,
-      data.type
+      {
+       name: data.name,
+     description: data.description,
+     tags: data.tags,
+     creationBytes: data.creationBytes,
+      amount: data.amount,
+     assetId: data.assetId,
+     atType: data.type
+    },
+    isFromExtension
     );
     return resDeployAt;
   } catch (error) {
@@ -1351,7 +1329,7 @@ export const deployAt = async (data) => {
   }
 };
 
-export const getUserWallet = async (data) => {
+export const getUserWallet = async (data, isFromExtension) => {
   const requiredFields = ["coin"];
   const missingFields: string[] = [];
   requiredFields.forEach((field) => {
@@ -1367,7 +1345,7 @@ export const getUserWallet = async (data) => {
   const resPermission = await getUserPermission({
     text1:
       "Do you give this application permission to get your wallet information?",
-  });
+  }, isFromExtension);
   const { accepted } = resPermission;
 
   if (accepted) {
@@ -1437,7 +1415,7 @@ export const getUserWallet = async (data) => {
   }
 };
 
-export const getWalletBalance = async (data, bypassPermission?: boolean) => {
+export const getWalletBalance = async (data, bypassPermission?: boolean, isFromExtension) => {
   const requiredFields = ["coin"];
   const missingFields: string[] = [];
   requiredFields.forEach((field) => {
@@ -1456,7 +1434,7 @@ export const getWalletBalance = async (data, bypassPermission?: boolean) => {
      resPermission = await getUserPermission({
         text1: "Do you give this application permission to fetch your",
         highlightedText: `${data.coin} balance`,
-      });
+      }, isFromExtension);
   } else {
     resPermission = {
         accepted: false
@@ -1558,7 +1536,6 @@ const getUserWalletFunc = async (coin) => {
   const address = wallet.address0;
   const resKeyPair = await getKeyPair();
   const parsedData = JSON.parse(resKeyPair);
-  console.log('coin', coin)
   switch (coin) {
     case "QORT":
       userWallet["address"] = address;
@@ -1592,7 +1569,7 @@ const getUserWalletFunc = async (coin) => {
   return userWallet;
 };
 
-export const getUserWalletInfo = async (data) => {
+export const getUserWalletInfo = async (data, isFromExtension) => {
   const requiredFields = ["coin"];
   const missingFields: string[] = [];
   requiredFields.forEach((field) => {
@@ -1607,14 +1584,12 @@ export const getUserWalletInfo = async (data) => {
   }
   const resPermission = await getUserPermission({
     text1: "Do you give this application permission to retrieve your wallet information",
-  });
+  }, isFromExtension);
   const { accepted } = resPermission;
 
   if (accepted) {
     let coin = data.coin;
     let walletKeys = await getUserWalletFunc(coin);
-    console.log('walletKeys', walletKeys)
-    console.log('walletKeys["publickey"]', walletKeys["publickey"])
     const _url = await createEndpoint(
       `/crosschain/` + data.coin.toLowerCase() + `/addressinfos`
     );
@@ -2076,7 +2051,7 @@ export const getTxActivitySummary = async (data) => {
     }
   };
   
-export const sendCoin = async (data) => {
+export const sendCoin = async (data, isFromExtension) => {
     const requiredFields = ['coin', 'destinationAddress', 'amount']
     const missingFields: string[] = []
     requiredFields.forEach((field) => {
@@ -2105,9 +2080,7 @@ export const sendCoin = async (data) => {
         const recipient = data.destinationAddress
        
         const url = await createEndpoint(`/addresses/balance/${address}`);
-    console.log("url", url);
     const response = await fetch(url);
-    console.log("response", response);
     if (!response.ok) throw new Error("Failed to fetch");
     let walletBalance;
     try {
@@ -2141,7 +2114,7 @@ export const sendCoin = async (data) => {
             text1: "Do you give this application permission to send coins?",
             text2: `To: ${recipient}`, 
             highlightedText: `${amount} ${checkCoin}`,
-          });
+          }, isFromExtension);
           const { accepted } = resPermission;
         
           if (accepted) {
@@ -2174,7 +2147,7 @@ export const sendCoin = async (data) => {
             text2: `To: ${recipient}`, 
             highlightedText: `${amount} ${checkCoin}`,
             fee: fee
-          });
+          }, isFromExtension);
           const { accepted } = resPermission;
         
           if (accepted) {
@@ -2231,7 +2204,7 @@ export const sendCoin = async (data) => {
             text2: `To: ${recipient}`, 
             highlightedText: `${amount} ${checkCoin}`,
             fee: fee
-          });
+          }, isFromExtension);
           const { accepted } = resPermission;
         
           if (accepted) {
@@ -2288,7 +2261,7 @@ export const sendCoin = async (data) => {
             text2: `To: ${recipient}`, 
             highlightedText: `${amount} ${checkCoin}`,
             fee: fee
-          });
+          }, isFromExtension);
           const { accepted } = resPermission;
         
           if (accepted) {
@@ -2343,7 +2316,7 @@ export const sendCoin = async (data) => {
             text2: `To: ${recipient}`, 
             highlightedText: `${amount} ${checkCoin}`,
             fee: fee
-          });
+          }, isFromExtension);
           const { accepted } = resPermission;
         
           if (accepted) {
@@ -2401,7 +2374,7 @@ export const sendCoin = async (data) => {
             text2: `To: ${recipient}`, 
             highlightedText: `${amount} ${checkCoin}`,
             fee: fee
-          });
+          }, isFromExtension);
           const { accepted } = resPermission;
         
           if (accepted) {
@@ -2455,7 +2428,7 @@ export const sendCoin = async (data) => {
             text2: `To: ${recipient}`, 
             highlightedText: `${amount} ${checkCoin}`,
             fee: fee
-          });
+          }, isFromExtension);
           const { accepted } = resPermission;
         
           if (accepted) {

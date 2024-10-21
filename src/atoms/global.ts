@@ -25,3 +25,13 @@ export const oldPinnedAppsAtom = atom({
   key: 'oldPinnedAppsAtom', 
   default: [], 
 });
+
+export const fullScreenAtom = atom({
+  key: 'fullScreenAtom', 
+  default: false, 
+});
+
+export const hasSettingsChangedAtom = atom({
+  key: 'hasSettingsChangedAtom', 
+  default: false, 
+});

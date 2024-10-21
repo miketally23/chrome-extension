@@ -41,7 +41,6 @@ export function saveToLocalStorage(key, subKey, newValue) {
     // Save combined data back to localStorage
     const serializedValue = JSON.stringify(combinedData);
     localStorage.setItem(key, serializedValue);
-    console.log(`Data saved to localStorage with key: ${key} and subKey: ${subKey}`);
   } catch (error) {
     console.error('Error saving to localStorage:', error);
   }
@@ -57,6 +56,7 @@ export const AppsNavBar = () => {
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
   const [sortablePinnedApps, setSortablePinnedApps] = useRecoilState(sortablePinnedAppsAtom);
+
   const setSettingsLocalLastUpdated = useSetRecoilState(settingsLocalLastUpdatedAtom);
 
   const handleClick = (event) => {
@@ -71,7 +71,6 @@ export const AppsNavBar = () => {
     // Scroll to the last tab whenever the tabs array changes (e.g., when a new tab is added)
     if (tabsRef.current) {
       const tabElements = tabsRef.current.querySelectorAll('.MuiTab-root');
-      console.log('tabElements', tabElements)
       if (tabElements.length > 0) {
         const lastTab = tabElements[tabElements.length - 1];
         lastTab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'end' });
@@ -95,7 +94,6 @@ export const AppsNavBar = () => {
     };
   }, []);
 
-  console.log('selectedTab', selectedTab)
 
   const isSelectedAppPinned = !!sortablePinnedApps?.find((item)=> item?.name === selectedTab?.name && item?.service === selectedTab?.service)
   return (

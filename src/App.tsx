@@ -100,8 +100,9 @@ import { Settings } from "./components/Group/Settings";
 import { MainAvatar } from "./components/MainAvatar";
 import { useRetrieveDataLocalStorage } from "./useRetrieveDataLocalStorage";
 import { useQortalGetSaveSettings } from "./useQortalGetSaveSettings";
-import { useResetRecoilState } from "recoil";
-import { canSaveSettingToQdnAtom, oldPinnedAppsAtom, settingsLocalLastUpdatedAtom, settingsQDNLastUpdatedAtom, sortablePinnedAppsAtom } from "./atoms/global";
+import { useRecoilState, useResetRecoilState } from "recoil";
+import { canSaveSettingToQdnAtom, fullScreenAtom, hasSettingsChangedAtom, oldPinnedAppsAtom, settingsLocalLastUpdatedAtom, settingsQDNLastUpdatedAtom, sortablePinnedAppsAtom } from "./atoms/global";
+import { useAppFullScreen } from "./useAppFullscreen";
 
 type extStates =
   | "not-authenticated"
@@ -297,10 +298,12 @@ function App() {
   const [txList, setTxList] = useState([]);
   const [memberGroups, setMemberGroups] = useState([]);
   const [isFocused, setIsFocused] = useState(true);
-
+  const [hasSettingsChanged, setHasSettingsChanged] =  useRecoilState(hasSettingsChangedAtom)
   const holdRefExtState = useRef<extStates>("not-authenticated");
   const isFocusedRef = useRef<boolean>(true);
   const { isShow, onCancel, onOk, show, message } = useModal();
+  const { isShow: isShowUnsavedChanges, onCancel:  onCancelUnsavedChanges, onOk: onOkUnsavedChanges, show:  showUnsavedChanges, message: messageUnsavedChanges } = useModal();
+
   const {
     onCancel: onCancelQortalRequest,
     onOk: onOkQortalRequest,
@@ -308,7 +311,14 @@ function App() {
     isShow: isShowQortalRequest,
     message: messageQortalRequest,
   } = useModal();
-
+  const {
+    onCancel: onCancelQortalRequestExtension,
+    onOk: onOkQortalRequestExtension,
+    show: showQortalRequestExtension,
+    isShow: isShowQortalRequestExtension,
+    message: messageQortalRequestExtension,
+  } = useModal();
+  
   const [openRegisterName, setOpenRegisterName] = useState(false);
   const registerNamePopoverRef = useRef(null);
   const [isLoadingRegisterName, setIsLoadingRegisterName] = useState(false);
@@ -328,7 +338,24 @@ function App() {
   const qortalRequestCheckbox1Ref = useRef(null);
   useRetrieveDataLocalStorage()
   useQortalGetSaveSettings(userInfo?.name)
+  const [fullScreen, setFullScreen] = useRecoilState(fullScreenAtom);
 
+  const { toggleFullScreen } = useAppFullScreen(setFullScreen);
+
+  useEffect(() => {
+      // Attach a global event listener for double-click
+      const handleDoubleClick = () => {
+          toggleFullScreen();
+      };
+
+      // Add the event listener to the root HTML document
+      document.documentElement.addEventListener('dblclick', handleDoubleClick);
+
+      // Clean up the event listener on unmount
+      return () => {
+          document.documentElement.removeEventListener('dblclick', handleDoubleClick);
+      };
+  }, [toggleFullScreen]);
   //resets for recoil
   const resetAtomSortablePinnedAppsAtom = useResetRecoilState(sortablePinnedAppsAtom);
   const resetAtomCanSaveSettingToQdnAtom = useResetRecoilState(canSaveSettingToQdnAtom);
@@ -588,15 +615,10 @@ function App() {
   const qortalRequestPermisson = async (message, sender, sendResponse) => {
     if (message.action === "QORTAL_REQUEST_PERMISSION" && !isMainWindow) {
       try {
-        console.log("payloadbefore", message.payload);
 
         await showQortalRequest(message?.payload);
-        console.log("payload", message.payload);
         if (message?.payload?.checkbox1) {
-          console.log(
-            "qortalRequestCheckbox1Ref.current",
-            qortalRequestCheckbox1Ref.current
-          );
+         
           sendResponse({
             accepted: true,
             checkbox1: qortalRequestCheckbox1Ref.current,
@@ -605,7 +627,6 @@ function App() {
         }
         sendResponse({ accepted: true });
       } catch (error) {
-        console.log("error", error);
         sendResponse({ accepted: false });
       } finally {
         window.close();
@@ -615,13 +636,11 @@ function App() {
   const qortalRequestPermissonFromExtension = async (message, sender, sendResponse) => {
     if (message.action === "QORTAL_REQUEST_PERMISSION" && isMainWindow) {
       try {
-        console.log("payloadbefore", message.payload);
 
-        await show('do you accept?');
+        await showQortalRequestExtension(message?.payload);
        
         sendResponse({ accepted: true });
       } catch (error) {
-        console.log("error", error);
         sendResponse({ accepted: false });
       } 
     }
@@ -695,7 +714,6 @@ function App() {
       // Call the permission request handler for "QORTAL_REQUEST_PERMISSION"
       qortalRequestPermisson(message, sender, sendResponse);
       if (message.action === "QORTAL_REQUEST_PERMISSION" && !isMainWindow) {
-        console.log("isMainWindow", isMainWindow, window?.location?.href);
         return true; // Return true to indicate an async response is coming
       }
       if (message.action === "QORTAL_REQUEST_PERMISSION" && isMainWindow && message?.isFromExtension) {
@@ -994,8 +1012,11 @@ function App() {
     }
   };
 
-  const logoutFunc = () => {
+  const logoutFunc = async () => {
     try {
+      if(hasSettingsChanged){
+        await showUnsavedChanges({message: 'Your settings have changed. If you logout you will lose your changes. Click on the save button in the header to keep your changed settings.'})
+      }
       chrome?.runtime?.sendMessage({ action: "logout" }, (response) => {
         if (response) {
           resetAllStates();
@@ -2761,6 +2782,246 @@ function App() {
               Agree
             </Button>
           </DialogActions>
+        </Dialog>
+      )}
+       {isShowUnsavedChanges && (
+        <Dialog
+          open={isShowUnsavedChanges}
+          aria-labelledby="alert-dialog-title"
+          aria-describedby="alert-dialog-description"
+        >
+          <DialogTitle id="alert-dialog-title">{"Warning"}</DialogTitle>
+          <DialogContent>
+            <DialogContentText id="alert-dialog-description">
+              {messageUnsavedChanges.message}
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button variant="contained" onClick={onCancelUnsavedChanges}>
+              Cancel
+            </Button>
+            <Button variant="contained" onClick={onOkUnsavedChanges} autoFocus>
+              Continue to Logout
+            </Button>
+          </DialogActions>
+        </Dialog>
+      )}
+      {isShowQortalRequestExtension && isMainWindow && (
+        <Dialog
+          open={isShowQortalRequestExtension}
+          aria-labelledby="alert-dialog-title"
+          aria-describedby="alert-dialog-description"
+        >
+          <CountdownCircleTimer
+            isPlaying
+            duration={30}
+            colors={["#004777", "#F7B801", "#A30000", "#A30000"]}
+            colorsTime={[7, 5, 2, 0]}
+            onComplete={() => {
+              onCancelQortalRequestExtension()
+            }}
+            size={50}
+            strokeWidth={5}
+          >
+            {({ remainingTime }) => <TextP>{remainingTime}</TextP>}
+          </CountdownCircleTimer>
+           <Box sx={{
+            display: 'flex',
+            padding: '20px',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'flex-start',
+            minHeight: '400px',
+            maxHeight: '90vh',
+            overflow: 'auto'
+           }}>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              width: "100%",
+            }}
+          >
+            <TextP
+              sx={{
+                lineHeight: 1.2,
+                maxWidth: "90%",
+                textAlign: "center",
+              }}
+            >
+              {messageQortalRequestExtension?.text1}
+            </TextP>
+          </Box>
+          {messageQortalRequestExtension?.text2 && (
+            <>
+              <Spacer height="10px" />
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "flex-start",
+                  width: "90%",
+                }}
+              >
+                <TextP
+                  sx={{
+                    lineHeight: 1.2,
+                    fontSize: "16px",
+                    fontWeight: "normal",
+                  }}
+                >
+                  {messageQortalRequestExtension?.text2}
+                </TextP>
+              </Box>
+              <Spacer height="15px" />
+            </>
+          )}
+          {messageQortalRequestExtension?.text3 && (
+            <>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "flex-start",
+                  width: "90%",
+                }}
+              >
+                <TextP
+                  sx={{
+                    lineHeight: 1.2,
+                    fontSize: "16px",
+                    fontWeight: "normal",
+                  }}
+                >
+                  {messageQortalRequestExtension?.text3}
+                </TextP>
+                <Spacer height="15px" />
+              </Box>
+            </>
+          )}
+
+          {messageQortalRequestExtension?.text4 && (
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "flex-start",
+                width: "90%",
+              }}
+            >
+              <TextP
+                sx={{
+                  lineHeight: 1.2,
+                  fontSize: "16px",
+                  fontWeight: "normal",
+                }}
+              >
+                {messageQortalRequestExtension?.text4}
+              </TextP>
+            </Box>
+          )}
+
+          {messageQortalRequestExtension?.html && (
+            <div
+              dangerouslySetInnerHTML={{ __html: messageQortalRequestExtension?.html }}
+            />
+          )}
+          <Spacer height="15px" />
+       
+          <TextP
+            sx={{
+              textAlign: "center",
+              lineHeight: 1.2,
+              fontSize: "16px",
+              fontWeight: 700,
+              maxWidth: "90%",
+            }}
+          >
+            {messageQortalRequestExtension?.highlightedText}
+          </TextP>
+
+          {messageQortalRequestExtension?.fee && (
+            <>
+                      <Spacer height="15px" />
+
+            <TextP
+    sx={{
+                  textAlign: "center",
+                  lineHeight: 1.2,
+                  fontSize: "16px",
+                  fontWeight: "normal",
+                  maxWidth: "90%",
+                }}
+              >
+                {'Fee: '}{messageQortalRequestExtension?.fee}{' QORT'}
+              </TextP>
+<Spacer height="15px" />
+
+            </>
+          )}
+          {messageQortalRequestExtension?.checkbox1 && (
+            <Box
+              sx={{
+                display: "flex",
+                gap: "10px",
+                alignItems: "center",
+                justifyContent: "center",
+                width: "90%",
+                marginTop: "20px",
+              }}
+            >
+              <Checkbox
+                onChange={(e) => {
+                  qortalRequestCheckbox1Ref.current = e.target.checked;
+                }}
+                edge="start"
+                tabIndex={-1}
+                disableRipple
+                defaultChecked={messageQortalRequestExtension?.checkbox1?.value}
+                sx={{
+                  "&.Mui-checked": {
+                    color: "white", // Customize the color when checked
+                  },
+                  "& .MuiSvgIcon-root": {
+                    color: "white",
+                  },
+                }}
+              />
+
+              <Typography
+                sx={{
+                  fontSize: "14px",
+                }}
+              >
+                {messageQortalRequestExtension?.checkbox1?.label}
+              </Typography>
+            </Box>
+          )}
+
+          <Spacer height="29px" />
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: "14px",
+            }}
+          >
+            <CustomButton
+              sx={{
+                minWidth: "102px",
+              }}
+              onClick={() => onOkQortalRequestExtension("accepted")}
+            >
+              accept
+            </CustomButton>
+            <CustomButton
+              sx={{
+                minWidth: "102px",
+              }}
+              onClick={() => onCancelQortalRequestExtension()}
+            >
+              decline
+            </CustomButton>
+          </Box>
+          <ErrorText>{sendPaymentError}</ErrorText>
+        </Box>
         </Dialog>
       )}
       <Popover

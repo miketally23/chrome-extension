@@ -48,20 +48,7 @@ export const GroupJoinRequests = ({ myAddress, groups, setOpenManageMembers, get
         return true
       })
 
-      // const getJoinGroupRequests = groupsAsAdmin.map(async (group)=> {
-      //   console.log('getJoinGroupRequests', group)
-      //   const joinRequestResponse = await requestQueueGroupJoinRequests.enqueue(()=> {
-      //     return  fetch(
-      //       `${getBaseApiReact()}/groups/joinrequests/${group.groupId}`
-      //     );
-      //   }) 
-
-      //   const joinRequestData = await joinRequestResponse.json()
-      //   return {
-      //     group,
-      //     data: joinRequestData
-      //   }
-      // })
+     
       await Promise.all(getAllGroupsAsAdmin)
      const res = await Promise.all(groupsAsAdmin.map(async (group)=> {
 

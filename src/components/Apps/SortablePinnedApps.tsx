@@ -14,7 +14,6 @@ import { ContextMenuPinnedApps } from '../ContextMenuPinnedApps';
 
 const SortableItem = ({ id, name, app }) => {
     const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id });
-    console.log('namednd', name)
     const style = {
         transform: CSS.Transform.toString(transform),
         transition,
@@ -86,7 +85,6 @@ export const SortablePinnedApps = ({  myWebsite, myApp, availableQapps = [] }) =
     const setSettingsLocalLastUpdated = useSetRecoilState(settingsLocalLastUpdatedAtom);
 
     const transformPinnedApps = useMemo(() => {
-      console.log({ myWebsite, myApp, availableQapps, pinnedApps });
   
       // Clone the existing pinned apps list
       let pinned = [...pinnedApps];
@@ -130,27 +128,7 @@ export const SortablePinnedApps = ({  myWebsite, myApp, availableQapps = [] }) =
       return pinned;
   }, [myApp, myWebsite, pinnedApps, availableQapps]);
   
-    console.log('transformPinnedApps', transformPinnedApps)
-    // const hasSetPinned = useRef(false)
-    // useEffect(() => {
-    //     if (!apps || apps.length === 0) return;
-
-    //     setPinnedApps((prevPinnedApps) => {
-    //         // Create a map of the previous pinned apps for easy lookup
-    //         const pinnedAppsMap = new Map(prevPinnedApps.map(app => [`${app?.service}-${app?.name}`, app]));
-
-    //         // Update the pinnedApps list based on new apps
-    //         const updatedPinnedApps = apps.map(app => {
-    //             const id = `${app?.service}-${app?.name}`;
-    //             // Keep the existing app from pinnedApps if it exists
-    //             return pinnedAppsMap.get(id) || app;
-    //         });
-
-    //         return updatedPinnedApps;
-    //     });
-    // }, [apps]);
-
-    console.log('dnd',{pinnedApps})
+ 
     const sensors = useSensors(
         useSensor(PointerSensor, {
             activationConstraint: {

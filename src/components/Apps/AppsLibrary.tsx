@@ -74,23 +74,11 @@ const ScrollerStyled = styled('div')({
     "-ms-overflow-style": "none",
   });
 
-export const AppsLibrary = ({  availableQapps, setMode, myName, hasPublishApp, isShow }) => {
+export const AppsLibrary = ({  availableQapps, setMode, myName, hasPublishApp, isShow, categories={categories} }) => {
   const [searchValue, setSearchValue] = useState("");
   const virtuosoRef = useRef();
   const { rootHeight } = useContext(MyContext);
-  const [appStates, setAppStates] = useState({});
 
-  const handleStateChange = (appId, newState) => {
-    setAppStates((prevState) => ({
-      ...prevState,
-      [appId]: {
-        ...(prevState[appId] || {}), // Preserve existing state for the app
-        ...newState,         // Merge in the new state properties
-      },
-    }));
-  };
-  
-  console.log('appStates', appStates)
   const officialApps = useMemo(() => {
     return availableQapps.filter(
       (app) =>
@@ -121,12 +109,10 @@ export const AppsLibrary = ({  availableQapps, setMode, myName, hasPublishApp, i
       app.name.toLowerCase().includes(debouncedValue.toLowerCase())
     );
   }, [debouncedValue]);
-  console.log("officialApps", searchedList);
 
   const rowRenderer = (index) => {
    
     let app = searchedList[index];
-    console.log('appi', app)
     return <AppInfoSnippet key={`${app?.service}-${app?.name}`} app={app} myName={myName} />;
   };
 
@@ -273,6 +259,49 @@ export const AppsLibrary = ({  availableQapps, setMode, myName, hasPublishApp, i
            
             <Spacer height="18px" />
             <AppLibrarySubTitle>Categories</AppLibrarySubTitle>
+            <Spacer height="18px" />
+            <AppsWidthLimiter sx={{
+              flexDirection: 'row',
+              overflowX: 'auto',
+              width: '100%',
+              gap: '5px',
+              "::-webkit-scrollbar": {
+                width: "0px",
+                height: "0px",
+              },
+              
+              // Hide scrollbar for Firefox
+              scrollbarWidth: "none",
+            
+              // Hide scrollbar for IE and older Edge
+              "-ms-overflow-style": "none",
+            }}>
+            {categories?.map((category)=> {
+              return (
+                <ButtonBase key={category?.id} onClick={()=> {
+                  executeEvent('selectedCategory', {
+                    data: category
+                  })
+                }}>
+                <Box sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  height: '110px',
+                  width: '110px',
+                  background: 'linear-gradient(163.47deg, #4BBCFE 27.55%, #1386C9 86.56%)',
+                  color: '#1D1D1E',
+                  fontWeight: 700,
+                  fontSize: '16px',
+                  flexShrink: 0,
+                  borderRadius: '11px'
+                }}>
+                  {category?.name}
+                </Box>
+                </ButtonBase>
+              )
+            })}
+            </AppsWidthLimiter>
             </AppsWidthLimiter>
           </>
         )}

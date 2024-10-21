@@ -319,7 +319,6 @@ export const decodeBase64ForUIChatMessages = (messages)=> {
 		if (decryptedKey) {
 			// Decrypt the data using the symmetric key.
 			const decryptedData = nacl.secretbox.open(encryptedData, nonce, decryptedKey)
-			console.log('decryptedData', decryptedData)
 			// If decryption was successful, decryptedData will not be null.
 			if (decryptedData) {
 				return decryptedData

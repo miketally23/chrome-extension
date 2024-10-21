@@ -97,7 +97,6 @@ async function handleGetFileFromIndexedDB(fileId, sendResponse) {
             const deleteRequest = deleteObjectStore.delete(fileId);
   
             deleteRequest.onsuccess = function () {
-              console.log(`File with ID ${fileId} has been removed from IndexedDB`);
               try {
                 sendResponse({ result: base64String });
   
@@ -171,7 +170,6 @@ const UIQortalRequests = [
   
   async function deleteQortalFilesFromIndexedDB() {
     try {
-      console.log("Opening IndexedDB for deleting files...");
       const db = await openIndexedDB();
       const transaction = db.transaction(["files"], "readwrite");
       const objectStore = transaction.objectStore("files");
@@ -262,7 +260,6 @@ const UIQortalRequests = [
       obj.fileId = fileId;
       delete obj.file;
     }
-    console.log(obj, obj.blob instanceof Blob, 'blob')
     if (obj.blob) {
       const fileId = "objFile_qortalfile";
   
@@ -315,7 +312,6 @@ const UIQortalRequests = [
 export const useQortalMessageListener = (frameWindow) => {
   const [path, setPath] = useState('')
   useEffect(() => {
-    console.log("Listener added react");
 
     const listener = async (event) => {
       event.preventDefault(); // Prevent default behavior
@@ -325,7 +321,6 @@ export const useQortalMessageListener = (frameWindow) => {
 
       const sendMessageToRuntime = (message, eventPort) => {
         chrome?.runtime?.sendMessage(message, (response) => {
-          console.log('response', response);
           if (response.error) {
             eventPort.postMessage({
               result: null,
@@ -342,7 +337,6 @@ export const useQortalMessageListener = (frameWindow) => {
 
       // Check if action is included in the predefined list of UI requests
       if (UIQortalRequests.includes(event.data.action)) {
-        console.log('event?.data', event?.data);
         sendMessageToRuntime(
           { action: event.data.action, type: 'qortalRequest', payload: event.data, isExtension: true },
           event.ports[0]
@@ -353,7 +347,6 @@ export const useQortalMessageListener = (frameWindow) => {
         event?.data?.action === 'ENCRYPT_DATA' || event?.data?.action === 'SAVE_FILE'
         
       ) {
-        console.log('event?.data?', event?.data);
         let data;
         try {
           data = await storeFilesInIndexedDB(event.data);
@@ -365,7 +358,6 @@ export const useQortalMessageListener = (frameWindow) => {
           });
           return;
         }
-        console.log('data after', data)
         if (data) {
           sendMessageToRuntime(
             { action: event.data.action, type: 'qortalRequest', payload: data, isExtension: true },
@@ -396,7 +388,6 @@ export const useQortalMessageListener = (frameWindow) => {
   }, []); // Empty dependency array to run once when the component mounts
 
   chrome.runtime?.onMessage.addListener( function (message, sender, sendResponse) {
-    console.log('SHOWING UP')
      if(message.action === "SHOW_SAVE_FILE_PICKER"){
       showSaveFilePicker(message?.data)
     }
