@@ -1,4 +1,5 @@
 import { useCallback, useEffect } from 'react';
+import { isMobile } from './App';
 
 export const useAppFullScreen = (setFullScreen) => {
     const enterFullScreen = useCallback(() => {
@@ -27,6 +28,7 @@ export const useAppFullScreen = (setFullScreen) => {
     }, []);
 
     const toggleFullScreen = useCallback(() => {
+        if(!isMobile) return
         if (document.fullscreenElement || document.mozFullScreenElement || document.webkitFullscreenElement || document.msFullscreenElement) {
             exitFullScreen();
             setFullScreen(false)

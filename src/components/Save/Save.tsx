@@ -8,7 +8,8 @@ import { MyContext } from '../../App';
 import { getFee } from '../../background';
 import { CustomizedSnackbars } from '../Snackbar/Snackbar';
 import { SaveIcon } from '../../assets/svgs/SaveIcon';
-export const Save = () => {
+import { IconWrapper } from '../Desktop/DesktopFooter';
+export const Save = ({isDesktop}) => {
     const [pinnedApps, setPinnedApps] = useRecoilState(sortablePinnedAppsAtom);
     const [settingsQdnLastUpdated, setSettingsQdnLastUpdated] = useRecoilState(settingsQDNLastUpdatedAtom);
     const [settingsLocalLastUpdated] = useRecoilState(settingsLocalLastUpdatedAtom);
@@ -130,9 +131,22 @@ export const Save = () => {
   return (
     <>
     <ButtonBase  onClick={saveToQdn} disabled={!hasChanged || !canSave || isLoading || settingsQdnLastUpdated === -100}>
-      <SaveIcon
+      {isDesktop ? (
+          <IconWrapper
+          color="rgba(250, 250, 250, 0.5)"
+          label="Save"
+          selected={false}
+        >
+           <SaveIcon
         color={settingsQdnLastUpdated === -100 ? '#8F8F91' : (hasChanged && !isLoading) ? '#5EB049' : '#8F8F91'}
        />
+          </IconWrapper>
+      ) : (
+        <SaveIcon
+        color={settingsQdnLastUpdated === -100 ? '#8F8F91' : (hasChanged && !isLoading) ? '#5EB049' : '#8F8F91'}
+       />
+      )}
+     
       </ButtonBase>
      <CustomizedSnackbars
         duration={3500}

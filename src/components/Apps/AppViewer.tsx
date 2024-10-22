@@ -16,7 +16,7 @@ import {
 } from "./Apps-styles";
 import { Avatar, Box, ButtonBase, InputBase } from "@mui/material";
 import { Add } from "@mui/icons-material";
-import { MyContext, getBaseApiReact } from "../../App";
+import { MyContext, getBaseApiReact, isMobile } from "../../App";
 import LogoSelected from "../../assets/svgs/LogoSelected.svg";
 
 import { Spacer } from "../../common/Spacer";
@@ -61,7 +61,7 @@ export const AppViewer = ({ app }) => {
 
   return (
         <iframe ref={iframeRef} style={{
-          height: `calc(${rootHeight} - 60px - 45px - 20px)`,
+          height: !isMobile ? '100vh' : `calc(${rootHeight} - 60px - 45px - 20px)`,
           border: 'none',
           width: '100%'
         }} id="browser-iframe" src={defaultUrl} sandbox="allow-scripts allow-same-origin allow-forms allow-downloads allow-modals" allow="fullscreen">

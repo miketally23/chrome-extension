@@ -39,7 +39,7 @@ import { Option as BaseOption, optionClasses } from "@mui/base/Option";
 import { styled } from "@mui/system";
 import UnfoldMoreRoundedIcon from "@mui/icons-material/UnfoldMoreRounded";
 import { Add } from "@mui/icons-material";
-import { MyContext, getBaseApiReact } from "../../App";
+import { MyContext, getBaseApiReact, isMobile } from "../../App";
 import LogoSelected from "../../assets/svgs/LogoSelected.svg";
 
 import { Spacer } from "../../common/Spacer";
@@ -257,8 +257,14 @@ export const AppPublish = ({ names, categories }) => {
     }
   };
   return (
-    <AppsLibraryContainer>
-      <AppsWidthLimiter>
+    <AppsLibraryContainer sx={{
+      height: !isMobile && '100%',
+      paddingTop: !isMobile && '30px',
+      alignItems: !isMobile && 'center'
+    }}>
+      <AppsWidthLimiter sx={{
+        width: !isMobile && 'auto'
+      }}>
         <AppLibrarySubTitle>Create Apps!</AppLibrarySubTitle>
         <Spacer height="18px" />
         <PublishQAppInfo>

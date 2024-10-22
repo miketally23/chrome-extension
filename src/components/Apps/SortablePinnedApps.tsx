@@ -12,7 +12,7 @@ import { useRecoilState, useSetRecoilState } from 'recoil';
 import { saveToLocalStorage } from './AppsNavBar';
 import { ContextMenuPinnedApps } from '../ContextMenuPinnedApps';
 
-const SortableItem = ({ id, name, app }) => {
+const SortableItem = ({ id, name, app, isDesktop }) => {
     const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id });
     const style = {
         transform: CSS.Transform.toString(transform),
@@ -42,7 +42,10 @@ const SortableItem = ({ id, name, app }) => {
                 })
               }}
             >
-              <AppCircleContainer>
+              <AppCircleContainer  sx={{
+                    border: "none",
+                    gap: isDesktop ? '10px': '5px'
+                  }}>
                 <AppCircle
                   sx={{
                     border: "none",
@@ -80,7 +83,7 @@ const SortableItem = ({ id, name, app }) => {
     );
 };
 
-export const SortablePinnedApps = ({  myWebsite, myApp, availableQapps = [] }) => {
+export const SortablePinnedApps = ({  isDesktop, myWebsite, myApp, availableQapps = [] }) => {
     const [pinnedApps, setPinnedApps] = useRecoilState(sortablePinnedAppsAtom);
     const setSettingsLocalLastUpdated = useSetRecoilState(settingsLocalLastUpdatedAtom);
 
@@ -164,7 +167,7 @@ export const SortablePinnedApps = ({  myWebsite, myApp, availableQapps = [] }) =
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext items={transformPinnedApps.map((app) => `${app?.service}-${app?.name}`)}>
                 {transformPinnedApps.map((app) => (
-                    <SortableItem key={`${app?.service}-${app?.name}`} id={`${app?.service}-${app?.name}`} name={app?.name} app={app} />
+                    <SortableItem isDesktop={isDesktop} key={`${app?.service}-${app?.name}`} id={`${app?.service}-${app?.name}`} name={app?.name} app={app} />
                 ))}
             </SortableContext>
         </DndContext>

@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useRef } from 'react'
 import { AppViewer } from './AppViewer'
 import Frame from 'react-frame-component';
-import { MyContext } from '../../App';
+import { MyContext, isMobile } from '../../App';
 import { subscribeToEvent, unsubscribeFromEvent } from '../../utils/events';
 
 const AppViewerContainer = ({app, isSelected, hide}) => {
@@ -32,7 +32,7 @@ const AppViewerContainer = ({app, isSelected, hide}) => {
           </style>
         </>
       } style={{
-          height: `calc(${rootHeight} - 60px - 45px  - 20px)`,
+          height: !isMobile ? '100vh' :  `calc(${rootHeight} - 60px - 45px  - 20px)`,
           border: 'none',
           width: '100%',
           display: (!isSelected || hide) && 'none'

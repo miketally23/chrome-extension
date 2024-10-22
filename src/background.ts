@@ -117,7 +117,7 @@ const getApiKeyFromStorage = async () => {
 const getArbitraryEndpoint = async () => {
   const apiKey = await getApiKeyFromStorage(); // Retrieve apiKey asynchronously
   if (apiKey) {
-    return `/arbitrary/resources/search`;
+    return `/arbitrary/resources/searchsimple`;
   } else {
     return `/arbitrary/resources/searchsimple`;
   }

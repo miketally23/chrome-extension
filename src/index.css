@@ -34,7 +34,7 @@
   --bg-primary : rgba(31, 32, 35, 1);
   --bg-2: #27282c;
   --bg-3: rgba(0, 0, 0, 0.1);
-  --unread: rgba(255, 0, 0, 1);
+  --unread: #B14646;
   --apps-circle: #1F2023
 }
 
@@ -103,4 +103,8 @@ body {
 
 html, body {
   overscroll-behavior:none !important;
+}
+
+.swiper {
+  width: 100%;
 }

@@ -146,7 +146,7 @@ const defaultValues: MyContextInterface = {
     message: "",
   },
 };
-export let isMobile = true;
+export let isMobile = false;
 
 const isMobileDevice = () => {
   const userAgent = navigator.userAgent || navigator.vendor || window.opera;
@@ -240,7 +240,7 @@ export const getBaseApiReact = (customApi?: string) => {
 // };
 export const getArbitraryEndpointReact = () => {
   if (globalApiKey) {
-    return `/arbitrary/resources/search`;
+    return `/arbitrary/resources/searchsimple`;
   } else {
     return `/arbitrary/resources/searchsimple`;
   }
@@ -259,6 +259,8 @@ export const getBaseApiReactSocket = (customApi?: string) => {
 export const isMainWindow = window?.location?.href?.includes("?main=true");
 function App() {
   const [extState, setExtstate] = useState<extStates>("not-authenticated");
+  const [desktopViewMode, setDesktopViewMode] = useState('home')
+
   const [backupjson, setBackupjson] = useState<any>(null);
   const [rawWallet, setRawWallet] = useState<any>(null);
   const [ltcBalanceLoading, setLtcBalanceLoading] = useState<boolean>(false);
@@ -1554,12 +1556,13 @@ function App() {
     <AppContainer
       sx={{
         height: isMobile ? "100%" : "100vh",
+        backgroundImage: desktopViewMode === 'apps' && 'url("appsBg.svg")',
+        backgroundSize: desktopViewMode === 'apps' &&  'cover',
+        backgroundPosition: desktopViewMode === 'apps' &&  'center',
+        backgroundRepeat: desktopViewMode === 'apps' &&  'no-repeat',
       }}
     >
-      {/* {extState === 'group' && (
-        <Group myAddress={userInfo?.address} />
-      )} */}
-
+   
       {extState === "not-authenticated" && (
         <>
           <Spacer height="48px" />
@@ -1780,8 +1783,10 @@ function App() {
               isMain={isMain}
               isOpenDrawerProfile={isOpenDrawerProfile}
               setIsOpenDrawerProfile={setIsOpenDrawerProfile}
+              desktopViewMode={desktopViewMode}
+              setDesktopViewMode={setDesktopViewMode}
             />
-            {!isMobile && renderProfile()}
+            {(!isMobile && desktopViewMode !== 'apps') && renderProfile()}
           </Box>
 
           <Box

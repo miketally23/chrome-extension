@@ -22,7 +22,7 @@ import {
 } from "./Apps-styles";
 import { Avatar, Box, ButtonBase, InputBase } from "@mui/material";
 import { Add } from "@mui/icons-material";
-import { getBaseApiReact } from "../../App";
+import { getBaseApiReact, isMobile } from "../../App";
 import LogoSelected from "../../assets/svgs/LogoSelected.svg";
 
 import { Spacer } from "../../common/Spacer";
@@ -32,7 +32,21 @@ import { AppRating } from "./AppRating";
 export const AppInfo = ({ app, myName }) => {
   const isInstalled = app?.status?.status === "READY";
   return (
-    <AppsLibraryContainer>
+    <AppsLibraryContainer
+      sx={{
+        height: !isMobile && "100%",
+        justifyContent: !isMobile && "flex-start",
+        alignItems: isMobile && 'center'
+      }}
+    >
+      <Box sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        maxWidth: "500px",
+      }}>
+
+   
+      {!isMobile && <Spacer height="30px" />}
       <AppsWidthLimiter>
         <AppInfoSnippetContainer>
           <AppInfoSnippetLeft
@@ -108,30 +122,28 @@ export const AppInfo = ({ app, myName }) => {
         </AppDownloadButton>
       </AppsWidthLimiter>
       <Spacer height="20px" />
-        <AppsWidthLimiter>
-
-      <AppsCategoryInfo>
-        <AppRating ratingCountPosition="top" myName={myName} app={app} />
-        <Spacer width="16px" />
-        <Spacer height="40px" width="1px" backgroundColor="white" />
-        <Spacer width="16px" />
-        <AppsCategoryInfoSub>
-          <AppsCategoryInfoLabel>Category:</AppsCategoryInfoLabel>
-          <Spacer height="4px" />
-          <AppsCategoryInfoValue>
-            {app?.metadata?.categoryName || "none"}
-          </AppsCategoryInfoValue>
-        </AppsCategoryInfoSub>
-      </AppsCategoryInfo>
-      <Spacer height="30px" />
-      <AppInfoAppName>
-      About this Q-App
-        </AppInfoAppName>
+      <AppsWidthLimiter>
+        <AppsCategoryInfo>
+          <AppRating ratingCountPosition="top" myName={myName} app={app} />
+          <Spacer width="16px" />
+          <Spacer height="40px" width="1px" backgroundColor="white" />
+          <Spacer width="16px" />
+          <AppsCategoryInfoSub>
+            <AppsCategoryInfoLabel>Category:</AppsCategoryInfoLabel>
+            <Spacer height="4px" />
+            <AppsCategoryInfoValue>
+              {app?.metadata?.categoryName || "none"}
+            </AppsCategoryInfoValue>
+          </AppsCategoryInfoSub>
+        </AppsCategoryInfo>
+        <Spacer height="30px" />
+        <AppInfoAppName>About this Q-App</AppInfoAppName>
       </AppsWidthLimiter>
       <Spacer height="20px" />
       <AppsInfoDescription>
-      {app?.metadata?.description || "No description"}
+        {app?.metadata?.description || "No description"}
       </AppsInfoDescription>
+      </Box>
     </AppsLibraryContainer>
   );
 };
