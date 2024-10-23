@@ -78,7 +78,7 @@ export const DesktopFooter = ({
   desktopViewMode,
   hide,
   setIsOpenSideViewDirects,
-  setisOpenSideViewDirects
+  setIsOpenSideViewGroups
   
 }) => {
   

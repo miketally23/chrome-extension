@@ -1107,6 +1107,7 @@ export const Group = ({
     if (findDirect) {
       if(!isMobile){
         setDesktopSideView("directs");
+        setDesktopViewMode('home')
       } else {
         setMobileViewModeKeepOpen("messaging");
       }
@@ -1144,6 +1145,7 @@ export const Group = ({
     if (findDirect) {
       if(!isMobile){
         setDesktopSideView("directs");
+        setDesktopViewMode('home')
       } else {
         setMobileViewModeKeepOpen("messaging");
       }
@@ -1167,6 +1169,7 @@ export const Group = ({
     } else {
       if(!isMobile){
         setDesktopSideView("directs");
+        setDesktopViewMode('home')
       } else {
         setMobileViewModeKeepOpen("messaging");
       }
@@ -1333,7 +1336,8 @@ export const Group = ({
       setTimeout(() => {
         setSelectedGroup(findGroup);
         setMobileViewMode("group");
-        setDesktopSideView('home')
+        setDesktopSideView('groups')
+        setDesktopViewMode('home')
         getTimestampEnterChat();
         isLoadingOpenSectionFromNotification.current = false;
       }, 200);
@@ -1381,7 +1385,8 @@ export const Group = ({
       setTimeout(() => {
         setSelectedGroup(findGroup);
         setMobileViewMode("group");
-        setDesktopSideView('home')
+        setDesktopSideView('groups')
+        setDesktopViewMode('home')
         getGroupAnnouncements();
       }, 200);
     }
@@ -1436,7 +1441,8 @@ export const Group = ({
       setTimeout(() => {
         setSelectedGroup(findGroup);
         setMobileViewMode("group");
-        setDesktopSideView('home')
+        setDesktopSideView('groups')
+        setDesktopViewMode('home')
         getGroupAnnouncements();
       }, 200);
     }
@@ -1962,7 +1968,8 @@ export const Group = ({
                 //   }
                 onClick={() => {
                   setMobileViewMode("group");
-                  setDesktopSideView('home')
+                  setDesktopSideView('groups')
+                  setDesktopViewMode('home')
                   initiatedGetMembers.current = false;
                   clearAllQueues();
                   setSelectedDirect(null);

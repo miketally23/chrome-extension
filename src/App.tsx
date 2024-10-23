@@ -103,6 +103,7 @@ import { useQortalGetSaveSettings } from "./useQortalGetSaveSettings";
 import { useRecoilState, useResetRecoilState } from "recoil";
 import { canSaveSettingToQdnAtom, fullScreenAtom, hasSettingsChangedAtom, oldPinnedAppsAtom, settingsLocalLastUpdatedAtom, settingsQDNLastUpdatedAtom, sortablePinnedAppsAtom } from "./atoms/global";
 import { useAppFullScreen } from "./useAppFullscreen";
+import { NotAuthenticated } from "./ExtStates/NotAuthenticated";
 
 type extStates =
   | "not-authenticated"
@@ -329,8 +330,6 @@ function App() {
   const [openSnack, setOpenSnack] = useState(false);
   const [hasLocalNode, setHasLocalNode] = useState(false);
   const [openAdvancedSettings, setOpenAdvancedSettings] = useState(false);
-  const [useLocalNode, setUseLocalNode] = useState(false);
-  const [confirmUseOfLocal, setConfirmUseOfLocal] = useState(false);
   const [isOpenDrawerProfile, setIsOpenDrawerProfile] = useState(false);
   const [apiKey, setApiKey] = useState("");
   const [isOpenSendQort, setIsOpenSendQort] = useState(false);
@@ -397,13 +396,16 @@ function App() {
       window.visualViewport?.removeEventListener("resize", resetHeight);
     };
   }, []);
+  const handleSetGlobalApikey = (key)=> {
+    globalApiKey = key;
+  }
   useEffect(() => {
     chrome?.runtime?.sendMessage({ action: "getApiKey" }, (response) => {
+      console.log('goingggg', response)
       if (response) {
-        globalApiKey = response;
+        console.log('response', response)
+        handleSetGlobalApikey(response)
         setApiKey(response);
-        setUseLocalNode(true);
-        setConfirmUseOfLocal(true);
         setOpenAdvancedSettings(true);
       }
     });
@@ -1065,9 +1067,6 @@ function App() {
     setWalletToBeDownloadedPasswordConfirm("");
     setWalletToBeDownloadedError("");
     setSendqortState(null);
-    globalApiKey = null;
-    setApiKey("");
-    setUseLocalNode(false);
     setHasLocalNode(false);
     setOpenAdvancedSettings(false);
     setConfirmUseOfLocal(false);
@@ -1564,188 +1563,7 @@ function App() {
     >
    
       {extState === "not-authenticated" && (
-        <>
-          <Spacer height="48px" />
-          <div
-            className="image-container"
-            style={{
-              width: "136px",
-              height: "154px",
-            }}
-          >
-            <img src={Logo1} className="base-image" />
-            <img src={Logo1Dark} className="hover-image" />
-          </div>
-          <Spacer height="38px" />
-          <TextP
-            sx={{
-              textAlign: "center",
-              lineHeight: "15px",
-            }}
-          >
-            WELCOME TO <TextItalic>YOUR</TextItalic> <br></br>
-            <TextSpan> QORTAL WALLET</TextSpan>
-          </TextP>
-          <Spacer height="38px" />
-          <Box
-            sx={{
-              display: "flex",
-              gap: "10px",
-              alignItems: "center",
-              marginLeft: "28px",
-            }}
-          >
-            <CustomButton {...getRootProps()}>
-              <input {...getInputProps()} />
-              Authenticate
-            </CustomButton>
-            <Tooltip
-              title="Authenticate by importing your Qortal JSON file"
-              arrow
-            >
-              <img src={Info} />
-            </Tooltip>
-          </Box>
-
-          <Spacer height="6px" />
-          <Box
-            sx={{
-              display: "flex",
-              gap: "10px",
-              alignItems: "center",
-              marginLeft: "28px",
-            }}
-          >
-            <CustomButton
-              onClick={() => {
-                setExtstate("create-wallet");
-              }}
-            >
-              Create account
-            </CustomButton>
-
-            <img
-              src={Info}
-              style={{
-                visibility: "hidden",
-              }}
-            />
-          </Box>
-
-          <>
-            <Spacer height="15px" />
-            <Box
-              sx={{
-                display: "flex",
-                gap: "10px",
-                alignItems: "center",
-                flexDirection: "column",
-              }}
-            >
-              <Typography
-                sx={{
-                  cursor: "pointer",
-                  fontSize: "14px",
-                }}
-                onClick={() => {
-                  setOpenAdvancedSettings(true);
-                }}
-              >
-                Advanced settings
-              </Typography>
-
-              {openAdvancedSettings && (
-                <>
-                  <Box
-                    sx={{
-                      display: "flex",
-                      gap: "10px",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      width: "100%",
-                    }}
-                  >
-                    <Checkbox
-                      edge="start"
-                      checked={useLocalNode}
-                      tabIndex={-1}
-                      disableRipple
-                      onChange={(event) => {
-                        setUseLocalNode(event.target.checked);
-                      }}
-                      disabled={confirmUseOfLocal}
-                      sx={{
-                        "&.Mui-checked": {
-                          color: "white", // Customize the color when checked
-                        },
-                        "& .MuiSvgIcon-root": {
-                          color: "white",
-                        },
-                      }}
-                    />
-
-                    <Typography>Use local node</Typography>
-                  </Box>
-                  {useLocalNode && (
-                    <>
-                      <Button
-                        disabled={confirmUseOfLocal}
-                        variant="contained"
-                        component="label"
-                      >
-                        Select apiKey.txt
-                        <input
-                          type="file"
-                          accept=".txt"
-                          hidden
-                          onChange={handleFileChangeApiKey} // File input handler
-                        />
-                      </Button>
-                      <Spacer height="5px" />
-                      <Typography
-                        sx={{
-                          fontSize: "12px",
-                        }}
-                      >
-                        {apiKey}
-                      </Typography>
-                      <Spacer height="5px" />
-                      <Button
-                        onClick={() => {
-                          const valueToSet = !confirmUseOfLocal;
-                          const payload = valueToSet ? apiKey : null;
-                          chrome?.runtime?.sendMessage(
-                            { action: "setApiKey", payload },
-                            (response) => {
-                              if (response) {
-                                globalApiKey = payload;
-
-                                setConfirmUseOfLocal(valueToSet);
-                                if (!globalApiKey) {
-                                  setUseLocalNode(false);
-                                  setOpenAdvancedSettings(false);
-                                  setApiKey("");
-                                }
-                              }
-                            }
-                          );
-                        }}
-                        variant="contained"
-                        sx={{
-                          color: "white",
-                        }}
-                      >
-                        {!confirmUseOfLocal
-                          ? "Confirm use of local node"
-                          : "Switch back to gateway"}
-                      </Button>
-                    </>
-                  )}
-                </>
-              )}
-            </Box>
-          </>
-        </>
+       <NotAuthenticated getRootProps={getRootProps} getInputProps={getInputProps} setExtstate={setExtstate} setOpenAdvancedSettings={setOpenAdvancedSettings} openAdvancedSettings={openAdvancedSettings}   handleFileChangeApiKey={handleFileChangeApiKey} apiKey={apiKey}  globalApiKey={globalApiKey} setApiKey={setApiKey}  handleSetGlobalApikey={handleSetGlobalApikey}/>
       )}
       {/* {extState !== "not-authenticated" && (
         <button onClick={logoutFunc}>logout</button>

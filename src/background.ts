@@ -4184,7 +4184,6 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
                 [
                   "keyPair",
                   "walletInfo",
-                  "apiKey",
                   "active-groups-directs",
                   key1,
                   key2,
