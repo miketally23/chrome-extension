@@ -342,8 +342,8 @@ export const NotAuthenticated = ({
                             (response) => {
                               console.log("setApiKey", response);
                               if (response) {
-                                setApiKey(payload);
-                                handleSetGlobalApikey(payload);
+                                setApiKey(null);
+                                handleSetGlobalApikey(null);
                                
                               }
                             }
