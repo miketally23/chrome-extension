@@ -303,10 +303,10 @@ export const Apps = ({ mode, setMode, show , myName}) => {
           categories={categories}
         />
    
-      {mode === "appInfo" && <AppInfo app={selectedAppInfo} myName={myName} />}
-      {mode === "appInfo-from-category" && <AppInfo app={selectedAppInfo} myName={myName} />}
+      {mode === "appInfo" && !selectedTab && <AppInfo app={selectedAppInfo} myName={myName} />}
+      {mode === "appInfo-from-category" && !selectedTab && <AppInfo app={selectedAppInfo} myName={myName} />}
       <AppsCategory  availableQapps={availableQapps} isShow={mode === 'category' && !selectedTab} category={selectedCategory} myName={myName} />
-      {mode === "publish" && <AppPublish names={myName ?  [myName] : []} categories={categories} />}
+      {mode === "publish" && !selectedTab &&  <AppPublish names={myName ?  [myName] : []} categories={categories} />}
 
       {tabs.map((tab) => {
         return (

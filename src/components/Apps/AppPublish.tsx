@@ -258,12 +258,12 @@ export const AppPublish = ({ names, categories }) => {
   };
   return (
     <AppsLibraryContainer sx={{
-      height: !isMobile && '100%',
+      height: !isMobile ? '100%' : 'auto',
       paddingTop: !isMobile && '30px',
       alignItems: !isMobile && 'center'
     }}>
       <AppsWidthLimiter sx={{
-        width: !isMobile && 'auto'
+        width: !isMobile ? 'auto' : '90%'
       }}>
         <AppLibrarySubTitle>Create Apps!</AppLibrarySubTitle>
         <Spacer height="18px" />
@@ -513,6 +513,7 @@ export const AppPublish = ({ names, categories }) => {
         info={infoSnack}
         setInfo={setInfoSnack}
       />
+      
     </AppsLibraryContainer>
   );
 };

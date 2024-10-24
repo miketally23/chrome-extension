@@ -43,6 +43,7 @@ export const AppInfo = ({ app, myName }) => {
         display: 'flex',
         flexDirection: 'column',
         maxWidth: "500px",
+        width: '90%'
       }}>
 
    

@@ -754,29 +754,7 @@ export const GroupContainer = styled(Box)`
 position: relative;
         overflow: auto;
         width: 100%;
-&::-webkit-scrollbar-track {
-  background-color: transparent;
-}
-&::-webkit-scrollbar-track:hover {
-  background-color: transparent;
-}
 
-&::-webkit-scrollbar {
-  width: 16px;
-  height: 10px;
-  background-color: white;
-}
-
-&::-webkit-scrollbar-thumb {
-  background-color: #838eee;
-  border-radius: 8px;
-  background-clip: content-box;
-  border: 4px solid transparent;
-}
-
-&::-webkit-scrollbar-thumb:hover {
-  background-color: #6270f0;
-}
 
 `
 

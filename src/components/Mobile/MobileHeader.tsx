@@ -203,7 +203,7 @@ const Header = ({
                   "& .MuiTypography-root": {
                     fontSize: "12px",
                     fontWeight: 600,
-                    color: hasUnreadDirects ? "var(--unread)" :"rgba(250, 250, 250, 0.5)"
+                    color: hasUnreadGroups ? "var(--unread)" :"rgba(250, 250, 250, 0.5)"
                   },
                 }} primary="Hubs" />
         </MenuItem>

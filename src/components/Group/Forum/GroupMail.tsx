@@ -172,6 +172,7 @@ export const GroupMail = ({
   const getAllThreads = React.useCallback(
     async (groupId: string, mode: string, isInitial?: boolean) => {
       try {
+        console.log('mode', mode)
         setIsLoading(true)
         const offset = isInitial ? 0 : allThreads.length;
         const isReverse = mode === "Newest" ? true : false;
@@ -536,10 +537,14 @@ export const GroupMail = ({
     });
   
     // Convert the map back to an array and sort by "created" timestamp in descending order
-    const sortedList = Array.from(uniqueItems.values()).sort((a, b) => b.threadData?.createdAt - a.threadData?.createdAt);
+    const sortedList = Array.from(uniqueItems.values()).sort((a, b) =>
+  filterMode === 'Oldest'
+    ? a.threadData?.createdAt - b.threadData?.createdAt
+    : b.threadData?.createdAt - a.threadData?.createdAt
+);
   
     return sortedList;
-  }, [tempPublishedList, listOfThreadsToDisplay]);
+  }, [tempPublishedList, listOfThreadsToDisplay, filterMode]);
 
   if (currentThread)
     return (
