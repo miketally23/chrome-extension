@@ -10,7 +10,7 @@ import Tiptap from './TipTap'
 import { CustomButton } from '../../App-styles'
 import CircularProgress from '@mui/material/CircularProgress';
 import { LoadingSnackbar } from '../Snackbar/LoadingSnackbar'
-import { getBaseApiReactSocket, isMobile, pauseAllQueues, resumeAllQueues } from '../../App'
+import { getBaseApiReact, getBaseApiReactSocket, isMobile, pauseAllQueues, resumeAllQueues } from '../../App'
 import { CustomizedSnackbars } from '../Snackbar/Snackbar'
 import { PUBLIC_NOTIFICATION_CODE_FIRST_SECRET_KEY } from '../../constants/codes'
 import { useMessageQueue } from '../../MessageQueueContext'
@@ -101,8 +101,29 @@ export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey,
     })
    }
 
+   const middletierFunc = async (data: any, groupId: string) => {
+    try {
+      if (hasInitialized.current) {
+        decryptMessages(data, true);
+        return;
+      }
+      hasInitialized.current = true;
+      const url = `${getBaseApiReact()}/chat/messages?txGroupId=${groupId}&encoding=BASE64&limit=0&reverse=false`;
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      const responseData = await response.json();
+      decryptMessages(responseData, false);
+    } catch (error) {
+      console.error(error);
+    }
+ }
+
  
-    const decryptMessages = (encryptedMessages: any[])=> {
+    const decryptMessages = (encryptedMessages: any[], isInitiated: boolean )=> {
       try {
         if(!secretKeyRef.current){
           checkForFirstSecretKeyNotification(encryptedMessages)
@@ -125,7 +146,7 @@ export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey,
                 }
               }), selectedGroup)
               res(combineUIAndExtensionMsgs)
-              if(hasInitialized.current){
+              if(isInitiated){
                
                 const formatted = combineUIAndExtensionMsgs.filter((rawItem)=> !rawItem?.chatReference).map((item: any)=> {
                   return {
@@ -216,7 +237,7 @@ export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey,
                   }
                 } )
                 setMessages(formatted)
-                hasInitialized.current = true
+              
                 setChatReferences((prev) => {
                   let organizedChatReferences = { ...prev };
                 
@@ -336,7 +357,7 @@ export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey,
             clearTimeout(timeoutIdRef.current);
             groupSocketTimeoutRef.current = setTimeout(pingGroupSocket, 45000); // Ping every 45 seconds
           } else {
-          decryptMessages(JSON.parse(e.data))
+            middletierFunc(JSON.parse(e.data), selectedGroup)
           setIsLoading(false)
           }
         } catch (error) {

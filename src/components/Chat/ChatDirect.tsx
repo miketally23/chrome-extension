@@ -11,7 +11,7 @@ import { LoadingSnackbar } from '../Snackbar/LoadingSnackbar';
 import { getNameInfo } from '../Group/Group';
 import { Spacer } from '../../common/Spacer';
 import { CustomizedSnackbars } from '../Snackbar/Snackbar';
-import { getBaseApiReactSocket, isMobile, pauseAllQueues, resumeAllQueues } from '../../App';
+import { getBaseApiReact, getBaseApiReactSocket, isMobile, pauseAllQueues, resumeAllQueues } from '../../App';
 import { getPublicKey } from '../../background';
 import { useMessageQueue } from '../../MessageQueueContext';
 import { executeEvent, subscribeToEvent, unsubscribeFromEvent } from '../../utils/events';
@@ -77,9 +77,28 @@ export const ChatDirect = ({ myAddress, isNewChat, selectedDirect, setSelectedDi
   }, [selectedDirect?.address])
  
 
-  
+  const middletierFunc = async (data: any, selectedDirectAddress: string, myAddress: string) => {
+    try {
+      if (hasInitialized.current) {
+        decryptMessages(data, true);
+        return;
+      }
+      hasInitialized.current = true;
+      const url = `${getBaseApiReact()}/chat/messages?involving=${selectedDirectAddress}&involving=${myAddress}&encoding=BASE64&limit=0&reverse=false`;
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      const responseData = await response.json();
+      decryptMessages(responseData, false);
+    } catch (error) {
+      console.error(error);
+    }
+ }
 
-    const decryptMessages = (encryptedMessages: any[])=> {
+    const decryptMessages = (encryptedMessages: any[], isInitiated: boolean)=> {
       try {
         return new Promise((res, rej)=> {
           chrome?.runtime?.sendMessage({ action: "decryptDirect", payload: {
@@ -92,7 +111,7 @@ export const ChatDirect = ({ myAddress, isNewChat, selectedDirect, setSelectedDi
                 processWithNewMessages(response, selectedDirect?.address)
              
               res(response)
-              if(hasInitialized.current){
+              if(isInitiated){
           
                 const formatted = response.map((item: any)=> {
                   return {
@@ -169,7 +188,8 @@ export const ChatDirect = ({ myAddress, isNewChat, selectedDirect, setSelectedDi
             clearTimeout(timeoutIdRef.current);
             groupSocketTimeoutRef.current = setTimeout(pingWebSocket, 45000); // Ping every 45 seconds
           } else {
-            decryptMessages(JSON.parse(e.data));
+            middletierFunc(JSON.parse(e.data), selectedDirect?.address, myAddress)
+
             setIsLoading(false);
           }
         } catch (error) {
