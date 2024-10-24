@@ -11,6 +11,7 @@ import ListItemText from '@mui/material/ListItemText';
 import InboxIcon from '@mui/icons-material/MoveToInbox';
 import MailIcon from '@mui/icons-material/Mail';
 import CloseIcon from '@mui/icons-material/Close';
+import { isMobile } from '../../App';
 export const DrawerComponent = ({open, setOpen, children}) => {
 
   const toggleDrawer = (newOpen: boolean) => () => {
@@ -21,7 +22,7 @@ export const DrawerComponent = ({open, setOpen, children}) => {
   return (
     <div>
       <Drawer open={open} onClose={toggleDrawer(false)}>
-      <Box sx={{ width: 400, height: '100%' }} role="presentation">
+      <Box sx={{ width: isMobile ? '100vw' : '400px', height: '100%' }} role="presentation">
      
       {children}
     </Box>
