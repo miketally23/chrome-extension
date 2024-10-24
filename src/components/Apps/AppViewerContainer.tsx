@@ -28,13 +28,18 @@ const AppViewerContainer = ({app, isSelected, hide}) => {
               *::-webkit-scrollbar {
                 display: none;  /* Chrome, Safari, Opera */
               }
+              .frame-content {
+                overflow: hidden;
+                height: ${!isMobile ? '100vh' :  `calc(${rootHeight} - 60px - 45px )`};
+              }
             `}
           </style>
         </>
       } style={{
-          height: !isMobile ? '100vh' :  `calc(${rootHeight} - 60px - 45px  - 20px)`,
+          height: !isMobile ? '100vh' :  `calc(${rootHeight} - 60px - 45px )`,
           border: 'none',
           width: '100%',
+          overflow: 'hidden',
           display: (!isSelected || hide) && 'none'
         }} ><AppViewer app={app}  /></Frame>
   )

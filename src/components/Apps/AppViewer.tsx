@@ -61,7 +61,7 @@ export const AppViewer = ({ app }) => {
 
   return (
         <iframe ref={iframeRef} style={{
-          height: !isMobile ? '100vh' : `calc(${rootHeight} - 60px - 45px - 20px)`,
+          height: !isMobile ? '100vh' : `calc(${rootHeight} - 60px - 45px )`,
           border: 'none',
           width: '100%'
         }} id="browser-iframe" src={defaultUrl} sandbox="allow-scripts allow-same-origin allow-forms allow-downloads allow-modals" allow="fullscreen">
