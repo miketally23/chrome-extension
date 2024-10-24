@@ -10,40 +10,35 @@ export const ChatList = ({ initialMessages, myAddress, tempMessages, chatId, onR
   const hasLoadedInitialRef = useRef(false);
   const isAtBottomRef = useRef(true);  //
   // Update message list with unique signatures and tempMessages
+
   useEffect(() => {
     let uniqueInitialMessagesMap = new Map();
-
+  
+    // Only add a message if it doesn't already exist in the Map
     initialMessages.forEach((message) => {
-      uniqueInitialMessagesMap.set(message.signature, message);
+      if (!uniqueInitialMessagesMap.has(message.signature)) {
+        uniqueInitialMessagesMap.set(message.signature, message);
+      }
     });
-
+  
     const uniqueInitialMessages = Array.from(uniqueInitialMessagesMap.values()).sort(
       (a, b) => a.timestamp - b.timestamp
     );
     const totalMessages = [...uniqueInitialMessages, ...(tempMessages || [])];
-
+  
     if (totalMessages.length === 0) return;
-
+  
     setMessages(totalMessages);
-
+  
     setTimeout(() => {
       const hasUnreadMessages = totalMessages.some((msg) => msg.unread && !msg?.chatReference);
-
+  
       if (virtuosoRef.current) {
-
-
         if (virtuosoRef.current && !isAtBottomRef.current && hasUnreadMessages) {
-
-   
-    
-
-    setShowScrollButton(hasUnreadMessages);
+          setShowScrollButton(hasUnreadMessages);
         } else {
           handleMessageSeen();
-
         }
-       
-
       }
       if (!hasLoadedInitialRef.current) {
         scrollToBottom(totalMessages);
@@ -51,6 +46,7 @@ export const ChatList = ({ initialMessages, myAddress, tempMessages, chatId, onR
       }
     }, 500);
   }, [initialMessages, tempMessages]);
+  
 
   
 
