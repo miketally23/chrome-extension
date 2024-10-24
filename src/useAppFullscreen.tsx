@@ -28,7 +28,7 @@ export const useAppFullScreen = (setFullScreen) => {
     }, []);
 
     const toggleFullScreen = useCallback(() => {
-        if(!isMobile) return
+        if(!isMobile || isMobile) return
         if (document.fullscreenElement || document.mozFullScreenElement || document.webkitFullscreenElement || document.msFullscreenElement) {
             exitFullScreen();
             setFullScreen(false)

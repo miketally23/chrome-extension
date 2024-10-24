@@ -31,6 +31,19 @@ import { Sha256 } from "asmcrypto.js";
 import { TradeBotRespondMultipleRequest } from "./transactions/TradeBotRespondMultipleRequest";
 import { RESOURCE_TYPE_NUMBER_GROUP_CHAT_REACTIONS } from "./constants/resourceTypes";
 
+export function cleanUrl(url) {
+  return url?.replace(/^(https?:\/\/)?(www\.)?/, '');
+}
+export function getProtocol(url) {
+  if (url?.startsWith('https://')) {
+    return 'https';
+  } else if (url?.startsWith('http://')) {
+    return 'http';
+  } else {
+    return 'unknown'; // If neither protocol is present
+  }
+}
+
 let lastGroupNotification;
 export const groupApi = "https://ext-node.qortal.link";
 export const groupApiSocket = "wss://ext-node.qortal.link";
@@ -39,6 +52,7 @@ export const groupApiSocketLocal = "ws://127.0.0.1:12391";
 const timeDifferenceForNotificationChatsBackground = 600000;
 const requestQueueAnnouncements = new RequestQueueWithPromise(1);
 let isMobile = false;
+
 
 const isMobileDevice = () => {
   const userAgent = navigator.userAgent || navigator.vendor || window.opera;
@@ -106,6 +120,17 @@ const getApiKeyFromStorage = async () => {
   });
 };
 
+const getCustomNodesFromStorage = async () => {
+  return new Promise((resolve, reject) => {
+    chrome.storage.local.get("customNodes", (result) => {
+      if (chrome.runtime.lastError) {
+        return reject(chrome.runtime.lastError);
+      }
+      resolve(result.customNodes || null); // Return null if apiKey isn't found
+    });
+  });
+};
+
 // const getArbitraryEndpoint = ()=> {
 //   const apiKey = await getApiKeyFromStorage(); // Retrieve apiKey asynchronously
 //   if (apiKey) {
@@ -130,7 +155,7 @@ export const getBaseApi = async (customApi?: string) => {
 
   const apiKey = await getApiKeyFromStorage(); // Retrieve apiKey asynchronously
   if (apiKey) {
-    return groupApiLocal;
+    return apiKey?.url;
   } else {
     return groupApi;
   }
@@ -145,15 +170,7 @@ export const isUsingLocal = async () => {
   }
 };
 
-export const createEndpointSocket = async (endpoint) => {
-  const apiKey = await getApiKeyFromStorage(); // Retrieve apiKey asynchronously
 
-  if (apiKey) {
-    return `${groupApiSocketLocal}${endpoint}`;
-  } else {
-    return `${groupApiSocket}${endpoint}`;
-  }
-};
 
 export const createEndpoint = async (endpoint, customApi?: string) => {
   if (customApi) {
@@ -165,7 +182,7 @@ export const createEndpoint = async (endpoint, customApi?: string) => {
   if (apiKey) {
     // Check if the endpoint already contains a query string
     const separator = endpoint.includes("?") ? "&" : "?";
-    return `${groupApiLocal}${endpoint}${separator}apiKey=${apiKey}`;
+    return `${apiKey?.url}${endpoint}${separator}apiKey=${apiKey?.apikey}`;
   } else {
     return `${groupApi}${endpoint}`;
   }
@@ -1816,7 +1833,7 @@ async function createBuyOrderTx({ crosschainAtInfo, useLocal }) {
       let responseVar 
       const txn = new TradeBotRespondMultipleRequest().createTransaction(message)
       const apiKey = await getApiKeyFromStorage();
-      const responseFetch = await fetch(`http://127.0.0.1:12391/crosschain/tradebot/respondmultiple?apiKey=${apiKey}`, {
+      const responseFetch = await fetch(`${apiKey?.url}/crosschain/tradebot/respondmultiple?apiKey=${apiKey?.apikey}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -3291,6 +3308,16 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
         return true;
         break;
       }
+      case "setCustomNodes": {
+        const { nodes } = request;
+
+        // Save the customNodes in chrome.storage.local for persistence
+        chrome.storage.local.set({ customNodes: nodes }, () => {
+          sendResponse(true);
+        });
+        return true;
+        break;
+      }
       case "getApiKey": {
         getApiKeyFromStorage()
           .then((res) => {
@@ -3303,6 +3330,19 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
         return true;
         break;
       }
+      case "getCustomNodesFromStorage": {
+        getCustomNodesFromStorage()
+          .then((res) => {
+            sendResponse(res);
+          })
+          .catch((error) => {
+            sendResponse({ error: error.message });
+            console.error(error.message);
+          });
+        return true;
+        break;
+      }
+      
       case "notifyAdminRegenerateSecretKey": {
         const { groupName, adminAddress } = request.payload;
         notifyAdminRegenerateSecretKey({ groupName, adminAddress })

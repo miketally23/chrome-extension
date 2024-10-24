@@ -78,7 +78,9 @@ import { Label } from "./components/Group/AddGroup";
 import { CustomizedSnackbars } from "./components/Snackbar/Snackbar";
 import SettingsIcon from "@mui/icons-material/Settings";
 import {
+  cleanUrl,
   getFee,
+  getProtocol,
   groupApi,
   groupApiLocal,
   groupApiSocket,
@@ -147,7 +149,7 @@ const defaultValues: MyContextInterface = {
     message: "",
   },
 };
-export let isMobile = false;
+export let isMobile = true;
 
 const isMobileDevice = () => {
   const userAgent = navigator.userAgent || navigator.vendor || window.opera;
@@ -226,7 +228,7 @@ export const getBaseApiReact = (customApi?: string) => {
   }
 
   if (globalApiKey) {
-    return groupApiLocal;
+    return globalApiKey?.url;
   } else {
     return groupApi;
   }
@@ -252,7 +254,7 @@ export const getBaseApiReactSocket = (customApi?: string) => {
   }
 
   if (globalApiKey) {
-    return groupApiSocketLocal;
+    return `${getProtocol(globalApiKey?.url) === 'http' ? 'ws://': 'wss://'}${cleanUrl(globalApiKey?.url)}`
   } else {
     return groupApiSocket;
   }
@@ -329,7 +331,6 @@ function App() {
   const [infoSnack, setInfoSnack] = useState(null);
   const [openSnack, setOpenSnack] = useState(false);
   const [hasLocalNode, setHasLocalNode] = useState(false);
-  const [openAdvancedSettings, setOpenAdvancedSettings] = useState(false);
   const [isOpenDrawerProfile, setIsOpenDrawerProfile] = useState(false);
   const [apiKey, setApiKey] = useState("");
   const [isOpenSendQort, setIsOpenSendQort] = useState(false);
@@ -406,7 +407,7 @@ function App() {
         console.log('response', response)
         handleSetGlobalApikey(response)
         setApiKey(response);
-        setOpenAdvancedSettings(true);
+
       }
     });
   }, []);
@@ -420,18 +421,7 @@ function App() {
     isFocusedRef.current = isFocused;
   }, [isFocused]);
 
-  // Handler for file selection
-  const handleFileChangeApiKey = (event) => {
-    const file = event.target.files[0]; // Get the selected file
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const text = e.target.result; // Get the file content
-        setApiKey(text); // Store the file content in the state
-      };
-      reader.readAsText(file); // Read the file as text
-    }
-  };
+ 
 
   // const checkIfUserHasLocalNode = useCallback(async () => {
   //   try {
@@ -1068,8 +1058,6 @@ function App() {
     setWalletToBeDownloadedError("");
     setSendqortState(null);
     setHasLocalNode(false);
-    setOpenAdvancedSettings(false);
-    setConfirmUseOfLocal(false);
     setTxList([]);
     setMemberGroups([]);
     resetAllRecoil()
@@ -1563,7 +1551,7 @@ function App() {
     >
    
       {extState === "not-authenticated" && (
-       <NotAuthenticated getRootProps={getRootProps} getInputProps={getInputProps} setExtstate={setExtstate} setOpenAdvancedSettings={setOpenAdvancedSettings} openAdvancedSettings={openAdvancedSettings}   handleFileChangeApiKey={handleFileChangeApiKey} apiKey={apiKey}  globalApiKey={globalApiKey} setApiKey={setApiKey}  handleSetGlobalApikey={handleSetGlobalApikey}/>
+       <NotAuthenticated getRootProps={getRootProps} getInputProps={getInputProps} setExtstate={setExtstate}     apiKey={apiKey}  globalApiKey={globalApiKey} setApiKey={setApiKey}  handleSetGlobalApikey={handleSetGlobalApikey}/>
       )}
       {/* {extState !== "not-authenticated" && (
         <button onClick={logoutFunc}>logout</button>
