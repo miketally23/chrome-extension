@@ -172,7 +172,6 @@ export const GroupMail = ({
   const getAllThreads = React.useCallback(
     async (groupId: string, mode: string, isInitial?: boolean) => {
       try {
-        console.log('mode', mode)
         setIsLoading(true)
         const offset = isInitial ? 0 : allThreads.length;
         const isReverse = mode === "Newest" ? true : false;

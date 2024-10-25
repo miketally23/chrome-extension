@@ -519,7 +519,6 @@ export const Group = ({
       });
     } catch (error) {}
   };
-  console.log('desktopViewMode', desktopViewMode)
   const getGroupDataSingle = async (groupId) => {
     try {
       return new Promise((res, rej) => {

@@ -41,11 +41,9 @@ export const ChatList = ({ initialMessages, myAddress, tempMessages, chatId, onR
 
     setTimeout(() => {
       const hasUnreadMessages = totalMessages.some((msg) => msg.unread && !msg?.chatReference);
-      console.log('hasUnreadMessages', hasUnreadMessages)
       if (parentRef.current) {
         const { scrollTop, scrollHeight, clientHeight } = parentRef.current;
       const atBottom = scrollTop + clientHeight >= scrollHeight - 10; // Adjust threshold as needed
-      console.log('atBottom', atBottom, {scrollTop, scrollHeight, clientHeight})
         if (!atBottom && hasUnreadMessages) {
           setShowScrollButton(hasUnreadMessages);
         } else {
@@ -60,7 +58,6 @@ export const ChatList = ({ initialMessages, myAddress, tempMessages, chatId, onR
   }, [initialMessages, tempMessages]);
 
   const handleMessageSeen = useCallback(() => {
-    console.log('hello handle seen')
     setMessages((prevMessages) =>
       prevMessages.map((msg) => ({
         ...msg,
@@ -101,7 +98,6 @@ export const ChatList = ({ initialMessages, myAddress, tempMessages, chatId, onR
     return messages[lastIndex]?.signature
   }, [messages])
 
-  console.log('messages', messages)
 
   // Initialize the virtualizer
   const rowVirtualizer = useVirtualizer({
@@ -113,7 +109,6 @@ export const ChatList = ({ initialMessages, myAddress, tempMessages, chatId, onR
     typeof window !== 'undefined' &&
     navigator.userAgent.indexOf('Firefox') === -1
       ? element => {
-        console.log('height', element?.getBoundingClientRect().height)
         return element?.getBoundingClientRect().height
       }
       : undefined,

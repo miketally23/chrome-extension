@@ -33,7 +33,6 @@ export const NotAuthenticated = ({
   globalApiKey,
   handleSetGlobalApikey,
 }) => {
-  console.log("apiKey", apiKey);
   const [isValidApiKey, setIsValidApiKey] = useState<boolean | null>(null);
   const [hasLocalNode, setHasLocalNode] = useState<boolean | null>(null);
   const [useLocalNode, setUseLocalNode] = useState(false);
@@ -57,12 +56,10 @@ export const NotAuthenticated = ({
   const isLocal = cleanUrl(currentNode?.url) === "127.0.0.1:12391";
   const handleFileChangeApiKey = (event) => {
     const file = event.target.files[0]; // Get the selected file
-    console.log('file', file)
     if (file) {
       const reader = new FileReader();
       reader.onload = (e) => {
         const text = e.target.result; // Get the file content
-        console.log('text', text)
 
         setImportedApiKey(text); // Store the file content in the state
       };
@@ -95,7 +92,6 @@ export const NotAuthenticated = ({
       { action: "getCustomNodesFromStorage" },
       (response) => {
         if (response) {
-          console.log("response", response);
           setCustomNodes(response || []);
         }
       }
@@ -109,11 +105,9 @@ export const NotAuthenticated = ({
     currentNodeRef.current = currentNode
   }, [currentNode])
 
-  console.log('currentNode', currentNode)
 
   const validateApiKey = useCallback(async (key) => {
     try {
-        console.log('currentNodeRef.current', currentNodeRef.current, key)
         if(!currentNodeRef.current) return
         const isLocalKey = cleanUrl(key?.url) === "127.0.0.1:12391";
         const isCurrentNodeLocal = cleanUrl(currentNodeRef.current?.url) === "127.0.0.1:12391";
@@ -132,7 +126,6 @@ export const NotAuthenticated = ({
       } else if(currentNodeRef.current) {
         payload = currentNodeRef.current;
       }
-      console.log('payload', payload)
       const url = `${payload?.url}/admin/apikey/test`;
       const response = await fetch(url, {
         method: "GET",
@@ -144,12 +137,10 @@ export const NotAuthenticated = ({
 
       // Assuming the response is in plain text and will be 'true' or 'false'
       const data = await response.text();
-      console.log("data", data);
       if (data === "true") {
         chrome?.runtime?.sendMessage(
           { action: "setApiKey", payload },
           (response) => {
-            console.log("setApiKey", response);
             if (response) {
               handleSetGlobalApikey(payload);
               setIsValidApiKey(true);
@@ -189,7 +180,6 @@ export const NotAuthenticated = ({
 
   const saveCustomNodes = (myNodes) => {
     let nodes = [...(myNodes || [])];
-    console.log("customNodeToSaveIndex", customNodeToSaveIndex);
     if (customNodeToSaveIndex !== null) {
       nodes.splice(customNodeToSaveIndex, 1, {
         url,
@@ -208,7 +198,6 @@ export const NotAuthenticated = ({
     chrome?.runtime?.sendMessage(
       { action: "setCustomNodes", nodes },
       (response) => {
-        console.log("setCustomNodes", response);
         if (response) {
           setMode("list");
           setUrl("http://");
@@ -219,7 +208,6 @@ export const NotAuthenticated = ({
     );
   };
 
-  console.log("render customNodes", customNodes, mode);
 
   return (
     <>
@@ -340,7 +328,6 @@ export const NotAuthenticated = ({
                           chrome?.runtime?.sendMessage(
                             { action: "setApiKey", payload:null },
                             (response) => {
-                              console.log("setApiKey", response);
                               if (response) {
                                 setApiKey(null);
                                 handleSetGlobalApikey(null);
@@ -519,12 +506,7 @@ export const NotAuthenticated = ({
                               const nodesToSave = [
                                 ...(customNodes || []),
                               ].filter((item) => item?.url !== node?.url);
-                              console.log(
-                                "nodesToSave",
-                                nodesToSave,
-                                customNodes,
-                                node
-                              );
+                         
 
                               saveCustomNodes(nodesToSave);
                             }}

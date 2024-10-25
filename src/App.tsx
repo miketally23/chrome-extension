@@ -402,9 +402,7 @@ function App() {
   }
   useEffect(() => {
     chrome?.runtime?.sendMessage({ action: "getApiKey" }, (response) => {
-      console.log('goingggg', response)
       if (response) {
-        console.log('response', response)
         handleSetGlobalApikey(response)
         setApiKey(response);
 

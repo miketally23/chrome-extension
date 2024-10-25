@@ -39,12 +39,10 @@ export const MessageItem = ({
 
   useEffect(() => {
     if (inView && message.unread) {
-      console.log('seenlast')
       onSeen(message.id);
     }
   }, [inView, message.id, message.unread, onSeen]);
 
-  console.log('isLast', lastSignature === message?.signature)
 
   return (
     <div
