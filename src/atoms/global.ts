@@ -3,7 +3,29 @@ import { atom } from 'recoil';
 
 export const sortablePinnedAppsAtom = atom({
   key: 'sortablePinnedAppsFromAtom', 
-  default: [], 
+  default: [{
+    name: 'Q-Tube',
+    servic: 'APP'
+  }, {
+    name: 'Q-Mail',
+    service: 'APP'
+  },  {
+    name: 'Q-Share',
+    service: 'APP'
+  }, {
+    name: 'Q-Blog',
+    service: 'APP'
+  }, {
+    name: 'Q-Fund',
+    service: 'APP'
+  }, {
+    name: 'Q-Shop',
+    service: 'APP'
+  },{
+    name: 'Qombo',
+    service: 'APP'
+  }
+], 
 });
 
 export const canSaveSettingToQdnAtom = atom({
