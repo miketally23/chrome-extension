@@ -52,7 +52,7 @@ export const NotAuthenticated = ({
     React.useState(null);
     const importedApiKeyRef = useRef(null)
     const currentNodeRef = useRef(null)
-
+  const hasLocalNodeRef = useRef(null)
   const isLocal = cleanUrl(currentNode?.url) === "127.0.0.1:12391";
   const handleFileChangeApiKey = (event) => {
     const file = event.target.files[0]; // Get the selected file
@@ -105,11 +105,18 @@ export const NotAuthenticated = ({
     currentNodeRef.current = currentNode
   }, [currentNode])
 
+  useEffect(()=> {
+    hasLocalNodeRef.current = hasLocalNode
+  }, [hasLocalNode])
 
-  const validateApiKey = useCallback(async (key) => {
+  const validateApiKey = useCallback(async (key, fromStartUp) => {
     try {
         if(!currentNodeRef.current) return
         const isLocalKey = cleanUrl(key?.url) === "127.0.0.1:12391";
+        if(isLocalKey && !hasLocalNodeRef.current && !fromStartUp){
+          throw new Error('Please turn on your local node')
+          
+        }
         const isCurrentNodeLocal = cleanUrl(currentNodeRef.current?.url) === "127.0.0.1:12391";
         if(isLocalKey && !isCurrentNodeLocal) {
             setIsValidApiKey(false);
@@ -145,6 +152,9 @@ export const NotAuthenticated = ({
               handleSetGlobalApikey(payload);
               setIsValidApiKey(true);
               setUseLocalNode(true);
+              if(!fromStartUp){
+                setApiKey(payload)
+              }
             }
           }
         );
@@ -162,15 +172,16 @@ export const NotAuthenticated = ({
       setUseLocalNode(false);
       setInfoSnack({
         type: "error",
-        message: "Select a valid apikey",
+        message: error?.message || "Select a valid apikey",
       });
+      setOpenSnack(true);
       console.error("Error validating API key:", error);
     }
   }, []);
 
   useEffect(() => {
     if (apiKey) {
-      validateApiKey(apiKey);
+      validateApiKey(apiKey, true);
     }
   }, [apiKey]);
 
@@ -282,7 +293,7 @@ export const NotAuthenticated = ({
                         visibility: !useLocalNode && 'hidden'
                       }}
                     >
-                      {"Using node: "} {apiKey?.url}
+                      {"Using node: "} {currentNode?.url}
                     </Typography>
       <>
         <Spacer height="15px" />
@@ -356,6 +367,10 @@ export const NotAuthenticated = ({
                     onChange={handleFileChangeApiKey} // File input handler
                   />
                 </Button>
+                <Typography sx={{
+                  fontSize: '12px',
+                  visibility: importedApiKey ? 'visible' : 'hidden'
+                }}>{`api key : ${importedApiKey}`}</Typography>
                 <Spacer height="5px" />
 
              
@@ -438,6 +453,17 @@ export const NotAuthenticated = ({
                           });
                           setMode("list");
                           setShow(false);
+                          setUseLocalNode(false);
+                             chrome?.runtime?.sendMessage(
+                              { action: "setApiKey", payload:null },
+                              (response) => {
+                                if (response) {
+                                  setApiKey(null);
+                                  handleSetGlobalApikey(null);
+                                 
+                                }
+                              }
+                            );
                         }}
                         variant="contained"
                       >
@@ -483,6 +509,16 @@ export const NotAuthenticated = ({
                               setShow(false);
                               setIsValidApiKey(false);
                              setUseLocalNode(false);
+                             chrome?.runtime?.sendMessage(
+                              { action: "setApiKey", payload:null },
+                              (response) => {
+                                if (response) {
+                                  setApiKey(null);
+                                  handleSetGlobalApikey(null);
+                                 
+                                }
+                              }
+                            );
                             }}
                             variant="contained"
                           >
