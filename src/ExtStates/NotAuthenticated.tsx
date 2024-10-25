@@ -22,6 +22,8 @@ import { CustomizedSnackbars } from "../components/Snackbar/Snackbar";
 import { set } from "lodash";
 import { cleanUrl, isUsingLocal } from "../background";
 
+const manifestData = chrome?.runtime?.getManifest();
+
 export const NotAuthenticated = ({
   getRootProps,
   getInputProps,
@@ -128,7 +130,7 @@ export const NotAuthenticated = ({
       if (currentNodeRef.current?.url === "http://127.0.0.1:12391") {
         payload = {
           apikey: importedApiKeyRef.current || key?.apikey,
-          url: currentNode?.url,
+          url: currentNodeRef.current?.url,
         };
       } else if(currentNodeRef.current) {
         payload = currentNodeRef.current;
@@ -222,7 +224,7 @@ export const NotAuthenticated = ({
 
   return (
     <>
-      <Spacer height="48px" />
+      <Spacer height="35px" />
       <div
         className="image-container"
         style={{
@@ -233,7 +235,7 @@ export const NotAuthenticated = ({
         <img src={Logo1} className="base-image" />
         <img src={Logo1Dark} className="hover-image" />
       </div>
-      <Spacer height="38px" />
+      <Spacer height="30px" />
       <TextP
         sx={{
           textAlign: "center",
@@ -243,7 +245,7 @@ export const NotAuthenticated = ({
         WELCOME TO <TextItalic>YOUR</TextItalic> <br></br>
         <TextSpan> QORTAL WALLET</TextSpan>
       </TextP>
-      <Spacer height="38px" />
+      <Spacer height="30px" />
       <Box
         sx={{
           display: "flex",
@@ -387,6 +389,10 @@ export const NotAuthenticated = ({
                   Choose custom node
                 </Button>
           </>
+          <Typography sx={{
+                  color: "white",
+              fontSize: '12px'
+            }}>Build version: {manifestData?.version}</Typography>
         </Box>
       </>
       <CustomizedSnackbars
@@ -413,6 +419,7 @@ export const NotAuthenticated = ({
                 flexDirection: "column",
               }}
             >
+               
               {mode === "list" && (
                 <Box
                   sx={{
@@ -581,7 +588,9 @@ export const NotAuthenticated = ({
                   />
                 </Box>
               )}
+              
             </Box>
+         
           </DialogContent>
           <DialogActions>
             {mode === "list" && (

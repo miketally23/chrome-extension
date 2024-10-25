@@ -1164,13 +1164,11 @@ function App() {
         });
       }
 
-      console.log("Webview is focused");
     };
 
     // Handler for when the window loses focus
     const handleBlur = () => {
       setIsFocused(false);
-      console.log("Webview is not focused");
     };
 
     // Attach the event listeners
@@ -1187,10 +1185,8 @@ function App() {
             payload: {},
           });
         }
-        console.log("Webview is visible");
       } else {
         setIsFocused(false);
-        console.log("Webview is hidden");
       }
     };
 
