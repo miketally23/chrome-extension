@@ -9,7 +9,7 @@ import {
 } from "./Apps-styles";
 import { Avatar, ButtonBase } from "@mui/material";
 import { Add } from "@mui/icons-material";
-import { getBaseApiReact } from "../../App";
+import { getBaseApiReact, isMobile } from "../../App";
 import LogoSelected from "../../assets/svgs/LogoSelected.svg";
 import { executeEvent } from "../../utils/events";
 import { SortablePinnedApps } from "./SortablePinnedApps";
@@ -39,11 +39,13 @@ export const AppsHome = ({  setMode, myApp, myWebsite, availableQapps  }) => {
             setMode("library");
           }}
         >
-          <AppCircleContainer>
+          <AppCircleContainer sx={{
+              gap: !isMobile ? "10px" : "5px",
+            }}>
             <AppCircle>
               <Add>+</Add>
             </AppCircle>
-            <AppCircleLabel>Add</AppCircleLabel>
+            <AppCircleLabel>Library</AppCircleLabel>
           </AppCircleContainer>
         </ButtonBase>
        
