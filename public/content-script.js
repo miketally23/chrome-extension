@@ -551,10 +551,34 @@ const testAsync = async (sendResponse)=> {
   sendResponse({ result: null, error: "Testing" });
 }
 
+const saveFile = (blob, filename) => {
+  // Create a URL for the blob
+  const url = URL.createObjectURL(blob);
+
+  // Create a link element
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+
+  // Append the link to the document and trigger a click
+  document.body.appendChild(a);
+  a.click();
+
+  // Clean up by removing the link and revoking the object URL
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
+
+
+
+
 const showSaveFilePicker = async (data) => {
+  let blob
+  let fileName
   try {
     const {filename, mimeType,  fileHandleOptions, fileId} = data
-    const blob = await retrieveFileFromIndexedDB(fileId)
+     blob = await retrieveFileFromIndexedDB(fileId)
+     fileName = filename
     const fileHandle = await window.showSaveFilePicker({
         suggestedName: filename,
         types: [
@@ -571,7 +595,7 @@ const showSaveFilePicker = async (data) => {
     }
     writeFile(fileHandle, blob).then(() => console.log("FILE SAVED"))
 } catch (error) {
-    FileSaver.saveAs(blob, filename)
+  saveFile(blob, fileName)
 } 
 }
 

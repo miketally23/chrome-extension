@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-
+import FileSaver from 'file-saver';
 class Semaphore {
 	constructor(count) {
 		this.count = count
@@ -213,9 +213,13 @@ const UIQortalRequests = [
   }
 
   const showSaveFilePicker = async (data) => {
+    let blob
+    let fileName
     try {
       const {filename, mimeType,  fileHandleOptions, fileId} = data
-      const blob = await retrieveFileFromIndexedDB(fileId)
+       blob = await retrieveFileFromIndexedDB(fileId)
+     fileName = filename
+
       const fileHandle = await window.showSaveFilePicker({
           suggestedName: filename,
           types: [
@@ -232,7 +236,7 @@ const UIQortalRequests = [
       }
       writeFile(fileHandle, blob).then(() => console.log("FILE SAVED"))
   } catch (error) {
-      FileSaver.saveAs(blob, filename)
+      FileSaver.saveAs(blob, fileName)
   } 
   }
 
