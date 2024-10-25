@@ -25,11 +25,13 @@ import IconSearch from "../../assets/svgs/Search.svg";
 import IconClearInput from "../../assets/svgs/ClearInput.svg";
 import qappDevelopText from "../../assets/svgs/qappDevelopText.svg";
 import qappDots from "../../assets/svgs/qappDots.svg";
+import ReturnSVG from '../../assets/svgs/Return.svg'
 
 import { Spacer } from "../../common/Spacer";
 import { AppInfoSnippet } from "./AppInfoSnippet";
 import { Virtuoso } from "react-virtuoso";
 import { executeEvent } from "../../utils/events";
+import { ComposeP, MailIconImg, ShowMessageReturnButton } from "../Group/Forum/Mail-styles";
 const officialAppList = [
   "q-tube",
   "q-blog",
@@ -159,6 +161,15 @@ export const AppsLibrary = ({  availableQapps, setMode, myName, hasPublishApp, i
           </AppsSearchContainer>
         </Box>
         </AppsWidthLimiter>
+        <Spacer height="25px" />
+        <ShowMessageReturnButton sx={{
+            padding: '2px'
+          }} onClick={() => {
+                    setMode('home')
+                  }}>
+                    <MailIconImg src={ReturnSVG} />
+                    <ComposeP>Return to Apps Dashboard</ComposeP>
+                  </ShowMessageReturnButton>
         <Spacer height="25px" />
         {searchedList?.length > 0 ? (
            <AppsWidthLimiter>

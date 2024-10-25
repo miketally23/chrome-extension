@@ -3,6 +3,7 @@ import {
   AppCircle,
   AppCircleContainer,
   AppCircleLabel,
+  AppLibrarySubTitle,
   AppsContainer,
   AppsParent,
 } from "./Apps-styles";
@@ -12,9 +13,26 @@ import { getBaseApiReact } from "../../App";
 import LogoSelected from "../../assets/svgs/LogoSelected.svg";
 import { executeEvent } from "../../utils/events";
 import { SortablePinnedApps } from "./SortablePinnedApps";
+import { Spacer } from "../../common/Spacer";
 
 export const AppsHome = ({  setMode, myApp, myWebsite, availableQapps  }) => {
   return (
+    <>
+    <AppsContainer
+        sx={{
+        
+          justifyContent: "flex-start",
+        }}
+      >
+    <AppLibrarySubTitle
+   
+  >
+    Apps Dashboard
+
+  </AppLibrarySubTitle>
+  </AppsContainer>
+  <Spacer height="20px" />
+
       <AppsContainer>
         <ButtonBase
           onClick={() => {
@@ -32,5 +50,6 @@ export const AppsHome = ({  setMode, myApp, myWebsite, availableQapps  }) => {
         <SortablePinnedApps availableQapps={availableQapps} myWebsite={myWebsite} myApp={myApp}  />
     
       </AppsContainer>
+      </>
   );
 };

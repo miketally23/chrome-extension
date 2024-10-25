@@ -44,6 +44,8 @@ import {
   AppsDesktopLibraryHeader,
 } from "./AppsDesktop-styles";
 import { AppsNavBarDesktop } from "./AppsNavBarDesktop";
+import ReturnSVG from '../../assets/svgs/Return.svg'
+import { ComposeP, MailIconImg, ShowMessageReturnButton } from "../Group/Forum/Mail-styles";
 const officialAppList = [
   "q-tube",
   "q-blog",
@@ -217,7 +219,17 @@ export const AppsLibraryDesktop = ({
             width: "90%",
           }}
         >
-          <Spacer height="90px" />
+           
+          <Spacer height="70px" />
+          <ShowMessageReturnButton sx={{
+            padding: '2px'
+          }} onClick={() => {
+                    setMode('home')
+                  }}>
+                    <MailIconImg src={ReturnSVG} />
+                    <ComposeP>Return to Apps Dashboard</ComposeP>
+                  </ShowMessageReturnButton>
+                  <Spacer height="20px" />
           {searchedList?.length > 0 ? (
             <AppsWidthLimiter>
               <StyledVirtuosoContainer

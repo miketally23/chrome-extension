@@ -5,7 +5,7 @@ export const sortablePinnedAppsAtom = atom({
   key: 'sortablePinnedAppsFromAtom', 
   default: [{
     name: 'Q-Tube',
-    servic: 'APP'
+    service: 'APP'
   }, {
     name: 'Q-Mail',
     service: 'APP'

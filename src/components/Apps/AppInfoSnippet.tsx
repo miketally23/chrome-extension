@@ -12,16 +12,23 @@ import {
   AppInfoUserName,
 } from "./Apps-styles";
 import { Avatar,  ButtonBase } from "@mui/material";
-import { getBaseApiReact } from "../../App";
+import { getBaseApiReact, isMobile } from "../../App";
 import LogoSelected from "../../assets/svgs/LogoSelected.svg";
 
 import { Spacer } from "../../common/Spacer";
 import { executeEvent } from "../../utils/events";
 import { AppRating } from "./AppRating";
+import { useRecoilState, useSetRecoilState } from "recoil";
+import { settingsLocalLastUpdatedAtom, sortablePinnedAppsAtom } from "../../atoms/global";
+import { saveToLocalStorage } from "./AppsNavBar";
 
 export const AppInfoSnippet = ({ app, myName, isFromCategory }) => {
 
   const isInstalled = app?.status?.status === 'READY'
+   const [sortablePinnedApps, setSortablePinnedApps] = useRecoilState(sortablePinnedAppsAtom);
+
+  const isSelectedAppPinned = !!sortablePinnedApps?.find((item)=> item?.name === app?.name && item?.service === app?.service)
+  const setSettingsLocalLastUpdated = useSetRecoilState(settingsLocalLastUpdatedAtom);
   return (
     <AppInfoSnippetContainer>
       <AppInfoSnippetLeft>
@@ -74,6 +81,7 @@ export const AppInfoSnippet = ({ app, myName, isFromCategory }) => {
         </AppCircleContainer>
       </ButtonBase>
       <AppInfoSnippetMiddle>
+        
         <ButtonBase onClick={()=> {
            if(isFromCategory){
             executeEvent("selectedAppInfoCategory", {
@@ -97,7 +105,41 @@ export const AppInfoSnippet = ({ app, myName, isFromCategory }) => {
           <AppRating app={app} myName={myName} />
       </AppInfoSnippetMiddle>
       </AppInfoSnippetLeft>
-      <AppInfoSnippetRight>
+      <AppInfoSnippetRight sx={{
+        gap: '10px'
+      }}>
+        {!isMobile && (
+               <AppDownloadButton onClick={()=> {
+          
+                setSortablePinnedApps((prev) => {
+                    let updatedApps;
+            
+                    if (isSelectedAppPinned) {
+                        // Remove the selected app if it is pinned
+                        updatedApps = prev.filter(
+                            (item) => !(item?.name === app?.name && item?.service === app?.service)
+                        );
+                    } else {
+                        // Add the selected app if it is not pinned
+                        updatedApps = [...prev, {
+                            name: app?.name,
+                            service: app?.service,
+                        }];
+                    }
+            
+                    saveToLocalStorage('ext_saved_settings', 'sortablePinnedApps', updatedApps)
+                    return updatedApps;
+                });
+                setSettingsLocalLastUpdated(Date.now())
+              }}  sx={{
+          backgroundColor: '#359ff7ff',
+                            opacity: isSelectedAppPinned ? 0.6 : 1
+      
+        }}>
+          <AppDownloadButtonText> {isSelectedAppPinned ? 'Unpin' : 'Pin'}</AppDownloadButtonText>
+        </AppDownloadButton>
+          )}
+ 
         <AppDownloadButton onClick={()=> {
           
                 executeEvent("addTab", {

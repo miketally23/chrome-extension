@@ -28,9 +28,17 @@ import LogoSelected from "../../assets/svgs/LogoSelected.svg";
 import { Spacer } from "../../common/Spacer";
 import { executeEvent } from "../../utils/events";
 import { AppRating } from "./AppRating";
+import { settingsLocalLastUpdatedAtom, sortablePinnedAppsAtom } from "../../atoms/global";
+import { saveToLocalStorage } from "./AppsNavBar";
+import { useRecoilState, useSetRecoilState } from "recoil";
 
 export const AppInfo = ({ app, myName }) => {
   const isInstalled = app?.status?.status === "READY";
+  const [sortablePinnedApps, setSortablePinnedApps] = useRecoilState(sortablePinnedAppsAtom);
+
+  const isSelectedAppPinned = !!sortablePinnedApps?.find((item)=> item?.name === app?.name && item?.service === app?.service)
+  const setSettingsLocalLastUpdated = useSetRecoilState(settingsLocalLastUpdatedAtom);
+
   return (
     <AppsLibraryContainer
       sx={{
@@ -104,6 +112,56 @@ export const AppInfo = ({ app, myName }) => {
           <AppInfoSnippetRight></AppInfoSnippetRight>
         </AppInfoSnippetContainer>
         <Spacer height="11px" />
+        <Box sx={{
+          width: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '20px'
+        }}>
+        <AppDownloadButton
+          onClick={() => {
+            setSortablePinnedApps((prev) => {
+              let updatedApps;
+      
+              if (isSelectedAppPinned) {
+                  // Remove the selected app if it is pinned
+                  updatedApps = prev.filter(
+                      (item) => !(item?.name === app?.name && item?.service === app?.service)
+                  );
+              } else {
+                  // Add the selected app if it is not pinned
+                  updatedApps = [...prev, {
+                      name: app?.name,
+                      service: app?.service,
+                  }];
+              }
+      
+              saveToLocalStorage('ext_saved_settings', 'sortablePinnedApps', updatedApps)
+              return updatedApps;
+          });
+          setSettingsLocalLastUpdated(Date.now())
+          }}
+          sx={{
+            backgroundColor: "#359ff7ff",
+            width: "100%",
+            maxWidth: "320px",
+            height: "29px",
+            opacity: isSelectedAppPinned ? 0.6 : 1
+          }}
+        >
+          <AppDownloadButtonText>
+            {!isMobile ? (
+              <>
+               {isSelectedAppPinned ? 'Unpin from dashboard' : 'Pin to dashboard'}
+              </>
+            ) : (
+              <>
+               {isSelectedAppPinned ? 'Unpin' : 'Pin'}
+              </>
+            )}
+           
+          </AppDownloadButtonText>
+          </AppDownloadButton>
         <AppDownloadButton
           onClick={() => {
             executeEvent("addTab", {
@@ -121,6 +179,8 @@ export const AppInfo = ({ app, myName }) => {
             {isInstalled ? "Open" : "Download"}
           </AppDownloadButtonText>
         </AppDownloadButton>
+        </Box>
+       
       </AppsWidthLimiter>
       <Spacer height="20px" />
       <AppsWidthLimiter>
