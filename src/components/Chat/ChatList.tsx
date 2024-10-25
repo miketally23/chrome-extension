@@ -57,6 +57,15 @@ export const ChatList = ({ initialMessages, myAddress, tempMessages, chatId, onR
     }, 500);
   }, [initialMessages, tempMessages]);
 
+  const scrollToBottom = (initialMsgs) => {
+    const index = initialMsgs ? initialMsgs.length - 1 : messages.length - 1;
+    if (rowVirtualizer) {
+      rowVirtualizer.scrollToIndex(index, { align: 'end' });
+    }
+    handleMessageSeen()
+  };
+
+
   const handleMessageSeen = useCallback(() => {
     setMessages((prevMessages) =>
       prevMessages.map((msg) => ({
@@ -74,12 +83,6 @@ export const ChatList = ({ initialMessages, myAddress, tempMessages, chatId, onR
   //   }
   // };
 
-  const scrollToBottom = (initialMsgs) => {
-    const index = initialMsgs ? initialMsgs.length - 1 : messages.length - 1;
-    if (rowVirtualizer) {
-      rowVirtualizer.scrollToIndex(index, { align: 'end' });
-    }
-  };
 
   const sentNewMessageGroupFunc = useCallback(() => {
     scrollToBottom();
