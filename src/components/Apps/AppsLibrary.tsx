@@ -165,7 +165,8 @@ export const AppsLibrary = ({  availableQapps, setMode, myName, hasPublishApp, i
         <ShowMessageReturnButton sx={{
             padding: '2px'
           }} onClick={() => {
-                    setMode('home')
+            executeEvent("navigateBack", {});
+
                   }}>
                     <MailIconImg src={ReturnSVG} />
                     <ComposeP>Return to Apps Dashboard</ComposeP>
