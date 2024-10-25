@@ -360,7 +360,7 @@ export const NotAuthenticated = ({
             </Box>
             {currentNode?.url === "http://127.0.0.1:12391" && (
               <>
-                <Button variant="contained" component="label">
+                <Button size="small" variant="contained" component="label">
                   {apiKey ? "Change " : "Import "} apiKey.txt
                   <input
                     type="file"
@@ -373,13 +373,14 @@ export const NotAuthenticated = ({
                   fontSize: '12px',
                   visibility: importedApiKey ? 'visible' : 'hidden'
                 }}>{`api key : ${importedApiKey}`}</Typography>
-                <Spacer height="5px" />
+           
 
              
                
               </>
             )}
              <Button
+             size="small"
                   onClick={() => {
                     setShow(true);
                   }}
