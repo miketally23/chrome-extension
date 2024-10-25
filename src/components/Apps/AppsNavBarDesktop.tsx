@@ -181,7 +181,8 @@ export const AppsNavBarDesktop = () => {
           ))}
         </Tabs>
       </AppsNavBarLeft>
-      <AppsNavBarRight
+      {selectedTab && (
+        <AppsNavBarRight
         sx={{
           gap: "10px",
           flexDirection: "column",
@@ -216,6 +217,8 @@ export const AppsNavBarDesktop = () => {
           />
         </ButtonBase>
       </AppsNavBarRight>
+      )}
+      
       <Menu
         id="navbar-more-mobile"
         anchorEl={anchorEl}
