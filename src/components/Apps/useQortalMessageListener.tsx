@@ -1,5 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import FileSaver from 'file-saver';
+import { executeEvent } from '../../utils/events';
+import { useSetRecoilState } from 'recoil';
+import { navigationControllerAtom } from '../../atoms/global';
 class Semaphore {
 	constructor(count) {
 		this.count = count
@@ -313,13 +316,54 @@ const UIQortalRequests = [
     return obj; // Updated object with references to stored files
   }
 
-export const useQortalMessageListener = (frameWindow) => {
+export const useQortalMessageListener = (frameWindow, iframeRef, tabId) => {
   const [path, setPath] = useState('')
+  const [history, setHistory] = useState({
+    customQDNHistoryPaths: [],
+currentIndex: -1,
+isDOMContentLoaded: false
+  })
+  const setHasSettingsChangedAtom = useSetRecoilState(navigationControllerAtom);
+
+ 
+  useEffect(()=> {
+    if(tabId && !isNaN(history?.currentIndex)){
+      setHasSettingsChangedAtom((prev)=> {
+        return {
+          ...prev,
+          [tabId]: {
+            hasBack: history?.currentIndex > 0,
+          }
+        }
+      })
+    }
+  }, [history?.currentIndex, tabId])
+
+
+  const changeCurrentIndex = useCallback((value)=> {
+    setHistory((prev)=> {
+      return {
+        ...prev,
+        currentIndex: value
+      }
+    })
+  }, [])
+
+  const resetHistory = useCallback(()=> {
+    setHistory({
+      customQDNHistoryPaths: [],
+  currentIndex: -1,
+  isManualNavigation: true,
+  isDOMContentLoaded: false
+    })
+  }, [])
+
   useEffect(() => {
 
     const listener = async (event) => {
-      event.preventDefault(); // Prevent default behavior
-      event.stopImmediatePropagation(); // Stop other listeners from firing
+      console.log('eventreactt', event)
+      // event.preventDefault(); // Prevent default behavior
+      // event.stopImmediatePropagation(); // Stop other listeners from firing
 
       if (event?.data?.requestedHandler !== 'UI') return;
 
@@ -377,6 +421,39 @@ export const useQortalMessageListener = (frameWindow) => {
       event?.data?.action === 'QDN_RESOURCE_DISPLAYED'){
         const pathUrl = event?.data?.path != null ? (event?.data?.path.startsWith('/') ? '' : '/') + event?.data?.path : null
         setPath(pathUrl)
+      } else if(event?.data?.action === 'NAVIGATION_HISTORY'){
+        if(event?.data?.payload?.isDOMContentLoaded){
+          setHistory((prev)=> {
+            const copyPrev = {...prev}
+            if((copyPrev?.customQDNHistoryPaths || []).at(-1) === (event?.data?.payload?.customQDNHistoryPaths || []).at(-1)) {
+              console.log('customQDNHistoryPaths.length', prev?.customQDNHistoryPaths.length)
+              return {
+                ...prev,
+                currentIndex: prev.customQDNHistoryPaths.length - 1 === -1 ? 0 : prev.customQDNHistoryPaths.length - 1
+              }
+            }
+            const copyHistory = {...prev}
+            const paths = [...(copyHistory?.customQDNHistoryPaths || []), ...(event?.data?.payload?.customQDNHistoryPaths || [])]
+            console.log('paths', paths)
+            return {
+              ...prev,
+              customQDNHistoryPaths: paths,
+              currentIndex: paths.length - 1
+            }
+          })
+        } else {
+          setHistory(event?.data?.payload)
+
+        }
+      } else  if(event?.data?.action === 'SET_TAB'){
+        executeEvent("addTab", {
+          data: event?.data?.payload
+        })
+        iframeRef.current.contentWindow.postMessage(
+          { action: 'SET_TAB_SUCCESS', requestedHandler: 'UI',payload: {
+            name: event?.data?.payload?.name
+          }  }, '*'
+        );
       }
     };
 
@@ -402,6 +479,6 @@ export const useQortalMessageListener = (frameWindow) => {
     }
   });
 
-  return {path}
+  return {path, history, resetHistory, changeCurrentIndex}
 };
 

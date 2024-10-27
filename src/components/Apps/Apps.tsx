@@ -1,20 +1,17 @@
-import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import React, {  useEffect, useMemo, useRef, useState } from "react";
 import { AppsHome } from "./AppsHome";
 import { Spacer } from "../../common/Spacer";
-import { MyContext, getBaseApiReact } from "../../App";
+import {  getBaseApiReact } from "../../App";
 import { AppInfo } from "./AppInfo";
 import {
   executeEvent,
   subscribeToEvent,
   unsubscribeFromEvent,
 } from "../../utils/events";
-import { AppsNavBar } from "./AppsNavBar";
 import { AppsParent } from "./Apps-styles";
-import { AppViewer } from "./AppViewer";
 import AppViewerContainer from "./AppViewerContainer";
 import ShortUniqueId from "short-unique-id";
 import { AppPublish } from "./AppPublish";
-import { useRecoilState } from "recoil";
 import { AppsCategory } from "./AppsCategory";
 import { AppsLibrary } from "./AppsLibrary";
 
@@ -28,6 +25,7 @@ export const Apps = ({ mode, setMode, show , myName}) => {
   const [selectedTab, setSelectedTab] = useState(null);
   const [isNewTabWindow, setIsNewTabWindow] = useState(false);
   const [categories, setCategories] = useState([])
+  const iframeRefs = useRef({});
 
 
   const myApp = useMemo(()=> {
@@ -158,33 +156,26 @@ export const Apps = ({ mode, setMode, show , myName}) => {
 
   
   const navigateBackFunc = (e) => {
-    if(mode === 'category'){
-      setMode("library");
-      setSelectedCategory(null)
-    } else if (mode === "appInfo-from-category") {
-      setMode("category");
-    } else if (mode === "appInfo") {
-      setMode("library");
-    } else if (mode === "library") {
-      if (isNewTabWindow) {
-        setMode("viewer");
-      } else {
-        setMode("home");
-      }
-    } else if(mode === 'publish'){
-      setMode('library')
-    } else {
-      const iframeId = `browser-iframe-${selectedTab?.tabId}`;
-      const iframe = document.getElementById(iframeId);
-      // Go Back in the iframe's history
-      if (iframe) {
-        if (iframe && iframe.contentWindow) {
-          const iframeWindow = iframe.contentWindow;
-          if (iframeWindow && iframeWindow.history) {
-            iframeWindow.history.back();
-          }
+    if (['category', 'appInfo-from-category', 'appInfo', 'library', 'publish'].includes(mode)) {
+      // Handle the various modes as needed
+      if (mode === 'category') {
+        setMode('library');
+        setSelectedCategory(null);
+      } else if (mode === 'appInfo-from-category') {
+        setMode('category');
+      } else if (mode === 'appInfo') {
+        setMode('library');
+      } else if (mode === 'library') {
+        if (isNewTabWindow) {
+          setMode('viewer');
+        } else {
+          setMode('home');
         }
+      } else if (mode === 'publish') {
+        setMode('library');
       }
+    } else if(selectedTab?.tabId) {
+      executeEvent(`navigateBackApp-${selectedTab?.tabId}`, {})
     }
   };
 
@@ -309,11 +300,16 @@ export const Apps = ({ mode, setMode, show , myName}) => {
       {mode === "publish" && !selectedTab &&  <AppPublish names={myName ?  [myName] : []} categories={categories} />}
 
       {tabs.map((tab) => {
+          if (!iframeRefs.current[tab.tabId]) {
+            iframeRefs.current[tab.tabId] = React.createRef();
+          }
         return (
           <AppViewerContainer
+          key={tab?.tabId}
             hide={isNewTabWindow}
             isSelected={tab?.tabId === selectedTab?.tabId}
             app={tab}
+            ref={iframeRefs.current[tab.tabId]}
           />
         );
       })}

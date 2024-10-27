@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   AppsNavBarLeft,
   AppsNavBarParent,
@@ -26,6 +26,7 @@ import PushPinIcon from "@mui/icons-material/PushPin";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import { useRecoilState, useSetRecoilState } from "recoil";
 import {
+  navigationControllerAtom,
   settingsLocalLastUpdatedAtom,
   sortablePinnedAppsAtom,
 } from "../../atoms/global";
@@ -64,6 +65,8 @@ export function saveToLocalStorage(key, subKey, newValue) {
 export const AppsNavBarDesktop = () => {
   const [tabs, setTabs] = useState([]);
   const [selectedTab, setSelectedTab] = useState(null);
+  const [navigationController, setNavigationController] =  useRecoilState(navigationControllerAtom)
+
   const [isNewTabWindow, setIsNewTabWindow] = useState(false);
   const tabsRef = useRef(null);
   const [anchorEl, setAnchorEl] = useState(null);
@@ -71,6 +74,7 @@ export const AppsNavBarDesktop = () => {
   const [sortablePinnedApps, setSortablePinnedApps] = useRecoilState(
     sortablePinnedAppsAtom
   );
+
 
   const setSettingsLocalLastUpdated = useSetRecoilState(
     settingsLocalLastUpdatedAtom
@@ -99,11 +103,22 @@ export const AppsNavBarDesktop = () => {
     }
   }, [tabs.length]); // Dependency on the number of tabs
 
+
+
+  const isDisableBackButton = useMemo(()=> {
+    if(selectedTab && navigationController[selectedTab?.tabId]?.hasBack) return false
+    if(selectedTab && !navigationController[selectedTab?.tabId]?.hasBack) return true
+    return false
+  }, [navigationController, selectedTab])
+
+
+
+
   const setTabsToNav = (e) => {
     const { tabs, selectedTab, isNewTabWindow } = e.detail?.data;
 
     setTabs([...tabs]);
-    setSelectedTab(!selectedTab ? nulll : { ...selectedTab });
+    setSelectedTab(!selectedTab ? null : { ...selectedTab });
     setIsNewTabWindow(isNewTabWindow);
   };
 
@@ -114,6 +129,8 @@ export const AppsNavBarDesktop = () => {
       unsubscribeFromEvent("setTabsToNav", setTabsToNav);
     };
   }, []);
+
+ 
 
   const isSelectedAppPinned = !!sortablePinnedApps?.find(
     (item) =>
@@ -138,7 +155,12 @@ export const AppsNavBarDesktop = () => {
       >
         <ButtonBase
           onClick={() => {
-            executeEvent("navigateBack", {});
+            executeEvent("navigateBack", selectedTab?.tabId);
+          }}
+          disabled={isDisableBackButton}
+          sx={{
+            opacity: !isDisableBackButton ? 1 : 0.1,
+            cursor: !isDisableBackButton ? 'pointer': 'default'
           }}
         >
           <img src={NavBack} />

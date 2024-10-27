@@ -8,15 +8,10 @@ import {
   subscribeToEvent,
   unsubscribeFromEvent,
 } from "../../utils/events";
-import { AppsNavBar } from "./AppsNavBar";
 import { AppsParent } from "./Apps-styles";
-import { AppViewer } from "./AppViewer";
 import AppViewerContainer from "./AppViewerContainer";
 import ShortUniqueId from "short-unique-id";
 import { AppPublish } from "./AppPublish";
-import { useRecoilState } from "recoil";
-import { AppsCategory } from "./AppsCategory";
-import { AppsLibrary } from "./AppsLibrary";
 import { AppsLibraryDesktop } from "./AppsLibraryDesktop";
 import { AppsCategoryDesktop } from "./AppsCategoryDesktop";
 import { AppsNavBarDesktop } from "./AppsNavBarDesktop";
@@ -36,8 +31,7 @@ export const AppsDesktop = ({ mode, setMode, show , myName, goToHome, setDesktop
   const [selectedTab, setSelectedTab] = useState(null);
   const [isNewTabWindow, setIsNewTabWindow] = useState(false);
   const [categories, setCategories] = useState([])
-
-
+  const iframeRefs = useRef({});
   const myApp = useMemo(()=> {
    
    return availableQapps.find((app)=> app.name === myName && app.service === 'APP')
@@ -164,37 +158,35 @@ export const AppsDesktop = ({ mode, setMode, show , myName, goToHome, setDesktop
     };
   }, []);
 
+
+
+
+
   
   const navigateBackFunc = (e) => {
-    if(mode === 'category'){
-      setMode("library");
-      setSelectedCategory(null)
-    } else if (mode === "appInfo-from-category") {
-      setMode("category");
-    } else if (mode === "appInfo") {
-      setMode("library");
-    } else if (mode === "library") {
-      if (isNewTabWindow) {
-        setMode("viewer");
-      } else {
-        setMode("home");
-      }
-    } else if(mode === 'publish'){
-      setMode('library')
-    } else {
-      const iframeId = `browser-iframe-${selectedTab?.tabId}`;
-      const iframe = document.getElementById(iframeId);
-      // Go Back in the iframe's history
-      if (iframe) {
-        if (iframe && iframe.contentWindow) {
-          const iframeWindow = iframe.contentWindow;
-          if (iframeWindow && iframeWindow.history) {
-            iframeWindow.history.back();
-          }
+    if (['category', 'appInfo-from-category', 'appInfo', 'library', 'publish'].includes(mode)) {
+      // Handle the various modes as needed
+      if (mode === 'category') {
+        setMode('library');
+        setSelectedCategory(null);
+      } else if (mode === 'appInfo-from-category') {
+        setMode('category');
+      } else if (mode === 'appInfo') {
+        setMode('library');
+      } else if (mode === 'library') {
+        if (isNewTabWindow) {
+          setMode('viewer');
+        } else {
+          setMode('home');
         }
+      } else if (mode === 'publish') {
+        setMode('library');
       }
+    } else if(selectedTab?.tabId) {
+      executeEvent(`navigateBackApp-${selectedTab?.tabId}`, {})
     }
   };
+  
 
   useEffect(() => {
     subscribeToEvent("navigateBack", navigateBackFunc);
@@ -217,6 +209,8 @@ export const AppsDesktop = ({ mode, setMode, show , myName, goToHome, setDesktop
     setIsNewTabWindow(false);
   };
 
+
+
   useEffect(() => {
     subscribeToEvent("addTab", addTabFunc);
 
@@ -224,7 +218,6 @@ export const AppsDesktop = ({ mode, setMode, show , myName, goToHome, setDesktop
       unsubscribeFromEvent("addTab", addTabFunc);
     };
   }, [tabs]);
-
   const setSelectedTabFunc = (e) => {
     const data = e.detail?.data;
 
@@ -240,6 +233,7 @@ export const AppsDesktop = ({ mode, setMode, show , myName, goToHome, setDesktop
     }, 100);
     setIsNewTabWindow(false);
   };
+  
 
   useEffect(() => {
     subscribeToEvent("setSelectedTab", setSelectedTabFunc);
@@ -364,7 +358,7 @@ export const AppsDesktop = ({ mode, setMode, show , myName, goToHome, setDesktop
         </ButtonBase>
         <Save isDesktop />
         {mode !== 'home' && (
-                 <AppsNavBarDesktop />
+                 <AppsNavBarDesktop  />
 
         )}
 
@@ -398,13 +392,17 @@ export const AppsDesktop = ({ mode, setMode, show , myName, goToHome, setDesktop
       {mode === "appInfo-from-category" && !selectedTab && <AppInfo app={selectedAppInfo} myName={myName} />}
       <AppsCategoryDesktop  availableQapps={availableQapps} isShow={mode === 'category' && !selectedTab} category={selectedCategory} myName={myName} />
       {mode === "publish" && !selectedTab && <AppPublish names={myName ?  [myName] : []} categories={categories} />}
-
       {tabs.map((tab) => {
+        if (!iframeRefs.current[tab.tabId]) {
+          iframeRefs.current[tab.tabId] = React.createRef();
+        }
         return (
           <AppViewerContainer
+          key={tab?.tabId}
             hide={isNewTabWindow}
             isSelected={tab?.tabId === selectedTab?.tabId}
             app={tab}
+            ref={iframeRefs.current[tab.tabId]}
           />
         );
       })}

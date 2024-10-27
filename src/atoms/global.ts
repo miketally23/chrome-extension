@@ -57,3 +57,8 @@ export const hasSettingsChangedAtom = atom({
   key: 'hasSettingsChangedAtom', 
   default: false, 
 });
+
+export const navigationControllerAtom = atom({
+  key: 'navigationControllerAtom', 
+  default: {}, 
+});
