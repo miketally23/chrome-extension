@@ -609,7 +609,7 @@ function App() {
       try {
 
         await showQortalRequest(message?.payload);
-        if (message?.payload?.checkbox1) {
+        if (qortalRequestCheckbox1Ref.current) {
          
           sendResponse({
             accepted: true,
@@ -631,6 +631,14 @@ function App() {
 
         await showQortalRequestExtension(message?.payload);
        
+        if (qortalRequestCheckbox1Ref.current) {
+         
+          sendResponse({
+            accepted: true,
+            checkbox1: qortalRequestCheckbox1Ref.current,
+          });
+          return;
+        }
         sendResponse({ accepted: true });
       } catch (error) {
         sendResponse({ accepted: false });
