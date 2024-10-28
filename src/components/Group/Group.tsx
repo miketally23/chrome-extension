@@ -88,6 +88,9 @@ import { ExitIcon } from "../../assets/Icons/ExitIcon";
 import { HomeDesktop } from "./HomeDesktop";
 import { DesktopFooter } from "../Desktop/DesktopFooter";
 import { DesktopHeader } from "../Desktop/DesktopHeader";
+import { Apps } from "../Apps/Apps";
+import { AppsNavBar } from "../Apps/AppsNavBar";
+import { AppsDesktop } from "../Apps/AppsDesktop";
 
 // let touchStartY = 0;
 // let disablePullToRefresh = false;
@@ -373,7 +376,11 @@ export const Group = ({
   isOpenDrawerProfile,
   setIsOpenDrawerProfile,
   logoutFunc,
+  setDesktopViewMode,
+  desktopViewMode
 }: GroupProps) => {
+  const [desktopSideView, setDesktopSideView] = useState('groups')
+
   const [secretKey, setSecretKey] = useState(null);
   const [secretKeyPublishDate, setSecretKeyPublishDate] = useState(null);
   const lastFetchedSecretKey = useRef(null);
@@ -418,7 +425,6 @@ export const Group = ({
   const [mutedGroups, setMutedGroups] = useState([]);
   const [mobileViewMode, setMobileViewMode] = useState("home");
   const [mobileViewModeKeepOpen, setMobileViewModeKeepOpen] = useState("");
-  const [desktopSideView, setDesktopSideView] = useState('groups')
   const isFocusedRef = useRef(true);
   const timestampEnterDataRef = useRef({});
   const selectedGroupRef = useRef(null);
@@ -431,7 +437,22 @@ export const Group = ({
   const { clearStatesMessageQueueProvider } = useMessageQueue();
   const initiatedGetMembers = useRef(false);
   const [groupChatTimestamps, setGroupChatTimestamps] = React.useState({});
+  const [appsMode, setAppsMode] = useState('home')
+  const [isOpenSideViewDirects, setIsOpenSideViewDirects] = useState(false)
+  const [isOpenSideViewGroups, setIsOpenSideViewGroups] = useState(false)
 
+  const toggleSideViewDirects = ()=> {
+    if(isOpenSideViewGroups){
+      setIsOpenSideViewGroups(false)
+    }
+    setIsOpenSideViewDirects((prev)=> !prev)
+  }
+  const toggleSideViewGroups = ()=> {
+    if(isOpenSideViewDirects){
+      setIsOpenSideViewDirects(false)
+    }
+    setIsOpenSideViewGroups((prev)=> !prev)
+  }
   useEffect(()=> {
     timestampEnterDataRef.current = timestampEnterData
   }, [timestampEnterData])
@@ -821,98 +842,7 @@ export const Group = ({
     }
   }, [selectedGroup]);
 
-  // const handleNotification = async (data)=> {
-  //   try {
-  //     if(isFocusedRef.current){
-  //       throw new Error('isFocused')
-  //     }
-  //     const newActiveChats= data
-  //     const oldActiveChats =  await new Promise((res, rej) => {
-  //       chrome?.runtime?.sendMessage(
-  //         {
-  //           action: "getChatHeads",
-  //         },
-  //         (response) => {
-  //           console.log({ response });
-  //           if (!response?.error) {
-  //             res(response);
-  //           }
-  //           rej(response.error);
-  //         }
-  //       );
-  //     });
-
-  //   let results = []
-  //   newActiveChats?.groups?.forEach(newChat => {
-  //     let isNewer = true;
-  //     oldActiveChats?.data?.groups?.forEach(oldChat => {
-  //         if (newChat?.timestamp <= oldChat?.timestamp) {
-  //             isNewer = false;
-  //         }
-  //     });
-  //     if (isNewer) {
-  //       results.push(newChat)
-  //         console.log('This newChat is newer than all oldChats:', newChat);
-  //     }
-  // });
-
-  //     if(results?.length > 0){
-  //       if (!lastGroupNotification.current || (Date.now() - lastGroupNotification.current >= 60000)) {
-  //         console.log((Date.now() - lastGroupNotification.current >= 60000), lastGroupNotification.current)
-  //         chrome?.runtime?.sendMessage(
-  //           {
-  //             action: "notification",
-  //             payload: {
-  //             },
-  //           },
-  //           (response) => {
-  //             console.log({ response });
-  //             if (!response?.error) {
-
-  //             }
-
-  //           }
-  //         );
-  //         audio.play();
-  //         lastGroupNotification.current = Date.now()
-
-  //       }
-  //     }
-
-  //   } catch (error) {
-  //     console.log('error not', error)
-  //     if(!isFocusedRef.current){
-  //       chrome?.runtime?.sendMessage(
-  //         {
-  //           action: "notification",
-  //           payload: {
-  //           },
-  //         },
-  //         (response) => {
-  //           console.log({ response });
-  //           if (!response?.error) {
-
-  //           }
-
-  //         }
-  //       );
-  //       audio.play();
-  //       lastGroupNotification.current = Date.now()
-  //     }
-
-  //   } finally {
-
-  //       chrome?.runtime?.sendMessage(
-  //         {
-  //           action: "setChatHeads",
-  //           payload: {
-  //             data,
-  //           },
-  //         }
-  //       );
-
-  //   }
-  // }
+ 
 
   const getAdmins = async (groupId) => {
     try {
@@ -1176,6 +1106,7 @@ export const Group = ({
     if (findDirect) {
       if(!isMobile){
         setDesktopSideView("directs");
+        setDesktopViewMode('home')
       } else {
         setMobileViewModeKeepOpen("messaging");
       }
@@ -1213,6 +1144,7 @@ export const Group = ({
     if (findDirect) {
       if(!isMobile){
         setDesktopSideView("directs");
+        setDesktopViewMode('home')
       } else {
         setMobileViewModeKeepOpen("messaging");
       }
@@ -1236,6 +1168,7 @@ export const Group = ({
     } else {
       if(!isMobile){
         setDesktopSideView("directs");
+        setDesktopViewMode('home')
       } else {
         setMobileViewModeKeepOpen("messaging");
       }
@@ -1402,6 +1335,8 @@ export const Group = ({
       setTimeout(() => {
         setSelectedGroup(findGroup);
         setMobileViewMode("group");
+        setDesktopSideView('groups')
+        setDesktopViewMode('home')
         getTimestampEnterChat();
         isLoadingOpenSectionFromNotification.current = false;
       }, 200);
@@ -1449,7 +1384,8 @@ export const Group = ({
       setTimeout(() => {
         setSelectedGroup(findGroup);
         setMobileViewMode("group");
-
+        setDesktopSideView('groups')
+        setDesktopViewMode('home')
         getGroupAnnouncements();
       }, 200);
     }
@@ -1504,6 +1440,8 @@ export const Group = ({
       setTimeout(() => {
         setSelectedGroup(findGroup);
         setMobileViewMode("group");
+        setDesktopSideView('groups')
+        setDesktopViewMode('home')
         getGroupAnnouncements();
       }, 200);
     }
@@ -1527,6 +1465,8 @@ export const Group = ({
     }
     if (!isMobile) {
     }
+    setDesktopViewMode('home')
+
     setGroupSection("default");
     clearAllQueues();
     await new Promise((res) => {
@@ -1550,6 +1490,8 @@ export const Group = ({
     setMemberCountFromSecretKeyData(null);
     setTriedToFetchSecretKey(false);
     setFirstSecretKeyInCreation(false);
+    setIsOpenSideViewDirects(false)
+    setIsOpenSideViewGroups(false)
   };
 
   const goToAnnouncements = async () => {
@@ -2025,6 +1967,8 @@ export const Group = ({
                 //   }
                 onClick={() => {
                   setMobileViewMode("group");
+                  setDesktopSideView('groups')
+                  setDesktopViewMode('home')
                   initiatedGetMembers.current = false;
                   clearAllQueues();
                   setSelectedDirect(null);
@@ -2228,7 +2172,7 @@ export const Group = ({
          isThin={
            mobileViewMode === "groups" ||
            mobileViewMode === "group" ||
-           mobileViewModeKeepOpen === "messaging"
+           mobileViewModeKeepOpen === "messaging" || (mobileViewMode === "apps" && appsMode !== 'home')
          }
          logoutFunc={logoutFunc}
          goToHome={goToHome}
@@ -2253,8 +2197,8 @@ export const Group = ({
           alignItems: "flex-start",
         }}
       >
-        {!isMobile && desktopSideView === 'groups' && renderGroups()}
-        {!isMobile && desktopSideView === 'directs' && renderDirects()}
+        {!isMobile && ((desktopSideView === 'groups' && desktopViewMode !== 'apps') || isOpenSideViewGroups) && renderGroups()}
+        {!isMobile && ((desktopSideView === 'directs'  && desktopViewMode !== 'apps') || isOpenSideViewDirects) && renderDirects()}
 
         <Box
           sx={{
@@ -2711,10 +2655,16 @@ export const Group = ({
           groupsAnnHasUnread}
         hasUnreadDirects={directChatHasUnread}
         myName={userInfo?.name || null}
-        isHome={groupSection === "home"}
-        isGroups={desktopSideView === 'groups'}
-        isDirects={desktopSideView === 'directs'}
+        isHome={groupSection === "home" && desktopViewMode === 'home'}
+        isGroups={desktopSideView === 'groups' && desktopViewMode !== 'apps'}
+        isDirects={desktopSideView === 'directs' && desktopViewMode !== 'apps'}
+        setDesktopViewMode={setDesktopViewMode}
+        isApps={desktopViewMode === 'apps'}
         setDesktopSideView={setDesktopSideView}
+        desktopViewMode={desktopViewMode}
+        hide={desktopViewMode === 'apps'}
+        setIsOpenSideViewDirects={setIsOpenSideViewDirects}
+        setIsOpenSideViewGroups={setIsOpenSideViewGroups}
         />
       )}
           {isMobile && mobileViewMode === "home" && (
@@ -2733,11 +2683,19 @@ export const Group = ({
               setMobileViewMode={setMobileViewMode}
             />
           )}
-          {
-          !isMobile && !selectedGroup &&
-          groupSection === "home" && (
-           
-<HomeDesktop
+          {isMobile  && (
+            <Apps mode={appsMode} setMode={setAppsMode} show={mobileViewMode === "apps"} myName={userInfo?.name} />
+          )}
+            {!isMobile  && (
+            <AppsDesktop toggleSideViewGroups={toggleSideViewGroups} toggleSideViewDirects={toggleSideViewDirects} goToHome={goToHome} mode={appsMode} setMode={setAppsMode} setDesktopSideView={setDesktopSideView} hasUnreadDirects={directChatHasUnread} show={desktopViewMode === "apps"} myName={userInfo?.name}  isGroups={isOpenSideViewGroups}
+            isDirects={isOpenSideViewDirects}    hasUnreadGroups={groupChatHasUnread ||
+              groupsAnnHasUnread} />
+          )}
+      
+     
+      {!isMobile && !selectedGroup &&
+          groupSection === "home"  && desktopViewMode !== "apps" && (
+        <HomeDesktop
   refreshHomeDataFunc={refreshHomeDataFunc}
   myAddress={myAddress}
   isLoadingGroups={isLoadingGroups}
@@ -2751,7 +2709,9 @@ export const Group = ({
   setOpenAddGroup={setOpenAddGroup}
   setMobileViewMode={setMobileViewMode}
 />
-          )}
+      )}
+
+    
         </Box>
         <AuthenticatedContainerInnerRight
           sx={{
@@ -2759,188 +2719,10 @@ export const Group = ({
             width: "31px",
             // minWidth: "135px",
             padding: "5px",
-            display: isMobile ? "none" : "flex",
+            display: (isMobile || desktopViewMode === 'apps') ? "none" : "flex",
           }}
         >
-          {/* <Spacer height="20px" />
-          <Box
-            sx={{
-              display: "flex",
-              gap: "3px",
-              alignItems: "center",
-              justifyContent: "flex-start",
-              width: "100%",
-              cursor: "pointer",
-            }}
-            onClick={goToHome}
-          >
-            <HomeIcon
-              sx={{
-                cursor: "pointer",
-                color: groupSection === "home" ? "#1444c7" : "white",
-                opacity: groupSection === "home" ? 1 : 0.4,
-              }}
-            />
-            <Typography
-              sx={{
-                fontSize: "12px",
-                color: groupSection === "home" ? "#1444c7" : "white",
-                opacity: groupSection === "home" ? 1 : 0.4,
-              }}
-            >
-              Home
-            </Typography>
-          </Box>
-          {selectedGroup && (
-            <>
-              <Spacer height="20px" />
-              <Box
-                sx={{
-                  display: "flex",
-                  gap: "3px",
-                  alignItems: "center",
-                  justifyContent: "flex-start",
-                  width: "100%",
-                  cursor: "pointer",
-                }}
-                onClick={goToAnnouncements}
-              >
-                <CampaignIcon
-                  sx={{
-                    cursor: "pointer",
-                    color: isUnread
-                      ? "red"
-                      : groupSection === "announcement"
-                      ? "#1444c7"
-                      : "white",
-                    opacity: groupSection === "announcement" ? 1 : 0.4,
-                  }}
-                />
-                <Typography
-                  sx={{
-                    fontSize: "12px",
-                    color: isUnread
-                      ? "red"
-                      : groupSection === "announcement"
-                      ? "#1444c7"
-                      : "white",
-                    opacity: groupSection === "announcement" ? 1 : 0.4,
-                  }}
-                >
-                  Announcements
-                </Typography>
-              </Box>
-
-              <Spacer height="20px" />
-              <Box
-                sx={{
-                  display: "flex",
-                  gap: "3px",
-                  alignItems: "center",
-                  justifyContent: "flex-start",
-                  width: "100%",
-                  cursor: "pointer",
-                }}
-                onClick={goToChat}
-              >
-                <ChatIcon
-                  sx={{
-                    cursor: "pointer",
-                    color: isUnreadChat
-                      ? "red"
-                      : groupSection === "chat"
-                      ? "#1444c7"
-                      : "white",
-                    opacity: groupSection === "chat" ? 1 : 0.4,
-                  }}
-                />
-                <Typography
-                  sx={{
-                    fontSize: "12px",
-                    color: isUnreadChat
-                      ? "red"
-                      : groupSection === "chat"
-                      ? "#1444c7"
-                      : "white",
-                    opacity: groupSection === "chat" ? 1 : 0.4,
-                  }}
-                >
-                  Chat
-                </Typography>
-              </Box>
-
-              <Spacer height="20px" />
-              <Box
-                sx={{
-                  display: "flex",
-                  gap: "3px",
-                  alignItems: "center",
-                  justifyContent: "flex-start",
-                  width: "100%",
-                  cursor: "pointer",
-                }}
-                onClick={() => {
-                  setGroupSection("forum");
-                  setSelectedDirect(null);
-                  setNewChat(false);
-                }}
-              >
-                <ForumIcon
-                  sx={{
-                    cursor: "pointer",
-                    color: groupSection === "forum" ? "#1444c7" : "white",
-                    opacity: groupSection === "forum" ? 1 : 0.4,
-                  }}
-                />
-                <Typography
-                  sx={{
-                    fontSize: "12px",
-                    color: groupSection === "forum" ? "#1444c7" : "white",
-                    opacity: groupSection === "forum" ? 1 : 0.4,
-                  }}
-                >
-                  Forum
-                </Typography>
-              </Box>
-              <Spacer height="20px" />
-              <Box
-                onClick={() => setOpenManageMembers(true)}
-                sx={{
-                  display: "flex",
-                  gap: "3px",
-                  alignItems: "center",
-                  justifyContent: "flex-start",
-                  width: "100%",
-                  cursor: "pointer",
-                }}
-              >
-                <PeopleIcon
-                  sx={{
-                    cursor: "pointer",
-                    color: "white",
-                    opacity: 0.4,
-                  }}
-                />
-                <Typography
-                  sx={{
-                    fontSize: "12px",
-                    color: "white",
-                    opacity: 0.4,
-                  }}
-                >
-                  Members
-                </Typography>
-              </Box>
-              <Spacer height="20px" />
-            </>
-          )} */}
-
-          {/* <SettingsIcon
-              sx={{
-                cursor: "pointer",
-                color: "white",
-              }}
-            /> */}
+     
         </AuthenticatedContainerInnerRight>
         <LoadingSnackbar
           open={isLoadingGroup}
@@ -2958,7 +2740,7 @@ export const Group = ({
         />
       </div>
      
-      {isMobile && mobileViewMode === "home" && !mobileViewModeKeepOpen && (
+      {(isMobile && mobileViewMode === "home" || (isMobile && mobileViewMode === "apps" && appsMode === 'home')) &&  !mobileViewModeKeepOpen && (
         <>
           <div
             style={{
@@ -3000,240 +2782,13 @@ export const Group = ({
           )}
         </>
       )}
+       {(isMobile &&  mobileViewMode === "apps" && appsMode !== 'home') &&  !mobileViewModeKeepOpen && (
+        <>
+          <AppsNavBar />
+        </>
+      )}
     </>
   );
 };
 
-// {isMobile && (
-//   <Box
-//     sx={{
-//       display: "flex",
-//       alignItems: "center",
-//       justifyContent: "center",
-//       flexDirection: "column",
-//       width: "100%",
-//       height: "75px", // Keep the height at 75px
-//       background: "rgba(0, 0, 0, 0.1)",
-//       padding: "0px", // Remove unnecessary padding
-//     }}
-//   >
-//     <Grid
-//       container
-//       spacing={0.5}
-//       sx={{ width: "100%", justifyContent: "space-around" }}
-//     >
-//       {selectedGroup && (
-//         <>
-//           <Grid item xs={4} sx={{
-//             display: 'flex'
-//           }}>
-//             <Button
-//               fullWidth
-//               size="small"
-//               variant="contained"
-//               startIcon={<AnnouncementsIcon />}
-//               sx={{
-//                 padding: "4px 6px",
-//                 color:
-//                   groupSection === "announcement" ? "black" : "white",
-//                 backgroundColor: isUnread
-//                   ? "red"
-//                   : groupSection === "announcement"
-//                   ? "white"
-//                   : "black",
-//                 "&:hover": {
-//                   backgroundColor: isUnread
-//                     ? "red"
-//                     : groupSection === "announcement"
-//                     ? "white"
-//                     : "black",
-//                 },
-//                 "&:active": {
-//                   backgroundColor: isUnread
-//                     ? "red"
-//                     : groupSection === "announcement"
-//                     ? "white"
-//                     : "black",
-//                 },
-//                 "&:focus": {
-//                   backgroundColor: isUnread
-//                     ? "red"
-//                     : groupSection === "announcement"
-//                     ? "white"
-//                     : "black",
-//                 },
-//               }}
-//               onClick={goToAnnouncements}
-//             >
-//               ANN
-//             </Button>
-//           </Grid>
-//           <Grid item xs={4} sx={{
-//             display: 'flex'
-//           }}>
-//             <Button
-//               fullWidth
-//               size="small"
-//               variant="contained"
-//               startIcon={<ChatIcon />}
-//               sx={{
-//                 padding: "4px 6px",
-//                 color: groupSection === "chat" ? "black" : "white",
-//                 backgroundColor: isUnreadChat
-//                   ? "red"
-//                   : groupSection === "chat"
-//                   ? "white"
-//                   : "black",
-//                 "&:hover": {
-//                   backgroundColor: isUnreadChat
-//                     ? "red"
-//                     : groupSection === "chat"
-//                     ? "white"
-//                     : "black", // Same logic for hover
-//                 },
-//                 "&:active": {
-//                   backgroundColor: isUnreadChat
-//                     ? "red"
-//                     : groupSection === "chat"
-//                     ? "white"
-//                     : "black", // Same logic for active
-//                 },
-//                 "&:focus": {
-//                   backgroundColor: isUnreadChat
-//                     ? "red"
-//                     : groupSection === "chat"
-//                     ? "white"
-//                     : "black", // Same logic for focus
-//                 },
-//               }}
-//               onClick={goToChat}
-//             >
-//               Chat
-//             </Button>
-//           </Grid>
-//           <Grid item xs={4} sx={{
-//             display: 'flex'
-//           }}>
-//             <Button
-//               fullWidth
-//               size="small"
-//               variant="contained"
-//               startIcon={<ForumIcon />}
-//               sx={{
-//                 padding: "4px 6px",
-//                 color: groupSection === "forum" ? "black" : "white",
-//                 backgroundColor:
-//                   groupSection === "forum" ? "white" : "black",
-//                   "&:hover": {
-//                     backgroundColor: groupSection === "forum" ? "white" : "black", // Hover state
-//                   },
-//                   "&:active": {
-//                     backgroundColor: groupSection === "forum" ? "white" : "black", // Active state
-//                   },
-//                   "&:focus": {
-//                     backgroundColor: groupSection === "forum" ? "white" : "black", // Focus state
-//                   },
-//               }}
-//               onClick={() => {
-//                 setSelectedDirect(null);
-//                 setNewChat(false)
-//                 setGroupSection("forum")
-//               } }
-//             >
-//               Forum
-//             </Button>
-//           </Grid>
-//           <Grid item xs={4} sx={{
-//             display: 'flex'
-//           }}>
-//             <Button
-//               fullWidth
-//               size="small"
-//               variant="contained"
-//               startIcon={<GroupIcon />}
-//               sx={{ padding: "4px 6px", backgroundColor: "black",  "&:hover": {
-//                 backgroundColor:  "black", // Hover state
-//               },
-//               "&:active": {
-//                 backgroundColor:  "black", // Active state
-//               },
-//               "&:focus": {
-//                 backgroundColor:  "black", // Focus state
-//               }, }}
-//               onClick={() => setOpenManageMembers(true)}
-//             >
-//               Members
-//             </Button>
-//           </Grid>
-//         </>
-//       )}
 
-//       {/* Second row: Groups, Home, Profile */}
-//       <Grid item xs={4} sx={{
-//             display: 'flex',
-//           }}>
-//         <Button
-//           fullWidth
-//           size="small"
-//           variant="contained"
-//           startIcon={<GroupIcon />}
-//           sx={{
-//             padding: "2px 4px",
-//             backgroundColor:
-//               groupChatHasUnread ||
-//               groupsAnnHasUnread ||
-//               directChatHasUnread
-//                 ? "red"
-//                 : "black",
-//                 "&:hover": {
-//                   backgroundColor:
-//                     groupChatHasUnread || groupsAnnHasUnread || directChatHasUnread
-//                       ? "red"
-//                       : "black", // Hover state follows the same logic
-//                 },
-//                 "&:active": {
-//                   backgroundColor:
-//                     groupChatHasUnread || groupsAnnHasUnread || directChatHasUnread
-//                       ? "red"
-//                       : "black", // Active state follows the same logic
-//                 },
-//                 "&:focus": {
-//                   backgroundColor:
-//                     groupChatHasUnread || groupsAnnHasUnread || directChatHasUnread
-//                       ? "red"
-//                       : "black", // Focus state follows the same logic
-//                 },
-//           }}
-//           onClick={() => {
-//             setIsOpenDrawer(true);
-//             setDrawerMode("groups");
-//           }}
-//         >
-//           {chatMode === "groups" ? "Groups" : "Direct"}
-//         </Button>
-//       </Grid>
-//       <Grid item xs={2} sx={{
-//             display: 'flex',
-//             justifyContent: 'center'
-//           }}>
-//         <IconButton
-//           sx={{ padding: "0", color: "white" }} // Reduce padding for icons
-//           onClick={goToHome}
-//         >
-//           <HomeIcon />
-//         </IconButton>
-//       </Grid>
-//       <Grid item xs={2}  sx={{
-//             display: 'flex',
-//             justifyContent: 'center'
-//           }}>
-//         <IconButton
-//           sx={{ padding: "0", color: "white" }} // Reduce padding for icons
-//           onClick={() => setIsOpenDrawerProfile(true)}
-//         >
-//           <PersonIcon />
-//         </IconButton>
-//       </Grid>
-//     </Grid>
-//   </Box>
-// )}

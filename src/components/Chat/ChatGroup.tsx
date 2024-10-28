@@ -97,27 +97,28 @@ export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey,
    }
 
    const middletierFunc = async (data: any, groupId: string) => {
-      try {
-        if (hasInitialized.current) {
-          decryptMessages(data, true);
-          return;
-        }
-        hasInitialized.current = true;
-        const url = `${getBaseApiReact()}/chat/messages?txGroupId=${groupId}&encoding=BASE64&limit=0&reverse=false`;
-        const response = await fetch(url, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-        const responseData = await response.json();
-        decryptMessages(responseData, false);
-      } catch (error) {
-        console.error(error);
+    try {
+      if (hasInitialized.current) {
+        decryptMessages(data, true);
+        return;
       }
-   }
+      hasInitialized.current = true;
+      const url = `${getBaseApiReact()}/chat/messages?txGroupId=${groupId}&encoding=BASE64&limit=0&reverse=false`;
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      const responseData = await response.json();
+      decryptMessages(responseData, false);
+    } catch (error) {
+      console.error(error);
+    }
+ }
 
-    const decryptMessages = ( encryptedMessages: any[], isInitiated: boolean )=> {
+ 
+    const decryptMessages = (encryptedMessages: any[], isInitiated: boolean )=> {
       try {
         if(!secretKeyRef.current){
           checkForFirstSecretKeyNotification(encryptedMessages)
@@ -231,6 +232,7 @@ export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey,
                   }
                 } )
                 setMessages(formatted)
+              
                 setChatReferences((prev) => {
                   let organizedChatReferences = { ...prev };
                 

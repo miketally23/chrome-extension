@@ -134,6 +134,7 @@ export const GroupMenu = ({ setGroupSection, groupSection, setOpenManageMembers,
                   "& .MuiTypography-root": {
                     fontSize: "12px",
                     fontWeight: 600,
+                    color: hasUnreadChat ? "var(--unread)" :"#fff"
                   },
                 }} primary="Chat" />
         </MenuItem>
@@ -153,6 +154,7 @@ export const GroupMenu = ({ setGroupSection, groupSection, setOpenManageMembers,
                   "& .MuiTypography-root": {
                     fontSize: "12px",
                     fontWeight: 600,
+                    color: hasUnreadAnnouncements ? "var(--unread)" :"#fff"
                   },
                 }} primary="Announcements" />
         </MenuItem>

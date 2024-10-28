@@ -153,7 +153,6 @@ export const publishData = async ({
 			fee = feeAmount
 		} else if (withFee) {
 			const res = await getArbitraryFee()
-
 			if (res.fee) {
 				fee = res.fee
 			} else {
@@ -162,9 +161,8 @@ export const publishData = async ({
 		}
 		
 		let transactionBytes = await uploadData(registeredName, file, fee)
-
-		if (transactionBytes.error) {
-			throw new Error(transactionBytes.message || 'Error when uploading')
+		if (!transactionBytes || transactionBytes.error) {
+			throw new Error(transactionBytes?.message || 'Error when uploading')
 		} else if (transactionBytes.includes('Error 500 Internal Server Error')) {
 			throw new Error('Error when uploading')
 		}
@@ -183,7 +181,7 @@ export const publishData = async ({
 	}
 
 	const uploadData = async (registeredName: string, file:any, fee: number) => {
-		if (identifier != null && identifier.trim().length > 0) {
+
 			let postBody = ''
 			let urlSuffix = ''
 
@@ -211,8 +209,7 @@ export const publishData = async ({
 			}
 			
 			let uploadDataUrl = `/arbitrary/${service}/${registeredName}${urlSuffix}`
-
-			if (identifier.trim().length > 0) {
+			if (identifier?.trim().length > 0) {
 				uploadDataUrl = `/arbitrary/${service}/${registeredName}/${identifier}${urlSuffix}`
 			}
 			
@@ -256,7 +253,7 @@ export const publishData = async ({
 			}
 
             return await reusablePost(uploadDataUrl, postBody)
-		}
+		
 	}
 
 	try {

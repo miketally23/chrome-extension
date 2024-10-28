@@ -29,7 +29,8 @@ export const MessageItem = ({
   scrollToItem,
   handleReaction,
   reactions,
-  isUpdating
+  isUpdating,
+  lastSignature
 }) => {
   const { ref, inView } = useInView({
     threshold: 0.7, // Fully visible
@@ -42,9 +43,10 @@ export const MessageItem = ({
     }
   }, [inView, message.id, message.unread, onSeen]);
 
+
   return (
     <div
-      ref={isLast ? ref : null}
+      ref={lastSignature === message?.signature ? ref : null}
       style={{
         padding: "10px",
         backgroundColor: "#232428",

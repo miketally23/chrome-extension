@@ -42,7 +42,7 @@ import Logout from "./assets/svgs/Logout.svg";
 import Return from "./assets/svgs/Return.svg";
 import Success from "./assets/svgs/Success.svg";
 import Info from "./assets/svgs/Info.svg";
-import CloseIcon from '@mui/icons-material/Close';
+import CloseIcon from "@mui/icons-material/Close";
 
 import {
   createAccount,
@@ -70,27 +70,42 @@ import { Spacer } from "./common/Spacer";
 import { Loader } from "./components/Loader";
 import { PasswordField, ErrorText } from "./components";
 import { ChatGroup } from "./components/Chat/ChatGroup";
-import { Group,  requestQueueMemberNames } from "./components/Group/Group";
+import { Group, requestQueueMemberNames } from "./components/Group/Group";
 import { TaskManger } from "./components/TaskManager/TaskManger";
 import { useModal } from "./common/useModal";
 import { LoadingButton } from "@mui/lab";
 import { Label } from "./components/Group/AddGroup";
 import { CustomizedSnackbars } from "./components/Snackbar/Snackbar";
-import SettingsIcon from '@mui/icons-material/Settings';
+import SettingsIcon from "@mui/icons-material/Settings";
 import {
+  cleanUrl,
   getFee,
+  getProtocol,
   groupApi,
   groupApiLocal,
   groupApiSocket,
   groupApiSocketLocal,
 } from "./background";
-import { executeEvent, subscribeToEvent, unsubscribeFromEvent } from "./utils/events";
-import { requestQueueCommentCount, requestQueuePublishedAccouncements } from "./components/Chat/GroupAnnouncements";
+import {
+  executeEvent,
+  subscribeToEvent,
+  unsubscribeFromEvent,
+} from "./utils/events";
+import {
+  requestQueueCommentCount,
+  requestQueuePublishedAccouncements,
+} from "./components/Chat/GroupAnnouncements";
 import { requestQueueGroupJoinRequests } from "./components/Group/GroupJoinRequests";
 import { DrawerComponent } from "./components/Drawer/Drawer";
 import { AddressQRCode } from "./components/AddressQRCode";
 import { Settings } from "./components/Group/Settings";
 import { MainAvatar } from "./components/MainAvatar";
+import { useRetrieveDataLocalStorage } from "./useRetrieveDataLocalStorage";
+import { useQortalGetSaveSettings } from "./useQortalGetSaveSettings";
+import { useRecoilState, useResetRecoilState } from "recoil";
+import { canSaveSettingToQdnAtom, fullScreenAtom, hasSettingsChangedAtom, oldPinnedAppsAtom, settingsLocalLastUpdatedAtom, settingsQDNLastUpdatedAtom, sortablePinnedAppsAtom } from "./atoms/global";
+import { useAppFullScreen } from "./useAppFullscreen";
+import { NotAuthenticated } from "./ExtStates/NotAuthenticated";
 
 type extStates =
   | "not-authenticated"
@@ -134,11 +149,11 @@ const defaultValues: MyContextInterface = {
     message: "",
   },
 };
-export let isMobile = false
+export let isMobile = false;
 
 const isMobileDevice = () => {
   const userAgent = navigator.userAgent || navigator.vendor || window.opera;
-  
+
   if (/android/i.test(userAgent)) {
     return true; // Android device
   }
@@ -151,7 +166,7 @@ const isMobileDevice = () => {
 };
 
 if (isMobileDevice()) {
-  isMobile = true
+  isMobile = true;
   console.log("Running on a mobile device");
 } else {
   console.log("Running on a desktop");
@@ -161,14 +176,14 @@ export const allQueues = {
   requestQueueCommentCount: requestQueueCommentCount,
   requestQueuePublishedAccouncements: requestQueuePublishedAccouncements,
   requestQueueMemberNames: requestQueueMemberNames,
-  requestQueueGroupJoinRequests: requestQueueGroupJoinRequests
-}
+  requestQueueGroupJoinRequests: requestQueueGroupJoinRequests,
+};
 
 const controlAllQueues = (action) => {
   Object.keys(allQueues).forEach((key) => {
     const val = allQueues[key];
     try {
-      if (typeof val[action] === 'function') {
+      if (typeof val[action] === "function") {
         val[action]();
       }
     } catch (error) {
@@ -186,50 +201,39 @@ export const clearAllQueues = () => {
       console.error(error);
     }
   });
-}
+};
 
 export const pauseAllQueues = () => {
-  controlAllQueues('pause');
-  chrome?.runtime?.sendMessage(
-    {
-      action: "pauseAllQueues",
-      payload: {
-      
-      },
-    }
-  );
-} 
+  controlAllQueues("pause");
+  chrome?.runtime?.sendMessage({
+    action: "pauseAllQueues",
+    payload: {},
+  });
+};
 export const resumeAllQueues = () => {
-  controlAllQueues('resume');
-  chrome?.runtime?.sendMessage(
-    {
-      action: "resumeAllQueues",
-      payload: {
-      
-      },
-    }
-  );
-}
-
+  controlAllQueues("resume");
+  chrome?.runtime?.sendMessage({
+    action: "resumeAllQueues",
+    payload: {},
+  });
+};
 
 export const MyContext = createContext<MyContextInterface>(defaultValues);
 
 export let globalApiKey: string | null = null;
 
 export const getBaseApiReact = (customApi?: string) => {
-  
   if (customApi) {
     return customApi;
   }
 
   if (globalApiKey) {
-    return groupApiLocal;
+    return globalApiKey?.url;
   } else {
     return groupApi;
   }
 };
 // export const getArbitraryEndpointReact = () => {
-  
 
 //   if (globalApiKey) {
 //     return `/arbitrary/resources/search`;
@@ -238,22 +242,19 @@ export const getBaseApiReact = (customApi?: string) => {
 //   }
 // };
 export const getArbitraryEndpointReact = () => {
-  
-
   if (globalApiKey) {
-    return `/arbitrary/resources/search`;
+    return `/arbitrary/resources/searchsimple`;
   } else {
     return `/arbitrary/resources/searchsimple`;
   }
 };
 export const getBaseApiReactSocket = (customApi?: string) => {
-  
   if (customApi) {
     return customApi;
   }
 
   if (globalApiKey) {
-    return groupApiSocketLocal;
+    return `${getProtocol(globalApiKey?.url) === 'http' ? 'ws://': 'wss://'}${cleanUrl(globalApiKey?.url)}`
   } else {
     return groupApiSocket;
   }
@@ -261,6 +262,8 @@ export const getBaseApiReactSocket = (customApi?: string) => {
 export const isMainWindow = window?.location?.href?.includes("?main=true");
 function App() {
   const [extState, setExtstate] = useState<extStates>("not-authenticated");
+  const [desktopViewMode, setDesktopViewMode] = useState('home')
+
   const [backupjson, setBackupjson] = useState<any>(null);
   const [rawWallet, setRawWallet] = useState<any>(null);
   const [ltcBalanceLoading, setLtcBalanceLoading] = useState<boolean>(false);
@@ -300,10 +303,27 @@ function App() {
   const [txList, setTxList] = useState([]);
   const [memberGroups, setMemberGroups] = useState([]);
   const [isFocused, setIsFocused] = useState(true);
- 
+  const [hasSettingsChanged, setHasSettingsChanged] =  useRecoilState(hasSettingsChangedAtom)
   const holdRefExtState = useRef<extStates>("not-authenticated");
   const isFocusedRef = useRef<boolean>(true);
   const { isShow, onCancel, onOk, show, message } = useModal();
+  const { isShow: isShowUnsavedChanges, onCancel:  onCancelUnsavedChanges, onOk: onOkUnsavedChanges, show:  showUnsavedChanges, message: messageUnsavedChanges } = useModal();
+
+  const {
+    onCancel: onCancelQortalRequest,
+    onOk: onOkQortalRequest,
+    show: showQortalRequest,
+    isShow: isShowQortalRequest,
+    message: messageQortalRequest,
+  } = useModal();
+  const {
+    onCancel: onCancelQortalRequestExtension,
+    onOk: onOkQortalRequestExtension,
+    show: showQortalRequestExtension,
+    isShow: isShowQortalRequestExtension,
+    message: messageQortalRequestExtension,
+  } = useModal();
+  
   const [openRegisterName, setOpenRegisterName] = useState(false);
   const registerNamePopoverRef = useRef(null);
   const [isLoadingRegisterName, setIsLoadingRegisterName] = useState(false);
@@ -311,47 +331,81 @@ function App() {
   const [infoSnack, setInfoSnack] = useState(null);
   const [openSnack, setOpenSnack] = useState(false);
   const [hasLocalNode, setHasLocalNode] = useState(false);
-  const [openAdvancedSettings, setOpenAdvancedSettings] = useState(false);
-  const [useLocalNode, setUseLocalNode] = useState(false);
-  const [confirmUseOfLocal, setConfirmUseOfLocal] = useState(false);
   const [isOpenDrawerProfile, setIsOpenDrawerProfile] = useState(false);
   const [apiKey, setApiKey] = useState("");
-  const [isOpenSendQort, setIsOpenSendQort] = useState(false)
-  const [isOpenSendQortSuccess, setIsOpenSendQortSuccess] = useState(false)
-  const [rootHeight, setRootHeight] = useState('100%')
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const [isOpenSendQort, setIsOpenSendQort] = useState(false);
+  const [isOpenSendQortSuccess, setIsOpenSendQortSuccess] = useState(false);
+  const [rootHeight, setRootHeight] = useState("100%");
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const qortalRequestCheckbox1Ref = useRef(null);
+  useRetrieveDataLocalStorage()
+  useQortalGetSaveSettings(userInfo?.name)
+  const [fullScreen, setFullScreen] = useRecoilState(fullScreenAtom);
+
+  const { toggleFullScreen } = useAppFullScreen(setFullScreen);
+
   useEffect(() => {
-    if(!isMobile) return
+      // Attach a global event listener for double-click
+      const handleDoubleClick = () => {
+          toggleFullScreen();
+      };
+
+      // Add the event listener to the root HTML document
+      document.documentElement.addEventListener('dblclick', handleDoubleClick);
+
+      // Clean up the event listener on unmount
+      return () => {
+          document.documentElement.removeEventListener('dblclick', handleDoubleClick);
+      };
+  }, [toggleFullScreen]);
+  //resets for recoil
+  const resetAtomSortablePinnedAppsAtom = useResetRecoilState(sortablePinnedAppsAtom);
+  const resetAtomCanSaveSettingToQdnAtom = useResetRecoilState(canSaveSettingToQdnAtom);
+  const resetAtomSettingsQDNLastUpdatedAtom = useResetRecoilState(settingsQDNLastUpdatedAtom);
+  const resetAtomSettingsLocalLastUpdatedAtom = useResetRecoilState(settingsLocalLastUpdatedAtom);
+  const resetAtomOldPinnedAppsAtom = useResetRecoilState(oldPinnedAppsAtom);
+
+  const resetAllRecoil = () => {
+    resetAtomSortablePinnedAppsAtom();
+    resetAtomCanSaveSettingToQdnAtom();
+    resetAtomSettingsQDNLastUpdatedAtom();
+    resetAtomSettingsLocalLastUpdatedAtom();
+    resetAtomOldPinnedAppsAtom();
+  };
+  useEffect(() => {
+    if (!isMobile) return;
     // Function to set the height of the app to the viewport height
     const resetHeight = () => {
-      const height = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+      const height = window.visualViewport
+        ? window.visualViewport.height
+        : window.innerHeight;
       // Set the height to the root element (usually #root)
-      document.getElementById('root').style.height = height + "px";
-      setRootHeight(height + "px")
+      document.getElementById("root").style.height = height + "px";
+      setRootHeight(height + "px");
     };
 
     // Set the initial height
     resetHeight();
 
     // Add event listeners for resize and visualViewport changes
-    window.addEventListener('resize', resetHeight);
-    window.visualViewport?.addEventListener('resize', resetHeight);
+    window.addEventListener("resize", resetHeight);
+    window.visualViewport?.addEventListener("resize", resetHeight);
 
     // Clean up the event listeners when the component unmounts
     return () => {
-      window.removeEventListener('resize', resetHeight);
-      window.visualViewport?.removeEventListener('resize', resetHeight);
+      window.removeEventListener("resize", resetHeight);
+      window.visualViewport?.removeEventListener("resize", resetHeight);
     };
   }, []);
+  const handleSetGlobalApikey = (key)=> {
+    globalApiKey = key;
+  }
   useEffect(() => {
     chrome?.runtime?.sendMessage({ action: "getApiKey" }, (response) => {
       if (response) {
-       
-        globalApiKey = response;
+        handleSetGlobalApikey(response)
         setApiKey(response);
-        setUseLocalNode(true)
-        setConfirmUseOfLocal(true)
-        setOpenAdvancedSettings(true)
+
       }
     });
   }, []);
@@ -365,19 +419,8 @@ function App() {
     isFocusedRef.current = isFocused;
   }, [isFocused]);
 
-  // Handler for file selection
-  const handleFileChangeApiKey = (event) => {
-    const file = event.target.files[0]; // Get the selected file
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const text = e.target.result; // Get the file content
-        setApiKey(text); // Store the file content in the state
-      };
-      reader.readAsText(file); // Read the file as text
-    }
-  };
  
+
   // const checkIfUserHasLocalNode = useCallback(async () => {
   //   try {
   //     const url = `http://127.0.0.1:12391/admin/status`;
@@ -546,8 +589,8 @@ function App() {
         if (response?.error) {
           setSendPaymentError(response.error);
         } else {
-          setIsOpenSendQort(false)
-          setIsOpenSendQortSuccess(true)
+          setIsOpenSendQort(false);
+          setIsOpenSendQortSuccess(true);
           // setExtstate("transfer-success-regular");
           // setSendPaymentSuccess("Payment successfully sent");
         }
@@ -561,51 +604,86 @@ function App() {
     setRequestAuthentication(null);
   };
 
+  const qortalRequestPermisson = async (message, sender, sendResponse) => {
+    if (message.action === "QORTAL_REQUEST_PERMISSION" && !isMainWindow) {
+      try {
+
+        await showQortalRequest(message?.payload);
+        if (qortalRequestCheckbox1Ref.current) {
+         
+          sendResponse({
+            accepted: true,
+            checkbox1: qortalRequestCheckbox1Ref.current,
+          });
+          return;
+        }
+        sendResponse({ accepted: true });
+      } catch (error) {
+        sendResponse({ accepted: false });
+      } finally {
+        window.close();
+      }
+    }
+  };
+  const qortalRequestPermissonFromExtension = async (message, sender, sendResponse) => {
+    if (message.action === "QORTAL_REQUEST_PERMISSION" && isMainWindow) {
+      try {
+
+        await showQortalRequestExtension(message?.payload);
+       
+        if (qortalRequestCheckbox1Ref.current) {
+         
+          sendResponse({
+            accepted: true,
+            checkbox1: qortalRequestCheckbox1Ref.current,
+          });
+          return;
+        }
+        sendResponse({ accepted: true });
+      } catch (error) {
+        sendResponse({ accepted: false });
+      } 
+    }
+  };
+
   useEffect(() => {
     // Listen for messages from the background script
-    chrome.runtime?.onMessage.addListener((message, sender, sendResponse) => {
-      // Check if the message is to update the state
+    const messageListener = (message, sender, sendResponse) => {
+      // Handle various actions
       if (
         message.action === "UPDATE_STATE_CONFIRM_SEND_QORT" &&
         !isMainWindow
       ) {
-        // Update the component state with the received 'sendqort' state
         setSendqortState(message.payload);
         setExtstate("web-app-request-payment");
       } else if (message.action === "closePopup" && !isMainWindow) {
-        // Update the component state with the received 'sendqort' state
         window.close();
       } else if (
         message.action === "UPDATE_STATE_REQUEST_CONNECTION" &&
         !isMainWindow
       ) {
-   
-        // Update the component state with the received 'sendqort' state
         setRequestConnection(message.payload);
         setExtstate("web-app-request-connection");
       } else if (
         message.action === "UPDATE_STATE_REQUEST_BUY_ORDER" &&
         !isMainWindow
       ) {
-        // Update the component state with the received 'sendqort' state
         setRequestBuyOrder(message.payload);
         setExtstate("web-app-request-buy-order");
       } else if (
         message.action === "UPDATE_STATE_REQUEST_AUTHENTICATION" &&
         !isMainWindow
       ) {
-        // Update the component state with the received 'sendqort' state
         setRequestAuthentication(message.payload);
         setExtstate("web-app-request-authentication");
       } else if (message.action === "SET_COUNTDOWN" && !isMainWindow) {
         setCountdown(message.payload);
       } else if (message.action === "INITIATE_MAIN") {
-        // Update the component state with the received 'sendqort' state
         setIsMain(true);
         isMainRef.current = true;
       } else if (message.action === "CHECK_FOCUS" && isMainWindow) {
-        
-        sendResponse(isFocusedRef.current);
+        sendResponse(isFocusedRef.current); // Synchronous response
+        return true; // Return true if you plan to send a response asynchronously
       } else if (
         message.action === "NOTIFICATION_OPEN_DIRECT" &&
         isMainWindow
@@ -632,9 +710,30 @@ function App() {
           data: message.payload.data,
         });
       }
-    });
-  }, []);
 
+      // Call the permission request handler for "QORTAL_REQUEST_PERMISSION"
+      qortalRequestPermisson(message, sender, sendResponse);
+      if (message.action === "QORTAL_REQUEST_PERMISSION" && !isMainWindow) {
+        return true; // Return true to indicate an async response is coming
+      }
+      if (message.action === "QORTAL_REQUEST_PERMISSION" && isMainWindow && message?.isFromExtension) {
+        qortalRequestPermissonFromExtension(message, sender, sendResponse);
+        return true;
+      }
+      if (message.action === "QORTAL_REQUEST_PERMISSION" && isMainWindow) {
+      
+        return;
+      }
+    };
+
+    // Add message listener
+    chrome.runtime?.onMessage.addListener(messageListener);
+
+    // Clean up the listener on component unmount
+    return () => {
+      chrome.runtime?.onMessage.removeListener(messageListener);
+    };
+  }, []);
 
   //param = isDecline
   const confirmPayment = (isDecline: boolean) => {
@@ -696,7 +795,7 @@ function App() {
             crosschainAtInfo: requestBuyOrder?.crosschainAtInfo,
             interactionId: requestBuyOrder?.interactionId,
             isDecline: true,
-            useLocal: requestBuyOrder?.useLocal
+            useLocal: requestBuyOrder?.useLocal,
           },
         },
         (response) => {
@@ -714,7 +813,7 @@ function App() {
           crosschainAtInfo: requestBuyOrder?.crosschainAtInfo,
           interactionId: requestBuyOrder?.interactionId,
           isDecline: false,
-          useLocal: requestBuyOrder?.useLocal
+          useLocal: requestBuyOrder?.useLocal,
         },
       },
       (response) => {
@@ -767,7 +866,6 @@ function App() {
           )
             return;
 
-         
           setExtstate("authenticated");
         }
       });
@@ -892,12 +990,15 @@ function App() {
               wallet,
               qortAddress: wallet.address0,
             });
-            chrome?.runtime?.sendMessage({ action: "userInfo" }, (response2) => {
-              setIsLoading(false);
-              if (response2 && !response2.error) {
-                setUserInfo(response);
+            chrome?.runtime?.sendMessage(
+              { action: "userInfo" },
+              (response2) => {
+                setIsLoading(false);
+                if (response2 && !response2.error) {
+                  setUserInfo(response);
+                }
               }
-            });
+            );
             getBalanceFunc();
           } else if (response?.error) {
             setIsLoading(false);
@@ -911,8 +1012,11 @@ function App() {
     }
   };
 
-  const logoutFunc = () => {
+  const logoutFunc = async () => {
     try {
+      if(hasSettingsChanged){
+        await showUnsavedChanges({message: 'Your settings have changed. If you logout you will lose your changes. Click on the save button in the header to keep your changed settings.'})
+      }
       chrome?.runtime?.sendMessage({ action: "logout" }, (response) => {
         if (response) {
           resetAllStates();
@@ -932,8 +1036,8 @@ function App() {
     setWalletToBeDownloaded(null);
     setWalletToBeDownloadedPassword("");
     setExtstate("authenticated");
-    setIsOpenSendQort(false)
-    setIsOpenSendQortSuccess(false)
+    setIsOpenSendQort(false);
+    setIsOpenSendQortSuccess(false);
   };
 
   const resetAllStates = () => {
@@ -959,14 +1063,10 @@ function App() {
     setWalletToBeDownloadedPasswordConfirm("");
     setWalletToBeDownloadedError("");
     setSendqortState(null);
-    globalApiKey = null;
-    setApiKey("");
-    setUseLocalNode(false);
     setHasLocalNode(false);
-    setOpenAdvancedSettings(false);
-    setConfirmUseOfLocal(false)
-    setTxList([])
-    setMemberGroups([])
+    setTxList([]);
+    setMemberGroups([]);
+    resetAllRecoil()
   };
 
   function roundUpToDecimals(number, decimals = 8) {
@@ -1048,7 +1148,7 @@ function App() {
     const handleBeforeUnload = (e) => {
       e.preventDefault();
       e.returnValue = ""; // This is required for Chrome to display the confirmation dialog.
-      return ""; 
+      return "";
     };
 
     // Add the event listener when the component mounts
@@ -1065,24 +1165,18 @@ function App() {
     // Handler for when the window gains focus
     const handleFocus = () => {
       setIsFocused(true);
-      if(isMobile){
-        chrome?.runtime?.sendMessage(
-          {
-            action: "clearAllNotifications",
-            payload: {
-            
-            },
-          }
-        );
+      if (isMobile) {
+        chrome?.runtime?.sendMessage({
+          action: "clearAllNotifications",
+          payload: {},
+        });
       }
-      
-      console.log("Webview is focused");
+
     };
 
     // Handler for when the window loses focus
     const handleBlur = () => {
       setIsFocused(false);
-      console.log("Webview is not focused");
     };
 
     // Attach the event listeners
@@ -1093,20 +1187,14 @@ function App() {
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
         setIsFocused(true);
-        if(isMobile){
-          chrome?.runtime?.sendMessage(
-            {
-              action: "clearAllNotifications",
-              payload: {
-              
-              },
-            }
-          );
+        if (isMobile) {
+          chrome?.runtime?.sendMessage({
+            action: "clearAllNotifications",
+            payload: {},
+          });
         }
-        console.log("Webview is visible");
       } else {
         setIsFocused(false);
-        console.log("Webview is hidden");
       }
     };
 
@@ -1120,12 +1208,11 @@ function App() {
     };
   }, []);
 
-
   const openPaymentInternal = (e) => {
     const directAddress = e.detail?.address;
-    const name = e.detail?.name
-    setIsOpenSendQort(true)
-    setPaymentTo(name || directAddress)
+    const name = e.detail?.name;
+    setIsOpenSendQort(true);
+    setPaymentTo(name || directAddress);
   };
 
   useEffect(() => {
@@ -1154,7 +1241,6 @@ function App() {
             },
           },
           (response) => {
-          
             if (!response?.error) {
               res(response);
               setIsLoadingRegisterName(false);
@@ -1199,437 +1285,280 @@ function App() {
     }
   };
 
-  const renderProfile = ()=> {
+  const renderProfile = () => {
     return (
-      <AuthenticatedContainer sx={{ width: isMobile ? '100vw' : "350px", display:  'flex', backgroundColor: 'var(--bg-2)' }}>
-      {isMobile && (
-             <Box sx={{
-              padding: '10px',
-              display: 'flex',
-              justifyContent: 'flex-end'
-          }}><CloseIcon onClick={()=> {
-              setIsOpenDrawerProfile(false)
-          }} sx={{
-              cursor: 'pointer',
-              color: 'white'
-          }} /></Box>
-        )}
-          
-      <AuthenticatedContainerInnerLeft sx={{
-        overflowY: isMobile && 'auto'
-      }}>
-      <Spacer height="48px" />
-
-      {authenticatedMode === "ltc" ? (
-        <>
-          <img src={ltcLogo} />
-          <Spacer height="32px" />
-          <CopyToClipboard text={rawWallet?.ltcAddress}>
-            <AddressBox>
-              {rawWallet?.ltcAddress?.slice(0, 6)}...
-              {rawWallet?.ltcAddress?.slice(-4)} <img src={Copy} />
-            </AddressBox>
-          </CopyToClipboard>
-          <Spacer height="10px" />
-          {ltcBalanceLoading && (
-            <CircularProgress color="success" size={16} />
-          )}
-          {!isNaN(+ltcBalance) && !ltcBalanceLoading && (
-            <Box
-              sx={{
-                gap: "10px",
-                display: "flex",
-                alignItems: "center",
+      <AuthenticatedContainer
+        sx={{
+          width: isMobile ? "100vw" : "350px",
+          display: "flex",
+          backgroundColor: "var(--bg-2)",
+        }}
+      >
+        {isMobile && (
+          <Box
+            sx={{
+              padding: "10px",
+              display: "flex",
+              justifyContent: "flex-end",
+            }}
+          >
+            <CloseIcon
+              onClick={() => {
+                setIsOpenDrawerProfile(false);
               }}
-            >
+              sx={{
+                cursor: "pointer",
+                color: "white",
+              }}
+            />
+          </Box>
+        )}
+
+        <AuthenticatedContainerInnerLeft
+          sx={{
+            overflowY: isMobile && "auto",
+          }}
+        >
+          <Spacer height="48px" />
+
+          {authenticatedMode === "ltc" ? (
+            <>
+              <img src={ltcLogo} />
+              <Spacer height="32px" />
+              <CopyToClipboard text={rawWallet?.ltcAddress}>
+                <AddressBox>
+                  {rawWallet?.ltcAddress?.slice(0, 6)}...
+                  {rawWallet?.ltcAddress?.slice(-4)} <img src={Copy} />
+                </AddressBox>
+              </CopyToClipboard>
+              <Spacer height="10px" />
+              {ltcBalanceLoading && (
+                <CircularProgress color="success" size={16} />
+              )}
+              {!isNaN(+ltcBalance) && !ltcBalanceLoading && (
+                <Box
+                  sx={{
+                    gap: "10px",
+                    display: "flex",
+                    alignItems: "center",
+                  }}
+                >
+                  <TextP
+                    sx={{
+                      textAlign: "center",
+                      lineHeight: "24px",
+                      fontSize: "20px",
+                      fontWeight: 700,
+                    }}
+                  >
+                    {ltcBalance} LTC
+                  </TextP>
+                  <RefreshIcon
+                    onClick={getLtcBalanceFunc}
+                    sx={{
+                      fontSize: "16px",
+                      color: "white",
+                      cursor: "pointer",
+                    }}
+                  />
+                </Box>
+              )}
+              <AddressQRCode targetAddress={rawWallet?.ltcAddress} />
+            </>
+          ) : (
+            <>
+              <MainAvatar myName={userInfo?.name} />
+              <Spacer height="32px" />
               <TextP
                 sx={{
                   textAlign: "center",
                   lineHeight: "24px",
                   fontSize: "20px",
-                  fontWeight: 700,
                 }}
               >
-                {ltcBalance} LTC
+                {userInfo?.name}
               </TextP>
-              <RefreshIcon
-                onClick={getLtcBalanceFunc}
-                sx={{
-                  fontSize: "16px",
-                  color: "white",
-                  cursor: "pointer",
+              <Spacer height="10px" />
+              <CopyToClipboard text={rawWallet?.address0}>
+                <AddressBox>
+                  {rawWallet?.address0?.slice(0, 6)}...
+                  {rawWallet?.address0?.slice(-4)} <img src={Copy} />
+                </AddressBox>
+              </CopyToClipboard>
+              <Spacer height="10px" />
+              {qortBalanceLoading && (
+                <CircularProgress color="success" size={16} />
+              )}
+              {!qortBalanceLoading && balance >= 0 && (
+                <Box
+                  sx={{
+                    gap: "10px",
+                    display: "flex",
+                    alignItems: "center",
+                  }}
+                >
+                  <TextP
+                    sx={{
+                      textAlign: "center",
+                      lineHeight: "24px",
+                      fontSize: "20px",
+                      fontWeight: 700,
+                    }}
+                  >
+                    {balance?.toFixed(2)} QORT
+                  </TextP>
+                  <RefreshIcon
+                    onClick={getBalanceFunc}
+                    sx={{
+                      fontSize: "16px",
+                      color: "white",
+                      cursor: "pointer",
+                    }}
+                  />
+                </Box>
+              )}
+
+              <Spacer height="35px" />
+              {userInfo && !userInfo?.name && (
+                <TextP
+                  ref={registerNamePopoverRef}
+                  sx={{
+                    textAlign: "center",
+                    lineHeight: 1.2,
+                    fontSize: "16px",
+                    fontWeight: 500,
+                    cursor: "pointer",
+                    marginTop: "10px",
+                    color: "red",
+                    textDecoration: "underline",
+                  }}
+                  onClick={() => {
+                    setOpenRegisterName(true);
+                  }}
+                >
+                  REGISTER NAME
+                </TextP>
+              )}
+              <Spacer height="20px" />
+              <CustomButton
+                onClick={() => {
+                  setIsOpenSendQort(true);
+                  // setExtstate("send-qort");
+                  setIsOpenDrawerProfile(false);
                 }}
-              />
-            </Box>
+              >
+                Transfer QORT
+              </CustomButton>
+              <AddressQRCode targetAddress={rawWallet?.address0} />
+            </>
           )}
-          <AddressQRCode targetAddress={rawWallet?.ltcAddress} />
-        </>
-      ) : (
-        <>
-          <MainAvatar myName={userInfo?.name} />
-          <Spacer height="32px" />
           <TextP
             sx={{
               textAlign: "center",
               lineHeight: "24px",
-              fontSize: "20px",
+              fontSize: "12px",
+              fontWeight: 500,
+              cursor: "pointer",
+              marginTop: "10px",
+              textDecoration: "underline",
+            }}
+            onClick={() => {
+              chrome.tabs.create({ url: "https://www.qort.trade" });
             }}
           >
-            {userInfo?.name}
+            Get QORT at qort.trade
           </TextP>
-          <Spacer height="10px" />
-          <CopyToClipboard text={rawWallet?.address0}>
-            <AddressBox>
-              {rawWallet?.address0?.slice(0, 6)}...
-              {rawWallet?.address0?.slice(-4)} <img src={Copy} />
-            </AddressBox>
-          </CopyToClipboard>
-          <Spacer height="10px" />
-          {qortBalanceLoading && (
-            <CircularProgress color="success" size={16} />
-          )}
-          {!qortBalanceLoading && balance >= 0 && (
-            <Box
-              sx={{
-                gap: "10px",
-                display: "flex",
-                alignItems: "center",
-              }}
-            >
-              <TextP
-                sx={{
-                  textAlign: "center",
-                  lineHeight: "24px",
-                  fontSize: "20px",
-                  fontWeight: 700,
+        </AuthenticatedContainerInnerLeft>
+        <AuthenticatedContainerInnerRight>
+          <Spacer height="20px" />
+          <img
+            onClick={() => {
+              setExtstate("download-wallet");
+              setIsOpenDrawerProfile(false);
+            }}
+            src={Download}
+            style={{
+              cursor: "pointer",
+            }}
+          />
+          {!isMobile && (
+            <>
+              <Spacer height="20px" />
+              <img
+                src={Logout}
+                onClick={() => {
+                  logoutFunc();
+                  setIsOpenDrawerProfile(false);
                 }}
-              >
-                {balance?.toFixed(2)} QORT
-              </TextP>
-              <RefreshIcon
-                onClick={getBalanceFunc}
-                sx={{
-                  fontSize: "16px",
-                  color: "white",
+                style={{
                   cursor: "pointer",
                 }}
               />
-            </Box>
-          )}
-
-          <Spacer height="35px" />
-          {userInfo && !userInfo?.name && (
-            <TextP
-              ref={registerNamePopoverRef}
-              sx={{
-                textAlign: "center",
-                lineHeight: 1.2,
-                fontSize: "16px",
-                fontWeight: 500,
-                cursor: "pointer",
-                marginTop: "10px",
-                color: "red",
-                textDecoration: "underline",
-              }}
-              onClick={() => {
-                setOpenRegisterName(true);
-              }}
-            >
-              REGISTER NAME
-            </TextP>
+            </>
           )}
           <Spacer height="20px" />
-          <CustomButton
+
+          <ButtonBase
             onClick={() => {
-              setIsOpenSendQort(true)
-              // setExtstate("send-qort");
-              setIsOpenDrawerProfile(false)
+              setIsSettingsOpen(true);
             }}
           >
-            Transfer QORT
-          </CustomButton>
-          <AddressQRCode targetAddress={rawWallet?.address0} />
-        </>
-      )}
-      <TextP
-        sx={{
-          textAlign: "center",
-          lineHeight: "24px",
-          fontSize: "12px",
-          fontWeight: 500,
-          cursor: "pointer",
-          marginTop: "10px",
-          textDecoration: "underline",
-        }}
-        onClick={() => {
-          chrome.tabs.create({ url: "https://www.qort.trade" });
-        }}
-      >
-        Get QORT at qort.trade
-      </TextP>
-    </AuthenticatedContainerInnerLeft>
-    <AuthenticatedContainerInnerRight>
-      <Spacer height="20px" />
-      <img
-        onClick={() => {
-          setExtstate("download-wallet");
-          setIsOpenDrawerProfile(false)
-        }}
-        src={Download}
-        style={{
-          cursor: "pointer",
-        }}
-      />
-      {!isMobile && (
-        <>
-         <Spacer height="20px" />
-      <img
-        src={Logout}
-        onClick={()=> {
-          logoutFunc()
-          setIsOpenDrawerProfile(false)
-        }}
-        style={{
-          cursor: "pointer",
-        }}
-      />
-        </>
-      )}
-           <Spacer height="20px" />
-
-     <ButtonBase onClick={()=> {
-      setIsSettingsOpen(true)
-     }}>
-        <SettingsIcon sx={{
-          color: 'rgba(255, 255, 255, 0.5)'
-        }} />
-      </ButtonBase>
-      <Spacer height="20px" />
-      {authenticatedMode === "qort" && (
-        <img
-          onClick={() => {
-            setAuthenticatedMode("ltc");
-          }}
-          src={ltcLogo}
-          style={{
-            cursor: "pointer",
-            width: "20px",
-            height: "auto",
-          }}
-        />
-      )}
-      {authenticatedMode === "ltc" && (
-        <img
-          onClick={() => {
-            setAuthenticatedMode("qort");
-          }}
-          src={qortLogo}
-          style={{
-            cursor: "pointer",
-            width: "20px",
-            height: "auto",
-          }}
-        />
-      )}
-     
-    </AuthenticatedContainerInnerRight>
-    </AuthenticatedContainer>
-    )
-  }
-
-  return (
-    <AppContainer sx={{
-      height: isMobile ? '100%' : '100vh'
-    }}>
-      {/* {extState === 'group' && (
-        <Group myAddress={userInfo?.address} />
-      )} */}
-
-      {extState === "not-authenticated" && (
-        <>
-          <Spacer height="48px" />
-          <div
-            className="image-container"
-            style={{
-              width: "136px",
-              height: "154px",
-            }}
-          >
-            <img src={Logo1} className="base-image" />
-            <img src={Logo1Dark} className="hover-image" />
-          </div>
-          <Spacer height="38px" />
-          <TextP
-            sx={{
-              textAlign: "center",
-              lineHeight: "15px",
-            }}
-          >
-            WELCOME TO <TextItalic>YOUR</TextItalic> <br></br>
-            <TextSpan> QORTAL WALLET</TextSpan>
-          </TextP>
-          <Spacer height="38px" />
-          <Box
-            sx={{
-              display: "flex",
-              gap: "10px",
-              alignItems: "center",
-              marginLeft: "28px",
-            }}
-          >
-            <CustomButton {...getRootProps()}>
-              <input {...getInputProps()} />
-              Authenticate
-            </CustomButton>
-            <Tooltip
-              title="Authenticate by importing your Qortal JSON file"
-              arrow
-            >
-              <img src={Info} />
-            </Tooltip>
-          </Box>
-
-          <Spacer height="6px" />
-          <Box
-            sx={{
-              display: "flex",
-              gap: "10px",
-              alignItems: "center",
-              marginLeft: "28px",
-            }}
-          >
-            <CustomButton
-              onClick={() => {
-                setExtstate("create-wallet");
-              }}
-            >
-              Create account
-            </CustomButton>
-
-            <img
-              src={Info}
-              style={{
-                visibility: "hidden",
+            <SettingsIcon
+              sx={{
+                color: "rgba(255, 255, 255, 0.5)",
               }}
             />
-          </Box>
-        
-            <>
-              <Spacer height="15px" />
-              <Box
-                sx={{
-                  display: "flex",
-                  gap: "10px",
-                  alignItems: "center",
-                  flexDirection: "column",
-                }}
-              >
-                
-                  <Typography
-                  sx={{
-                    cursor: 'pointer',
-                    fontSize: '14px'
-                  }}
-                    onClick={() => {
-                      setOpenAdvancedSettings(true);
-                    }}
-                  >
-                    Advanced settings
-                  </Typography>
-             
-                {openAdvancedSettings && (
-                  <>
-                  <Box
-                sx={{
-                  display: "flex",
-                  gap: "10px",
-                  alignItems: "center",
-                  justifyContent: 'center',
-                  width: '100%'
-                }}
-              >
-                    <Checkbox
-                      edge="start"
-                      checked={useLocalNode}
-                      tabIndex={-1}
-                      disableRipple
-                      onChange={(event) => {
-                        setUseLocalNode(event.target.checked);
-                      }}
-                      disabled={confirmUseOfLocal}
-                      sx={{
-                        "&.Mui-checked": {
-                          color: "white", // Customize the color when checked
-                        },
-                        "& .MuiSvgIcon-root": {
-                          color: "white",
-                        },
-                      }}
-                    />
+          </ButtonBase>
+          <Spacer height="20px" />
+          {authenticatedMode === "qort" && (
+            <img
+              onClick={() => {
+                setAuthenticatedMode("ltc");
+              }}
+              src={ltcLogo}
+              style={{
+                cursor: "pointer",
+                width: "20px",
+                height: "auto",
+              }}
+            />
+          )}
+          {authenticatedMode === "ltc" && (
+            <img
+              onClick={() => {
+                setAuthenticatedMode("qort");
+              }}
+              src={qortLogo}
+              style={{
+                cursor: "pointer",
+                width: "20px",
+                height: "auto",
+              }}
+            />
+          )}
+        </AuthenticatedContainerInnerRight>
+      </AuthenticatedContainer>
+    );
+  };
 
-                    <Typography>Use local node</Typography>
-                    </Box>
-                    {useLocalNode && (
-                      <>
-                        <Button disabled={confirmUseOfLocal} variant="contained" component="label">
-                          Select apiKey.txt
-                          <input
-                            type="file"
-                            accept=".txt"
-                            hidden
-                            onChange={handleFileChangeApiKey} // File input handler
-                          />
-                        </Button>
-                        <Spacer height="5px" />
-                        <Typography
-                          sx={{
-                            fontSize: "12px",
-                          }}
-                        >
-                          {apiKey}
-                        </Typography>
-                        <Spacer height="5px" />
-                        <Button
-                          onClick={() => {
-                            const valueToSet = !confirmUseOfLocal
-                            const payload = valueToSet ? apiKey : null
-                            chrome?.runtime?.sendMessage(
-                              { action: "setApiKey", payload },
-                              (response) => {
-                                if (response) {
-                                  globalApiKey = payload;
-                               
-                                  setConfirmUseOfLocal(valueToSet)
-                                  if(!globalApiKey){
-                                    setUseLocalNode(false)
-                                    setOpenAdvancedSettings(false)
-                                    setApiKey('')
-                                  }
-                                }
-                              }
-                            );
-                          }}
-                          variant="contained"
-                          sx={{
-                            color: "white",
-                          }}
-                        >
-                          {!confirmUseOfLocal ? 'Confirm use of local node' : 'Switch back to gateway'}
-                          
-                        </Button>
-                      </>
-                    )}
-                  </>
-                )}
-              </Box>
-            </>
-        
-        </>
+  return (
+    <AppContainer
+      sx={{
+        height: isMobile ? "100%" : "100vh",
+        backgroundImage: desktopViewMode === 'apps' && 'url("appsBg.svg")',
+        backgroundSize: desktopViewMode === 'apps' &&  'cover',
+        backgroundPosition: desktopViewMode === 'apps' &&  'center',
+        backgroundRepeat: desktopViewMode === 'apps' &&  'no-repeat',
+      }}
+    >
+   
+      {extState === "not-authenticated" && (
+       <NotAuthenticated getRootProps={getRootProps} getInputProps={getInputProps} setExtstate={setExtstate}     apiKey={apiKey}  globalApiKey={globalApiKey} setApiKey={setApiKey}  handleSetGlobalApikey={handleSetGlobalApikey}/>
       )}
       {/* {extState !== "not-authenticated" && (
         <button onClick={logoutFunc}>logout</button>
       )} */}
-      {extState === "authenticated"  && isMainWindow && (
+      {extState === "authenticated" && isMainWindow && (
         <MyContext.Provider
           value={{
             txList,
@@ -1641,58 +1570,59 @@ function App() {
             onOk,
             show,
             message,
-            rootHeight
+            rootHeight,
           }}
         >
           <Box
             sx={{
               width: "100vw",
-              height: isMobile ? '100%' : "100vh",
+              height: isMobile ? "100%" : "100vh",
               display: "flex",
-              flexDirection: isMobile ? 'column' : 'row',
-              overflow: isMobile && 'hidden'
+              flexDirection: isMobile ? "column" : "row",
+              overflow: isMobile && "hidden",
             }}
           >
             <Group
-            logoutFunc={logoutFunc}
+              logoutFunc={logoutFunc}
               balance={balance}
               userInfo={userInfo}
               myAddress={address}
               isFocused={isFocused}
               isMain={isMain}
               isOpenDrawerProfile={isOpenDrawerProfile}
-               setIsOpenDrawerProfile={setIsOpenDrawerProfile}
+              setIsOpenDrawerProfile={setIsOpenDrawerProfile}
+              desktopViewMode={desktopViewMode}
+              setDesktopViewMode={setDesktopViewMode}
             />
-            {!isMobile && renderProfile()}
-           
+            {(!isMobile && desktopViewMode !== 'apps') && renderProfile()}
           </Box>
-       
-             <Box
-             sx={{
-               position: "fixed",
-               right: "25px",
-               bottom: "25px",
-               width: "350px",
-               zIndex: 100000,
-             }}
-           >
-             <TaskManger getUserInfo={getUserInfo} />
-           </Box>
-          
-         
+
+          <Box
+            sx={{
+              position: "fixed",
+              right: "25px",
+              bottom: "25px",
+              width: "350px",
+              zIndex: 100000,
+            }}
+          >
+            <TaskManger getUserInfo={getUserInfo} />
+          </Box>
         </MyContext.Provider>
       )}
       {isOpenSendQort && isMainWindow && (
-         <Box sx={{
-          width: '100%',
-          height: '100%',
-          position: 'fixed',
-          background: '#27282c',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          zIndex: 6
-        }}>
+        <Box
+          sx={{
+            width: "100%",
+            height: "100%",
+            position: "fixed",
+            background: "#27282c",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            zIndex: 6,
+          }}
+        >
           <Spacer height="22px" />
           <Box
             sx={{
@@ -1800,6 +1730,198 @@ function App() {
           </CustomButton>
         </Box>
       )}
+
+      {isShowQortalRequest && !isMainWindow && (
+        <>
+          <Spacer height="120px" />
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              width: "100%",
+            }}
+          >
+            <TextP
+              sx={{
+                lineHeight: 1.2,
+                maxWidth: "90%",
+                textAlign: "center",
+              }}
+            >
+              {messageQortalRequest?.text1}
+            </TextP>
+          </Box>
+          {messageQortalRequest?.text2 && (
+            <>
+              <Spacer height="10px" />
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "flex-start",
+                  width: "90%",
+                }}
+              >
+                <TextP
+                  sx={{
+                    lineHeight: 1.2,
+                    fontSize: "16px",
+                    fontWeight: "normal",
+                  }}
+                >
+                  {messageQortalRequest?.text2}
+                </TextP>
+              </Box>
+              <Spacer height="15px" />
+            </>
+          )}
+          {messageQortalRequest?.text3 && (
+            <>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "flex-start",
+                  width: "90%",
+                }}
+              >
+                <TextP
+                  sx={{
+                    lineHeight: 1.2,
+                    fontSize: "16px",
+                    fontWeight: "normal",
+                  }}
+                >
+                  {messageQortalRequest?.text3}
+                </TextP>
+                <Spacer height="15px" />
+              </Box>
+            </>
+          )}
+
+          {messageQortalRequest?.text4 && (
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "flex-start",
+                width: "90%",
+              }}
+            >
+              <TextP
+                sx={{
+                  lineHeight: 1.2,
+                  fontSize: "16px",
+                  fontWeight: "normal",
+                }}
+              >
+                {messageQortalRequest?.text4}
+              </TextP>
+            </Box>
+          )}
+
+          {messageQortalRequest?.html && (
+            <div
+              dangerouslySetInnerHTML={{ __html: messageQortalRequest?.html }}
+            />
+          )}
+          <Spacer height="15px" />
+       
+          <TextP
+            sx={{
+              textAlign: "center",
+              lineHeight: 1.2,
+              fontSize: "16px",
+              fontWeight: 700,
+              maxWidth: "90%",
+            }}
+          >
+            {messageQortalRequest?.highlightedText}
+          </TextP>
+
+          {messageQortalRequest?.fee && (
+            <>
+                      <Spacer height="15px" />
+
+            <TextP
+    sx={{
+                  textAlign: "center",
+                  lineHeight: 1.2,
+                  fontSize: "16px",
+                  fontWeight: "normal",
+                  maxWidth: "90%",
+                }}
+              >
+                {'Fee: '}{messageQortalRequest?.fee}{' QORT'}
+              </TextP>
+<Spacer height="15px" />
+
+            </>
+          )}
+          {messageQortalRequest?.checkbox1 && (
+            <Box
+              sx={{
+                display: "flex",
+                gap: "10px",
+                alignItems: "center",
+                justifyContent: "center",
+                width: "90%",
+                marginTop: "20px",
+              }}
+            >
+              <Checkbox
+                onChange={(e) => {
+                  qortalRequestCheckbox1Ref.current = e.target.checked;
+                }}
+                edge="start"
+                tabIndex={-1}
+                disableRipple
+                defaultChecked={messageQortalRequest?.checkbox1?.value}
+                sx={{
+                  "&.Mui-checked": {
+                    color: "white", // Customize the color when checked
+                  },
+                  "& .MuiSvgIcon-root": {
+                    color: "white",
+                  },
+                }}
+              />
+
+              <Typography
+                sx={{
+                  fontSize: "14px",
+                }}
+              >
+                {messageQortalRequest?.checkbox1?.label}
+              </Typography>
+            </Box>
+          )}
+
+          <Spacer height="29px" />
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: "14px",
+            }}
+          >
+            <CustomButton
+              sx={{
+                minWidth: "102px",
+              }}
+              onClick={() => onOkQortalRequest("accepted")}
+            >
+              accept
+            </CustomButton>
+            <CustomButton
+              sx={{
+                minWidth: "102px",
+              }}
+              onClick={() => onCancelQortalRequest()}
+            >
+              decline
+            </CustomButton>
+          </Box>
+          <ErrorText>{sendPaymentError}</ErrorText>
+        </>
+      )}
       {extState === "web-app-request-buy-order" && !isMainWindow && (
         <>
           <Spacer height="100px" />
@@ -1812,7 +1934,12 @@ function App() {
           >
             The Application <br></br>{" "}
             <TextItalic>{requestBuyOrder?.hostname}</TextItalic> <br></br>
-            <TextSpan>is requesting {requestBuyOrder?.crosschainAtInfo?.length}  {`buy order${requestBuyOrder?.crosschainAtInfo.length === 1 ? '' : 's'}`}</TextSpan>
+            <TextSpan>
+              is requesting {requestBuyOrder?.crosschainAtInfo?.length}{" "}
+              {`buy order${
+                requestBuyOrder?.crosschainAtInfo.length === 1 ? "" : "s"
+              }`}
+            </TextSpan>
           </TextP>
           <Spacer height="10px" />
           <TextP
@@ -1823,9 +1950,10 @@ function App() {
               fontWeight: 700,
             }}
           >
-            {requestBuyOrder?.crosschainAtInfo?.reduce((latest, cur)=> {
-              return latest + +cur?.qortAmount
-            }, 0)} QORT
+            {requestBuyOrder?.crosschainAtInfo?.reduce((latest, cur) => {
+              return latest + +cur?.qortAmount;
+            }, 0)}{" "}
+            QORT
           </TextP>
           <Spacer height="15px" />
           <TextP
@@ -1846,9 +1974,11 @@ function App() {
               fontWeight: 700,
             }}
           >
-             {roundUpToDecimals(requestBuyOrder?.crosschainAtInfo?.reduce((latest, cur)=> {
-              return latest + +cur?.expectedForeignAmount
-            }, 0))}
+            {roundUpToDecimals(
+              requestBuyOrder?.crosschainAtInfo?.reduce((latest, cur) => {
+                return latest + +cur?.expectedForeignAmount;
+              }, 0)
+            )}
             {` ${requestBuyOrder?.crosschainAtInfo?.[0]?.foreignBlockchain}`}
           </TextP>
           {/* <Spacer height="29px" />
@@ -1890,6 +2020,7 @@ function App() {
           <ErrorText>{sendPaymentError}</ErrorText>
         </>
       )}
+
       {extState === "web-app-request-payment" && !isMainWindow && (
         <>
           <Spacer height="100px" />
@@ -2337,16 +2468,18 @@ function App() {
         </>
       )}
       {isOpenSendQortSuccess && (
-        <Box sx={{
-          width: '100%',
-          height: '100%',
-          position: 'fixed',
-          background: '#27282c',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          zIndex: 6
-        }}>
+        <Box
+          sx={{
+            width: "100%",
+            height: "100%",
+            position: "fixed",
+            background: "#27282c",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            zIndex: 6,
+          }}
+        >
           <Spacer height="48px" />
           <img src={Success} />
           <Spacer height="45px" />
@@ -2464,6 +2597,246 @@ function App() {
           </DialogActions>
         </Dialog>
       )}
+       {isShowUnsavedChanges && (
+        <Dialog
+          open={isShowUnsavedChanges}
+          aria-labelledby="alert-dialog-title"
+          aria-describedby="alert-dialog-description"
+        >
+          <DialogTitle id="alert-dialog-title">{"Warning"}</DialogTitle>
+          <DialogContent>
+            <DialogContentText id="alert-dialog-description">
+              {messageUnsavedChanges.message}
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button variant="contained" onClick={onCancelUnsavedChanges}>
+              Cancel
+            </Button>
+            <Button variant="contained" onClick={onOkUnsavedChanges} autoFocus>
+              Continue to Logout
+            </Button>
+          </DialogActions>
+        </Dialog>
+      )}
+      {isShowQortalRequestExtension && isMainWindow && (
+        <Dialog
+          open={isShowQortalRequestExtension}
+          aria-labelledby="alert-dialog-title"
+          aria-describedby="alert-dialog-description"
+        >
+          <CountdownCircleTimer
+            isPlaying
+            duration={30}
+            colors={["#004777", "#F7B801", "#A30000", "#A30000"]}
+            colorsTime={[7, 5, 2, 0]}
+            onComplete={() => {
+              onCancelQortalRequestExtension()
+            }}
+            size={50}
+            strokeWidth={5}
+          >
+            {({ remainingTime }) => <TextP>{remainingTime}</TextP>}
+          </CountdownCircleTimer>
+           <Box sx={{
+            display: 'flex',
+            padding: '20px',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'flex-start',
+            minHeight: '400px',
+            maxHeight: '90vh',
+            overflow: 'auto'
+           }}>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              width: "100%",
+            }}
+          >
+            <TextP
+              sx={{
+                lineHeight: 1.2,
+                maxWidth: "90%",
+                textAlign: "center",
+              }}
+            >
+              {messageQortalRequestExtension?.text1}
+            </TextP>
+          </Box>
+          {messageQortalRequestExtension?.text2 && (
+            <>
+              <Spacer height="10px" />
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "flex-start",
+                  width: "90%",
+                }}
+              >
+                <TextP
+                  sx={{
+                    lineHeight: 1.2,
+                    fontSize: "16px",
+                    fontWeight: "normal",
+                  }}
+                >
+                  {messageQortalRequestExtension?.text2}
+                </TextP>
+              </Box>
+              <Spacer height="15px" />
+            </>
+          )}
+          {messageQortalRequestExtension?.text3 && (
+            <>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "flex-start",
+                  width: "90%",
+                }}
+              >
+                <TextP
+                  sx={{
+                    lineHeight: 1.2,
+                    fontSize: "16px",
+                    fontWeight: "normal",
+                  }}
+                >
+                  {messageQortalRequestExtension?.text3}
+                </TextP>
+                <Spacer height="15px" />
+              </Box>
+            </>
+          )}
+
+          {messageQortalRequestExtension?.text4 && (
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "flex-start",
+                width: "90%",
+              }}
+            >
+              <TextP
+                sx={{
+                  lineHeight: 1.2,
+                  fontSize: "16px",
+                  fontWeight: "normal",
+                }}
+              >
+                {messageQortalRequestExtension?.text4}
+              </TextP>
+            </Box>
+          )}
+
+          {messageQortalRequestExtension?.html && (
+            <div
+              dangerouslySetInnerHTML={{ __html: messageQortalRequestExtension?.html }}
+            />
+          )}
+          <Spacer height="15px" />
+       
+          <TextP
+            sx={{
+              textAlign: "center",
+              lineHeight: 1.2,
+              fontSize: "16px",
+              fontWeight: 700,
+              maxWidth: "90%",
+            }}
+          >
+            {messageQortalRequestExtension?.highlightedText}
+          </TextP>
+
+          {messageQortalRequestExtension?.fee && (
+            <>
+                      <Spacer height="15px" />
+
+            <TextP
+    sx={{
+                  textAlign: "center",
+                  lineHeight: 1.2,
+                  fontSize: "16px",
+                  fontWeight: "normal",
+                  maxWidth: "90%",
+                }}
+              >
+                {'Fee: '}{messageQortalRequestExtension?.fee}{' QORT'}
+              </TextP>
+<Spacer height="15px" />
+
+            </>
+          )}
+          {messageQortalRequestExtension?.checkbox1 && (
+            <Box
+              sx={{
+                display: "flex",
+                gap: "10px",
+                alignItems: "center",
+                justifyContent: "center",
+                width: "90%",
+                marginTop: "20px",
+              }}
+            >
+              <Checkbox
+                onChange={(e) => {
+                  qortalRequestCheckbox1Ref.current = e.target.checked;
+                }}
+                edge="start"
+                tabIndex={-1}
+                disableRipple
+                defaultChecked={messageQortalRequestExtension?.checkbox1?.value}
+                sx={{
+                  "&.Mui-checked": {
+                    color: "white", // Customize the color when checked
+                  },
+                  "& .MuiSvgIcon-root": {
+                    color: "white",
+                  },
+                }}
+              />
+
+              <Typography
+                sx={{
+                  fontSize: "14px",
+                }}
+              >
+                {messageQortalRequestExtension?.checkbox1?.label}
+              </Typography>
+            </Box>
+          )}
+
+          <Spacer height="29px" />
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: "14px",
+            }}
+          >
+            <CustomButton
+              sx={{
+                minWidth: "102px",
+              }}
+              onClick={() => onOkQortalRequestExtension("accepted")}
+            >
+              accept
+            </CustomButton>
+            <CustomButton
+              sx={{
+                minWidth: "102px",
+              }}
+              onClick={() => onCancelQortalRequestExtension()}
+            >
+              decline
+            </CustomButton>
+          </Box>
+          <ErrorText>{sendPaymentError}</ErrorText>
+        </Box>
+        </Dialog>
+      )}
       <Popover
         open={openRegisterName}
         anchorEl={registerNamePopoverRef.current}
@@ -2511,8 +2884,7 @@ function App() {
         </Box>
       </Popover>
       {isSettingsOpen && (
-              <Settings open={isSettingsOpen} setOpen={setIsSettingsOpen} />
-
+        <Settings open={isSettingsOpen} setOpen={setIsSettingsOpen} />
       )}
       <CustomizedSnackbars
         open={openSnack}
@@ -2520,7 +2892,12 @@ function App() {
         info={infoSnack}
         setInfo={setInfoSnack}
       />
-         <DrawerComponent open={isOpenDrawerProfile} setOpen={setIsOpenDrawerProfile} >{renderProfile()}</DrawerComponent>
+      <DrawerComponent
+        open={isOpenDrawerProfile}
+        setOpen={setIsOpenDrawerProfile}
+      >
+        {renderProfile()}
+      </DrawerComponent>
     </AppContainer>
   );
 }

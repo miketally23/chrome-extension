@@ -1,5 +1,7 @@
 // @ts-nocheck
 // import { encryptAndPublishSymmetricKeyGroupChat } from "./backgroundFunctions/encryption";
+
+import './qortalRequests'
 import { constant, isArray } from "lodash";
 import {
   decryptGroupEncryption,
@@ -29,6 +31,19 @@ import { Sha256 } from "asmcrypto.js";
 import { TradeBotRespondMultipleRequest } from "./transactions/TradeBotRespondMultipleRequest";
 import { RESOURCE_TYPE_NUMBER_GROUP_CHAT_REACTIONS } from "./constants/resourceTypes";
 
+export function cleanUrl(url) {
+  return url?.replace(/^(https?:\/\/)?(www\.)?/, '');
+}
+export function getProtocol(url) {
+  if (url?.startsWith('https://')) {
+    return 'https';
+  } else if (url?.startsWith('http://')) {
+    return 'http';
+  } else {
+    return 'unknown'; // If neither protocol is present
+  }
+}
+
 let lastGroupNotification;
 export const groupApi = "https://ext-node.qortal.link";
 export const groupApiSocket = "wss://ext-node.qortal.link";
@@ -37,6 +52,7 @@ export const groupApiSocketLocal = "ws://127.0.0.1:12391";
 const timeDifferenceForNotificationChatsBackground = 600000;
 const requestQueueAnnouncements = new RequestQueueWithPromise(1);
 let isMobile = false;
+
 
 const isMobileDevice = () => {
   const userAgent = navigator.userAgent || navigator.vendor || window.opera;
@@ -104,6 +120,17 @@ const getApiKeyFromStorage = async () => {
   });
 };
 
+const getCustomNodesFromStorage = async () => {
+  return new Promise((resolve, reject) => {
+    chrome.storage.local.get("customNodes", (result) => {
+      if (chrome.runtime.lastError) {
+        return reject(chrome.runtime.lastError);
+      }
+      resolve(result.customNodes || null); // Return null if apiKey isn't found
+    });
+  });
+};
+
 // const getArbitraryEndpoint = ()=> {
 //   const apiKey = await getApiKeyFromStorage(); // Retrieve apiKey asynchronously
 //   if (apiKey) {
@@ -115,7 +142,7 @@ const getApiKeyFromStorage = async () => {
 const getArbitraryEndpoint = async () => {
   const apiKey = await getApiKeyFromStorage(); // Retrieve apiKey asynchronously
   if (apiKey) {
-    return `/arbitrary/resources/search`;
+    return `/arbitrary/resources/searchsimple`;
   } else {
     return `/arbitrary/resources/searchsimple`;
   }
@@ -128,23 +155,24 @@ export const getBaseApi = async (customApi?: string) => {
 
   const apiKey = await getApiKeyFromStorage(); // Retrieve apiKey asynchronously
   if (apiKey) {
-    return groupApiLocal;
+    return apiKey?.url;
   } else {
     return groupApi;
   }
 };
+export const isUsingLocal = async () => {
 
-export const createEndpointSocket = async (endpoint) => {
   const apiKey = await getApiKeyFromStorage(); // Retrieve apiKey asynchronously
-
   if (apiKey) {
-    return `${groupApiSocketLocal}${endpoint}`;
+    return true
   } else {
-    return `${groupApiSocket}${endpoint}`;
+    return false;
   }
 };
 
-export const createEndpoint = async (endpoint, customApi) => {
+
+
+export const createEndpoint = async (endpoint, customApi?: string) => {
   if (customApi) {
     return `${customApi}${endpoint}`;
   }
@@ -154,7 +182,7 @@ export const createEndpoint = async (endpoint, customApi) => {
   if (apiKey) {
     // Check if the endpoint already contains a query string
     const separator = endpoint.includes("?") ? "&" : "?";
-    return `${groupApiLocal}${endpoint}${separator}apiKey=${apiKey}`;
+    return `${apiKey?.url}${endpoint}${separator}apiKey=${apiKey?.apikey}`;
   } else {
     return `${groupApi}${endpoint}`;
   }
@@ -949,7 +977,7 @@ async function getAddressInfo(address) {
   return data;
 }
 
-async function getKeyPair() {
+export async function getKeyPair() {
   const res = await chrome.storage.local.get(["keyPair"]);
   if (res?.keyPair) {
     return res.keyPair;
@@ -958,7 +986,7 @@ async function getKeyPair() {
   }
 }
 
-async function getSaveWallet() {
+export async function getSaveWallet() {
   const res = await chrome.storage.local.get(["walletInfo"]);
   if (res?.walletInfo) {
     return res.walletInfo;
@@ -1007,7 +1035,7 @@ async function getTradesInfo(qortalAtAddresses) {
   return trades; // Return the array of trade info objects
 }
 
-async function getBalanceInfo() {
+export async function getBalanceInfo() {
   const wallet = await getSaveWallet();
   const address = wallet.address0;
   const validApi = await getBaseApi();
@@ -1057,7 +1085,7 @@ const processTransactionVersion2Chat = async (body: any, customApi) => {
   });
 };
 
-const processTransactionVersion2 = async (body: any) => {
+export const processTransactionVersion2 = async (body: any) => {
   const url = await createEndpoint(`/transactions/process?apiVersion=2`);
 
   try {
@@ -1139,7 +1167,7 @@ const makeTransactionRequest = async (
   return myTxnrequest;
 };
 
-const getLastRef = async () => {
+export const getLastRef = async () => {
   const wallet = await getSaveWallet();
   const address = wallet.address0;
   const validApi = await getBaseApi();
@@ -1150,7 +1178,7 @@ const getLastRef = async () => {
   const data = await response.text();
   return data;
 };
-const sendQortFee = async () => {
+export const sendQortFee = async (): Promise<number> => {
   const validApi = await getBaseApi();
   const response = await fetch(
     validApi + "/transactions/unitfee?txType=PAYMENT"
@@ -1350,6 +1378,24 @@ async function decryptWallet({ password, wallet, walletVersion }) {
       publicKey: Base58.encode(keyPair.publicKey),
       ltcPrivateKey: ltcPrivateKey,
       ltcPublicKey: ltcPublicKey,
+      arrrSeed58: wallet2._addresses[0].arrrWallet.seed58,
+      btcAddress: wallet2._addresses[0].btcWallet.address,
+      btcPublicKey: wallet2._addresses[0].btcWallet.derivedMasterPublicKey,
+      btcPrivateKey: wallet2._addresses[0].btcWallet.derivedMasterPrivateKey,
+
+      ltcAddress: wallet2._addresses[0].ltcWallet.address,
+
+      dogeAddress: wallet2._addresses[0].dogeWallet.address,
+      dogePublicKey: wallet2._addresses[0].dogeWallet.derivedMasterPublicKey,
+      dogePrivateKey: wallet2._addresses[0].dogeWallet.derivedMasterPrivateKey,
+
+      dgbAddress: wallet2._addresses[0].dgbWallet.address,
+      dgbPublicKey: wallet2._addresses[0].dgbWallet.derivedMasterPublicKey,
+      dgbPrivateKey: wallet2._addresses[0].dgbWallet.derivedMasterPrivateKey,
+
+      rvnAddress: wallet2._addresses[0].rvnWallet.address,
+      rvnPublicKey: wallet2._addresses[0].rvnWallet.derivedMasterPublicKey,
+      rvnPrivateKey: wallet2._addresses[0].rvnWallet.derivedMasterPrivateKey
     };
     const dataString = JSON.stringify(toSave);
     await new Promise((resolve, reject) => {
@@ -1382,7 +1428,7 @@ async function decryptWallet({ password, wallet, walletVersion }) {
   }
 }
 
-async function signChatFunc(chatBytesArray, chatNonce, customApi, keyPair) {
+export async function signChatFunc(chatBytesArray, chatNonce, customApi, keyPair) {
   let response;
   try {
     const signedChatBytes = signChat(chatBytesArray, chatNonce, keyPair);
@@ -1407,7 +1453,7 @@ function sbrk(size, heap) {
   return old;
 }
 
-const computePow = async ({ chatBytes, path, difficulty }) => {
+export const computePow = async ({ chatBytes, path, difficulty }) => {
   let response = null;
   await new Promise((resolve, reject) => {
     const _chatBytesArray = Object.keys(chatBytes).map(function (key) {
@@ -1787,7 +1833,7 @@ async function createBuyOrderTx({ crosschainAtInfo, useLocal }) {
       let responseVar 
       const txn = new TradeBotRespondMultipleRequest().createTransaction(message)
       const apiKey = await getApiKeyFromStorage();
-      const responseFetch = await fetch(`http://127.0.0.1:12391/crosschain/tradebot/respondmultiple?apiKey=${apiKey}`, {
+      const responseFetch = await fetch(`${apiKey?.url}/crosschain/tradebot/respondmultiple?apiKey=${apiKey?.apikey}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -1971,7 +2017,7 @@ async function leaveGroup({ groupId }) {
   return res;
 }
 
-async function joinGroup({ groupId }) {
+export async function joinGroup({ groupId }) {
   const wallet = await getSaveWallet();
   const address = wallet.address0;
   const lastReference = await getLastRef();
@@ -2266,7 +2312,7 @@ async function inviteToGroup({ groupId, qortalAddress, inviteTime }) {
   return res;
 }
 
-async function sendCoin({ password, amount, receiver }, skipConfirmPassword) {
+export async function sendCoin({ password, amount, receiver }, skipConfirmPassword) {
   try {
     const confirmReceiver = await getNameOrAddress(receiver);
     if (confirmReceiver.error)
@@ -2498,7 +2544,7 @@ async function listenForChatMessageForBuyOrder({
   }
 }
 
-function removeDuplicateWindow(popupUrl) {
+export function removeDuplicateWindow(popupUrl) {
   chrome.windows.getAll(
     { populate: true, windowTypes: ["popup"] },
     (windows) => {
@@ -2800,6 +2846,9 @@ async function getChatHeadsDirect() {
 }
 chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
   if (request) {
+
+    console.log('REQUEST MESSAGE', request)
+
     switch (request.action) {
       case "version":
         // Example: respond with the version
@@ -3259,6 +3308,16 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
         return true;
         break;
       }
+      case "setCustomNodes": {
+        const { nodes } = request;
+
+        // Save the customNodes in chrome.storage.local for persistence
+        chrome.storage.local.set({ customNodes: nodes }, () => {
+          sendResponse(true);
+        });
+        return true;
+        break;
+      }
       case "getApiKey": {
         getApiKeyFromStorage()
           .then((res) => {
@@ -3271,6 +3330,19 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
         return true;
         break;
       }
+      case "getCustomNodesFromStorage": {
+        getCustomNodesFromStorage()
+          .then((res) => {
+            sendResponse(res);
+          })
+          .catch((error) => {
+            sendResponse({ error: error.message });
+            console.error(error.message);
+          });
+        return true;
+        break;
+      }
+      
       case "notifyAdminRegenerateSecretKey": {
         const { groupName, adminAddress } = request.payload;
         notifyAdminRegenerateSecretKey({ groupName, adminAddress })
@@ -3873,19 +3945,35 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
         break;
       }
       case "publishOnQDN": {
-        const { data, identifier, service } = request.payload;
+        const { data, identifier, service, title,
+          description,
+          category,
+          tag1,
+          tag2,
+          tag3,
+          tag4,
+          tag5, uploadType } = request.payload;
 
         publishOnQDN({
           data,
           identifier,
-          service
+          service,
+          title,
+          description,
+          category,
+          tag1,
+          tag2,
+          tag3,
+          tag4,
+          tag5,
+          uploadType
         })
           .then((data) => {
             sendResponse(data);
           })
           .catch((error) => {
-            console.error(error.message);
-            sendResponse({ error: error.message });
+            console.error(error?.message);
+            sendResponse({ error: error?.message || 'Unable to publish' });
           });
         return true;
         break;
@@ -4136,7 +4224,6 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
                 [
                   "keyPair",
                   "walletInfo",
-                  "apiKey",
                   "active-groups-directs",
                   key1,
                   key2,
