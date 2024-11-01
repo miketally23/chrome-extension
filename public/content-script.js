@@ -678,7 +678,6 @@ async function retrieveFileFromIndexedDB(fileId) {
 
 async function deleteQortalFilesFromIndexedDB() {
   try {
-    console.log("Opening IndexedDB for deleting files...");
     const db = await openIndexedDB();
     const transaction = db.transaction(["files"], "readwrite");
     const objectStore = transaction.objectStore("files");
@@ -800,7 +799,6 @@ async function storeFilesInIndexedDB(obj) {
 const UIQortalRequests = ['GET_USER_ACCOUNT', 'DECRYPT_DATA', 'SEND_COIN', 'GET_LIST_ITEMS', 'ADD_LIST_ITEMS', 'DELETE_LIST_ITEM', 'VOTE_ON_POLL', 'CREATE_POLL', 'SEND_CHAT_MESSAGE', 'JOIN_GROUP', 'DEPLOY_AT', 'GET_USER_WALLET', 'GET_WALLET_BALANCE', 'GET_USER_WALLET_INFO', 'GET_CROSSCHAIN_SERVER_INFO', 'GET_TX_ACTIVITY_SUMMARY', 'GET_FOREIGN_FEE', 'UPDATE_FOREIGN_FEE', 'GET_SERVER_CONNECTION_HISTORY', 'SET_CURRENT_FOREIGN_SERVER', 'ADD_FOREIGN_SERVER', 'REMOVE_FOREIGN_SERVER', 'GET_DAY_SUMMARY']
 
 if (!window.hasAddedQortalListener) {
-  console.log("Listener added");
   window.hasAddedQortalListener = true;
   //qortalRequests
   const listener = async (event) => {
@@ -887,4 +885,25 @@ if (!window.hasAddedQortalListener) {
   
 }
 
+window.addEventListener("message", (event) => {
+  // Ensure the message is from the same page
+  if (event.source !== window || !event.data || event.data.type !== "qortalExtensionRequests") return;
+
+  // Extract the message detail
+  const { detail } = event.data;
+
+  // Forward the message to the background script and listen for a response
+ 
+  chrome?.runtime?.sendMessage({ action: "version" }, (response) => {
+    if (response.error) {
+      console.error("Error:", response.error);
+    } else {
+      // Include the requestId in the detail when dispatching the response
+      window.postMessage(
+        { type: "qortalExtensionResponses", detail: { requestId: detail.requestId, data: response } },
+        "*"
+    );
+    }
+  });
+});
 

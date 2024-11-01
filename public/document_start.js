@@ -1,4 +1,3 @@
-
 const script = document.createElement('script');
 script.src = chrome.runtime.getURL('disable-gateway-popup.js'); // Reference the external script
 document.documentElement.appendChild(script); // Inject it into the page
