@@ -3465,7 +3465,7 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
                       // Assuming the primary display is the first one (adjust logic as needed)
                       const primaryDisplay = displays[0];
                       const screenWidth = primaryDisplay.bounds.width;
-                      const windowHeight = 500; // Your window height
+                      const windowHeight = 650; // Your window height
                       const windowWidth = 400; // Your window width
 
                       // Calculate left position for the window to appear on the right of the screen
@@ -3579,7 +3579,7 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
                       // Assuming the primary display is the first one (adjust logic as needed)
                       const primaryDisplay = displays[0];
                       const screenWidth = primaryDisplay.bounds.width;
-                      const windowHeight = 500; // Your window height
+                      const windowHeight = 650; // Your window height
                       const windowWidth = 400; // Your window width
 
                       // Calculate left position for the window to appear on the right of the screen
@@ -3675,7 +3675,7 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
                         // Assuming the primary display is the first one (adjust logic as needed)
                         const primaryDisplay = displays[0];
                         const screenWidth = primaryDisplay.bounds.width;
-                        const windowHeight = 500; // Your window height
+                        const windowHeight = 650; // Your window height
                         const windowWidth = 400; // Your window width
 
                         // Calculate left position for the window to appear on the right of the screen
@@ -3755,7 +3755,7 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
                   // Assuming the primary display is the first one (adjust logic as needed)
                   const primaryDisplay = displays[0];
                   const screenWidth = primaryDisplay.bounds.width;
-                  const windowHeight = 500; // Your window height
+                  const windowHeight = 650; // Your window height
                   const windowWidth = 400; // Your window width
 
                   // Calculate left position for the window to appear on the right of the screen
