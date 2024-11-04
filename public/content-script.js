@@ -802,14 +802,14 @@ if (!window.hasAddedQortalListener) {
   window.hasAddedQortalListener = true;
   //qortalRequests
   const listener = async (event) => {
-    event.preventDefault();  // Prevent default behavior
-    event.stopImmediatePropagation();  // Stop other listeners from firing
+
   
     // Verify that the message is from the web page and contains expected data
     if (event.source !== window || !event.data || !event.data.action) return;
   
     if (event?.data?.requestedHandler !== 'UI') return;
-
+    event.preventDefault();  // Prevent default behavior
+    event.stopImmediatePropagation();  // Stop other listeners from firing
    await new Promise((res)=> {
     chrome?.runtime?.sendMessage(
       {
