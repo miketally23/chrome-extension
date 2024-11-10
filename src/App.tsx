@@ -1019,8 +1019,8 @@ function App() {
       }
       chrome?.runtime?.sendMessage({ action: "logout" }, (response) => {
         if (response) {
-          resetAllStates();
           executeEvent("logout-event", {});
+          resetAllStates();
         }
       });
     } catch (error) {}
