@@ -49,7 +49,6 @@ function getLocalStorage(key) {
       // Save the updated object back to storage
       await setLocalStorage({ qortalRequestPermissions });
       
-      console.log('Permission set for', key);
     } catch (error) {
       console.error('Error setting permission:', error);
     }
@@ -471,7 +470,6 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
       }
       case "IS_USING_GATEWAY": {
         isRunningGateway().then((res) => {
-          console.log('isusing', res)
           sendResponse({isGateway: res});
         })
         .catch((error) => {

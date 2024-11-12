@@ -1446,7 +1446,6 @@ export const getWalletBalance = async (data, bypassPermission?: boolean, isFromE
   }
 
   const value = (await getPermission(`qAPPAutoWalletBalance-${data.coin}`)) || false;
-  console.log('value', value)
   let skip = false;
   if (value) {
     skip = true;
@@ -2489,7 +2488,6 @@ export const sendCoin = async (data, isFromExtension) => {
 
 
 export const createBuyOrder = async (data, isFromExtension) => {
-  console.log('data', data)
   const requiredFields = [
     "crosschainAtInfo",
     "foreignBlockchain"
@@ -2509,7 +2507,6 @@ export const createBuyOrder = async (data, isFromExtension) => {
   const foreignBlockchain = data.foreignBlockchain
   const crosschainAtInfo = data.crosschainAtInfo;
   const atAddresses = data.crosschainAtInfo?.map((order)=> order.qortalAtAddress);
-  console.log('test', isGateway, foreignBlockchain , crosschainAtInfo, atAddresses)
   try {
     const resPermission = await getUserPermission({
       text1: "Do you give this application permission to perform a buy order?",

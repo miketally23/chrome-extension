@@ -1272,7 +1272,6 @@ async function getDataPublishes(groupId, type) {
 }
 
 async function sendChatForBuyOrder({ qortAddress, recipientPublicKey, message }) {
-  console.log('test3', qortAddress, recipientPublicKey, message)
   let _reference = new Uint8Array(64);
   self.crypto.getRandomValues(_reference);
 
@@ -2013,7 +2012,6 @@ async function createBuyOrderTx({ crosschainAtInfo, useLocal }) {
 
 export async function createBuyOrderTxQortalRequest({ crosschainAtInfo, isGateway, foreignBlockchain }) {
   try {
-    console.log('test2', crosschainAtInfo, isGateway, foreignBlockchain)
     if (!isGateway) {
       const wallet = await getSaveWallet();
 
@@ -3074,7 +3072,6 @@ async function getChatHeadsDirect() {
 chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
   if (request) {
 
-    console.log('REQUEST MESSAGE', request)
 
     switch (request.action) {
       case "version":

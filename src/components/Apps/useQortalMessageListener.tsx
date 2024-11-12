@@ -370,7 +370,6 @@ isDOMContentLoaded: false
 
       const sendMessageToRuntime = (message, eventPort) => {
         chrome?.runtime?.sendMessage(message, (response) => {
-          console.log('runtimeres', response)
           if (response.error) {
             eventPort.postMessage({
               result: null,
