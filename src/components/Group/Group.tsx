@@ -1313,10 +1313,10 @@ export const Group = ({
   };
 
   useEffect(() => {
-    subscribeToEvent("open-dev-mode", openDevModeFunc);
+    subscribeToEvent("open-apps-mode", openDevModeFunc);
 
     return () => {
-      unsubscribeFromEvent("open-dev-mode", openDevModeFunc);
+      unsubscribeFromEvent("open-apps-mode", openDevModeFunc);
     };
   }, []);
 

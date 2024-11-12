@@ -39,6 +39,8 @@ import { Spacer } from "../../common/Spacer";
 import { AppInfoSnippet } from "./AppInfoSnippet";
 import { Virtuoso } from "react-virtuoso";
 import { executeEvent } from "../../utils/events";
+import RefreshIcon from "@mui/icons-material/Refresh";
+
 import {
   AppsDesktopLibraryBody,
   AppsDesktopLibraryHeader,
@@ -55,6 +57,7 @@ const officialAppList = [
   "qombo",
   "q-fund",
   "q-shop",
+  "q-trade"
 ];
 
 const ScrollerStyled = styled("div")({
@@ -96,7 +99,7 @@ export const AppsLibraryDesktop = ({
   myName,
   hasPublishApp,
   isShow,
-  categories = { categories },
+  categories, getQapps
 }) => {
   const [searchValue, setSearchValue] = useState("");
   const virtuosoRef = useRef();
@@ -169,6 +172,11 @@ export const AppsLibraryDesktop = ({
             }}
           >
             <img src={qappLibraryText} />
+            <Box sx={{
+              display: 'flex',
+              gap: '20px',
+              alignItems: 'center'
+            }}>
             <AppsSearchContainer
               sx={{
                 width: "412px",
@@ -200,6 +208,21 @@ export const AppsLibraryDesktop = ({
                 )}
               </AppsSearchRight>
             </AppsSearchContainer>
+            <ButtonBase
+          onClick={(e) => {
+            getQapps()
+          }}
+        >
+          <RefreshIcon
+             
+              sx={{
+                color: "rgba(250, 250, 250, 0.5)",
+                width: '30px',
+                height: 'auto'
+              }}
+            />
+        </ButtonBase>
+            </Box>
           </Box>
         </AppsWidthLimiter>
       </AppsDesktopLibraryHeader>

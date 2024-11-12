@@ -628,7 +628,9 @@ function App() {
   const qortalRequestPermissonFromExtension = async (message, sender, sendResponse) => {
     if (message.action === "QORTAL_REQUEST_PERMISSION" && isMainWindow) {
       try {
-
+        if(message?.payload?.checkbox1){
+          qortalRequestCheckbox1Ref.current = message?.payload?.checkbox1
+        }
         await showQortalRequestExtension(message?.payload);
        
         if (qortalRequestCheckbox1Ref.current) {
@@ -1069,7 +1071,7 @@ function App() {
     resetAllRecoil()
   };
 
-  function roundUpToDecimals(number, decimals = 8) {
+   function roundUpToDecimals(number, decimals = 8) {
     const factor = Math.pow(10, decimals); // Create a factor based on the number of decimals
     return Math.ceil(+number * factor) / factor;
   }
@@ -1463,10 +1465,11 @@ function App() {
               textDecoration: "underline",
             }}
             onClick={() => {
-              chrome.tabs.create({ url: "https://www.qort.trade" });
+              executeEvent("addTab", { data: { service: 'APP', name: 'q-trade' } });
+            executeEvent("open-apps-mode", { });
             }}
           >
-            Get QORT at qort.trade
+            Get QORT at Q-Trade
           </TextP>
         </AuthenticatedContainerInnerLeft>
         <AuthenticatedContainerInnerRight>
@@ -2769,6 +2772,25 @@ function App() {
 
             </>
           )}
+          {messageQortalRequestExtension?.foreignFee && (
+              <>
+                <Spacer height="15px" />
+
+                <TextP
+                  sx={{
+                    textAlign: "center",
+                    lineHeight: 1.2,
+                    fontSize: "16px",
+                    fontWeight: "normal",
+                    maxWidth: "90%",
+                  }}
+                >
+                  {"Foreign Fee: "}
+                  {messageQortalRequestExtension?.foreignFee}
+                </TextP>
+                <Spacer height="15px" />
+              </>
+            )}
           {messageQortalRequestExtension?.checkbox1 && (
             <Box
               sx={{

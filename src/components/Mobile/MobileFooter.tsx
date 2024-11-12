@@ -15,6 +15,7 @@ import { WalletIcon } from "../../assets/Icons/WalletIcon";
 import { HubsIcon } from "../../assets/Icons/HubsIcon";
 import { TradingIcon } from "../../assets/Icons/TradingIcon";
 import { MessagingIcon } from "../../assets/Icons/MessagingIcon";
+import { executeEvent } from "../../utils/events";
 
 const IconWrapper = ({ children, label, color }) => {
   return (
@@ -184,7 +185,8 @@ export const MobileFooter = ({
         />
         <BottomNavigationAction
           onClick={() => {
-            chrome.tabs.create({ url: "https://www.qort.trade"});
+            executeEvent("addTab", { data: { service: 'APP', name: 'q-trade' } });
+            executeEvent("open-apps-mode", { });
           }}
           icon={
             <IconWrapper label="Trading" color="rgba(250, 250, 250, 0.5)">

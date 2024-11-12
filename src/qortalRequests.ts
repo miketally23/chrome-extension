@@ -1,4 +1,5 @@
-import { addForeignServer, addListItems, createPoll, decryptData, deleteListItems, deployAt, encryptData, getCrossChainServerInfo, getDaySummary, getForeignFee, getListItems, getServerConnectionHistory, getTxActivitySummary, getUserAccount, getUserWallet, getUserWalletInfo, getWalletBalance, joinGroup, publishMultipleQDNResources, publishQDNResource, removeForeignServer, saveFile, sendChatMessage, sendCoin, setCurrentForeignServer, updateForeignFee, voteOnPoll } from "./qortalRequests/get";
+import { getApiKeyFromStorage } from "./background";
+import { addForeignServer, addListItems, cancelSellOrder, createBuyOrder, createPoll, createSellOrder, decryptData, deleteListItems, deployAt, encryptData, getCrossChainServerInfo, getDaySummary, getForeignFee, getListItems, getServerConnectionHistory, getTxActivitySummary, getUserAccount, getUserWallet, getUserWalletInfo, getWalletBalance, joinGroup, publishMultipleQDNResources, publishQDNResource, removeForeignServer, saveFile, sendChatMessage, sendCoin, setCurrentForeignServer, updateForeignFee, voteOnPoll } from "./qortalRequests/get";
 
 
 
@@ -24,6 +25,16 @@ function getLocalStorage(key) {
         resolve();
       });
     });
+  }
+
+  export const isRunningGateway = async ()=> {
+    let isGateway = true;
+    const apiKey = await getApiKeyFromStorage();
+    if (apiKey && (apiKey?.url && !gateways.some(gateway => apiKey?.url?.includes(gateway)))) {
+      isGateway = false;
+    }
+  
+    return isGateway
   }
 
   
@@ -420,6 +431,52 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
             sendResponse({ error: error.message });
           });
 
+        break;
+      }
+      case "CREATE_TRADE_BUY_ORDER": {
+        const data = request.payload;
+
+      
+          createBuyOrder(data, isFromExtension).then((res) => {
+            sendResponse(res);
+          })
+          .catch((error) => {
+            sendResponse({ error: error.message });
+          });
+        break;
+      }
+
+      case "CREATE_TRADE_SELL_ORDER": {
+        const data = request.payload;
+        createSellOrder(data, isFromExtension).then((res) => {
+          sendResponse(res);
+        })
+        .catch((error) => {
+          sendResponse({ error: error.message });
+        });
+
+        break;
+      }
+
+      case "CANCEL_TRADE_SELL_ORDER": {
+        const data = request.payload;
+        cancelSellOrder(data, isFromExtension).then((res) => {
+          sendResponse(res);
+        })
+        .catch((error) => {
+          sendResponse({ error: error.message });
+        });
+       
+        break;
+      }
+      case "IS_USING_GATEWAY": {
+        isRunningGateway().then((res) => {
+          console.log('isusing', res)
+          sendResponse({isGateway: res});
+        })
+        .catch((error) => {
+          sendResponse({ error: 'unable to determine if using gateway' });
+        });
         break;
       }
     }

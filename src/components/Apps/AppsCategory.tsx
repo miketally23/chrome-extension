@@ -30,16 +30,7 @@ import { Spacer } from "../../common/Spacer";
 import { AppInfoSnippet } from "./AppInfoSnippet";
 import { Virtuoso } from "react-virtuoso";
 import { executeEvent } from "../../utils/events";
-const officialAppList = [
-  "q-tube",
-  "q-blog",
-  "q-share",
-  "q-support",
-  "q-mail",
-  "qombo",
-  "q-fund",
-  "q-shop",
-];
+
 
 const ScrollerStyled = styled('div')({
     // Hide scrollbar for WebKit browsers (Chrome, Safari)
