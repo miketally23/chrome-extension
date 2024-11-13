@@ -80,6 +80,7 @@ export const HomeDesktop = ({
             myAddress={myAddress}
             name={userInfo?.name}
             hasGroups={groups?.length !== 0}
+            userInfo={userInfo}
           />
           </Box>
           <Box sx={{

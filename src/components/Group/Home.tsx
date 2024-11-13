@@ -84,6 +84,7 @@ export const Home = ({
             myAddress={myAddress}
             name={userInfo?.name}
             hasGroups={groups?.length !== 0}
+            userInfo={userInfo}
           />
           <ListOfThreadPostsWatched />
 

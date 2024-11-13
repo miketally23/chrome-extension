@@ -1683,6 +1683,54 @@ async function sendChat({ qortAddress, recipientPublicKey, message }) {
   return _response;
 }
 
+export async function addEnteredQmailTimestampFunc() {
+  const wallet = await getSaveWallet();
+  const address = wallet.address0;
+  const key = `qmail-entered-timestamp-${address}`;
+  
+  return new Promise((resolve, reject) => {
+    chrome.storage.local.set({ [key]: Date.now() }, () => {
+      if (chrome.runtime.lastError) {
+        reject(new Error(chrome.runtime.lastError.message || "Error saving data"));
+      } else {
+        resolve(true);
+      }
+    });
+  });
+}
+
+// Function to retrieve the timestamp from Chrome's local storage
+export async function getEnteredQmailTimestampFunc() {
+  const wallet = await getSaveWallet();
+  const address = wallet.address0;
+  const key = `qmail-entered-timestamp-${address}`;
+  
+  return new Promise((resolve, reject) => {
+    chrome.storage.local.get([key], (result) => {
+      if (chrome.runtime.lastError) {
+        reject(new Error(chrome.runtime.lastError.message || "Error retrieving data"));
+      } else {
+        const timestamp = result[key];
+        resolve(timestamp || null);
+      }
+    });
+  });
+}
+
+ async function addEnteredQmailTimestamp() {
+
+    const response = await addEnteredQmailTimestampFunc();
+
+    return response
+}
+ async function getEnteredQmailTimestamp() {
+  
+    const response = await getEnteredQmailTimestampFunc();
+
+   return {timestamp: response}
+  
+}
+
 async function sendChatGroup({
   groupId,
   typeMessage,
@@ -4428,6 +4476,28 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
         break;
       }
 
+      case "addEnteredQmailTimestamp": {     
+        addEnteredQmailTimestamp()
+          .then((res) => {
+            sendResponse(res);
+          })
+          .catch((error) => {
+            sendResponse({ error: error?.message });
+          });
+
+        break;
+      }
+      case "getEnteredQmailTimestamp": {     
+        getEnteredQmailTimestamp()
+          .then((res) => {
+            sendResponse(res);
+          })
+          .catch((error) => {
+            sendResponse({ error: error?.message });
+          });
+
+        break;
+      }
       case "logout":
         {
           try {
