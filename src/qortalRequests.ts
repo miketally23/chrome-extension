@@ -1,5 +1,5 @@
 import { getApiKeyFromStorage } from "./background";
-import { addForeignServer, addListItems, cancelSellOrder, createBuyOrder, createPoll, createSellOrder, decryptData, deleteListItems, deployAt, encryptData, getCrossChainServerInfo, getDaySummary, getForeignFee, getListItems, getServerConnectionHistory, getTxActivitySummary, getUserAccount, getUserWallet, getUserWalletInfo, getWalletBalance, joinGroup, publishMultipleQDNResources, publishQDNResource, removeForeignServer, saveFile, sendChatMessage, sendCoin, setCurrentForeignServer, updateForeignFee, voteOnPoll } from "./qortalRequests/get";
+import { addForeignServer, addListItems, adminAction, cancelSellOrder, createBuyOrder, createPoll, createSellOrder, decryptData, deleteListItems, deployAt, encryptData, getCrossChainServerInfo, getDaySummary, getForeignFee, getListItems, getServerConnectionHistory, getTxActivitySummary, getUserAccount, getUserWallet, getUserWalletInfo, getWalletBalance, joinGroup, publishMultipleQDNResources, publishQDNResource, removeForeignServer, saveFile, sendChatMessage, sendCoin, setCurrentForeignServer, updateForeignFee, voteOnPoll } from "./qortalRequests/get";
 
 
 
@@ -74,9 +74,10 @@ function getLocalStorage(key) {
 chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
   if (request) {
     const isFromExtension = request?.isExtension
+    const appInfo = request?.appInfo;
     switch (request.action) {
       case "GET_USER_ACCOUNT": {
-        getUserAccount()
+        getUserAccount({isFromExtension, appInfo})
           .then((res) => {
             sendResponse(res);
           })
@@ -270,7 +271,7 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
       case "GET_WALLET_BALANCE": {
         const data = request.payload;
       
-        getWalletBalance(data, false, isFromExtension)
+        getWalletBalance(data, false, isFromExtension, appInfo)
           .then((res) => {
             sendResponse(res);
           })
@@ -475,6 +476,17 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
         .catch((error) => {
           sendResponse({ error: 'unable to determine if using gateway' });
         });
+        break;
+      }
+
+      case "ADMIN_ACTION": {
+        adminAction(data, isFromExtension).then((res) => {
+          sendResponse(res);
+        })
+        .catch((error) => {
+          sendResponse({ error: error?.message });
+        });
+
         break;
       }
     }
