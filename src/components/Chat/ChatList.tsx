@@ -1,10 +1,25 @@
-import React, { useCallback, useState, useEffect, useRef, useMemo } from 'react';
-import { useVirtualizer } from '@tanstack/react-virtual';
-import { MessageItem } from './MessageItem';
-import { subscribeToEvent, unsubscribeFromEvent } from '../../utils/events';
-import { useInView } from 'react-intersection-observer'
+import React, {
+  useCallback,
+  useState,
+  useEffect,
+  useRef,
+  useMemo,
+} from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import { MessageItem } from "./MessageItem";
+import { subscribeToEvent, unsubscribeFromEvent } from "../../utils/events";
+import { useInView } from "react-intersection-observer";
 
-export const ChatList = ({ initialMessages, myAddress, tempMessages, chatId, onReply, handleReaction, chatReferences, tempChatReferences }) => {
+export const ChatList = ({
+  initialMessages,
+  myAddress,
+  tempMessages,
+  chatId,
+  onReply,
+  handleReaction,
+  chatReferences,
+  tempChatReferences,
+}) => {
   const parentRef = useRef();
   const [messages, setMessages] = useState(initialMessages);
   const [showScrollButton, setShowScrollButton] = useState(false);
@@ -16,7 +31,7 @@ export const ChatList = ({ initialMessages, myAddress, tempMessages, chatId, onR
 
   // useEffect(() => {
   //   if (inView) {
-      
+
   //   }
   // }, [inView])
   // Update message list with unique signatures and tempMessages
@@ -30,9 +45,9 @@ export const ChatList = ({ initialMessages, myAddress, tempMessages, chatId, onR
       }
     });
 
-    const uniqueInitialMessages = Array.from(uniqueInitialMessagesMap.values()).sort(
-      (a, b) => a.timestamp - b.timestamp
-    );
+    const uniqueInitialMessages = Array.from(
+      uniqueInitialMessagesMap.values()
+    ).sort((a, b) => a.timestamp - b.timestamp);
     const totalMessages = [...uniqueInitialMessages, ...(tempMessages || [])];
 
     if (totalMessages.length === 0) return;
@@ -40,10 +55,12 @@ export const ChatList = ({ initialMessages, myAddress, tempMessages, chatId, onR
     setMessages(totalMessages);
 
     setTimeout(() => {
-      const hasUnreadMessages = totalMessages.some((msg) => msg.unread && !msg?.chatReference);
+      const hasUnreadMessages = totalMessages.some(
+        (msg) => msg.unread && !msg?.chatReference
+      );
       if (parentRef.current) {
         const { scrollTop, scrollHeight, clientHeight } = parentRef.current;
-      const atBottom = scrollTop + clientHeight >= scrollHeight - 10; // Adjust threshold as needed
+        const atBottom = scrollTop + clientHeight >= scrollHeight - 10; // Adjust threshold as needed
         if (!atBottom && hasUnreadMessages) {
           setShowScrollButton(hasUnreadMessages);
         } else {
@@ -60,11 +77,10 @@ export const ChatList = ({ initialMessages, myAddress, tempMessages, chatId, onR
   const scrollToBottom = (initialMsgs) => {
     const index = initialMsgs ? initialMsgs.length - 1 : messages.length - 1;
     if (rowVirtualizer) {
-      rowVirtualizer.scrollToIndex(index, { align: 'end' });
+      rowVirtualizer.scrollToIndex(index, { align: "end" });
     }
-    handleMessageSeen()
+    handleMessageSeen();
   };
-
 
   const handleMessageSeen = useCallback(() => {
     setMessages((prevMessages) =>
@@ -73,7 +89,7 @@ export const ChatList = ({ initialMessages, myAddress, tempMessages, chatId, onR
         unread: false,
       }))
     );
-    setShowScrollButton(false)
+    setShowScrollButton(false);
   }, []);
 
   // const scrollToBottom = (initialMsgs) => {
@@ -83,24 +99,22 @@ export const ChatList = ({ initialMessages, myAddress, tempMessages, chatId, onR
   //   }
   // };
 
-
   const sentNewMessageGroupFunc = useCallback(() => {
     scrollToBottom();
   }, [messages]);
 
   useEffect(() => {
-    subscribeToEvent('sent-new-message-group', sentNewMessageGroupFunc);
+    subscribeToEvent("sent-new-message-group", sentNewMessageGroupFunc);
     return () => {
-      unsubscribeFromEvent('sent-new-message-group', sentNewMessageGroupFunc);
+      unsubscribeFromEvent("sent-new-message-group", sentNewMessageGroupFunc);
     };
   }, [sentNewMessageGroupFunc]);
 
-  const lastSignature = useMemo(()=> {
-    if(!messages || messages?.length === 0) return null
-    const lastIndex = messages.length - 1
-    return messages[lastIndex]?.signature
-  }, [messages])
-
+  const lastSignature = useMemo(() => {
+    if (!messages || messages?.length === 0) return null;
+    const lastIndex = messages.length - 1;
+    return messages[lastIndex]?.signature;
+  }, [messages]);
 
   // Initialize the virtualizer
   const rowVirtualizer = useVirtualizer({
@@ -108,125 +122,147 @@ export const ChatList = ({ initialMessages, myAddress, tempMessages, chatId, onR
     getScrollElement: () => parentRef.current,
     estimateSize: () => 80, // Provide an estimated height of items, adjust this as needed
     overscan: 10, // Number of items to render outside the visible area to improve smoothness
-    measureElement:
-    typeof window !== 'undefined' &&
-    navigator.userAgent.indexOf('Firefox') === -1
-      ? element => {
-        return element?.getBoundingClientRect().height
-      }
-      : undefined,
+    getItemKey: React.useCallback(
+      (index) => messages[index].signature,
+      [messages]
+    ),
   });
 
   return (
-<div style={{
-  height: '100%',
-  position: 'relative'
-}}>
-    <div ref={parentRef} style={{ height: '100%', overflow: 'auto', position: 'relative', display: 'flex' }}>
+    <div
+      style={{
+        height: "100%",
+        position: "relative",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
       <div
+        ref={parentRef}
+        className="List"
         style={{
-          width: '100%',
-          position: 'relative',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center', // Center items horizontally
-          gap: '10px', // Add gap between items
-          flexGrow: 1
+          flexGrow: 1,
+          overflow: "auto",
+          position: "relative",
+          display: "flex",
+          height: "0px",
         }}
       >
-        {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-          const index = virtualRow.index;
-          let message = messages[index];
-          let replyIndex = messages.findIndex((msg) => msg?.signature === message?.repliedTo);
-          let reply;
-          let reactions = null;
+        <div
+          style={{
+            height: rowVirtualizer.getTotalSize(),
+            width: "100%",
+          }}
+        >
+          <div
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              width: "100%",
+              // transform: `translateY(${rowVirtualizer.getVirtualItems()[0]?.start ?? 0}px)`,
+            }}
+          >
+            {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+              const index = virtualRow.index;
+              let message = messages[index];
+              let replyIndex = messages.findIndex(
+                (msg) => msg?.signature === message?.repliedTo
+              );
+              let reply;
+              let reactions = null;
 
-          if (message?.repliedTo && replyIndex !== -1) {
-            reply = messages[replyIndex];
-          }
+              if (message?.repliedTo && replyIndex !== -1) {
+                reply = messages[replyIndex];
+              }
 
-          if (message?.message && message?.groupDirectId) {
-            replyIndex = messages.findIndex((msg) => msg?.signature === message?.message?.repliedTo);
-            if (message?.message?.repliedTo && replyIndex !== -1) {
-              reply = messages[replyIndex];
-            }
-            message = {
-              ...(message?.message || {}),
-              isTemp: true,
-              unread: false,
-              status: message?.status
-            };
-          }
+              if (message?.message && message?.groupDirectId) {
+                replyIndex = messages.findIndex(
+                  (msg) => msg?.signature === message?.message?.repliedTo
+                );
+                if (message?.message?.repliedTo && replyIndex !== -1) {
+                  reply = messages[replyIndex];
+                }
+                message = {
+                  ...(message?.message || {}),
+                  isTemp: true,
+                  unread: false,
+                  status: message?.status,
+                };
+              }
 
-          if (chatReferences && chatReferences[message?.signature]) {
-            if (chatReferences[message.signature]?.reactions) {
-              reactions = chatReferences[message.signature]?.reactions;
-            }
-          }
+              if (chatReferences && chatReferences[message?.signature]) {
+                if (chatReferences[message.signature]?.reactions) {
+                  reactions = chatReferences[message.signature]?.reactions;
+                }
+              }
 
-          let isUpdating = false;
-          if (tempChatReferences && tempChatReferences?.find((item) => item?.chatReference === message?.signature)) {
-            isUpdating = true;
-          }
+              let isUpdating = false;
+              if (
+                tempChatReferences &&
+                tempChatReferences?.find(
+                  (item) => item?.chatReference === message?.signature
+                )
+              ) {
+                isUpdating = true;
+              }
 
-          return (
-            <div
-            data-index={virtualRow.index} //needed for dynamic row height measurement
-            ref={node => rowVirtualizer.measureElement(node)} //measure dynamic row height
-              key={message.signature}
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: '50%', // Move to the center horizontally
-                transform: `translateY(${virtualRow.start}px) translateX(-50%)`, // Adjust for centering
-                width: '100%', // Control width (90% of the parent)
-                padding: '10px 0',
-                display: 'flex',
-                justifyContent: 'center',
-                overscrollBehavior: 'none',
-              }}
-            >
-              <MessageItem
-                isLast={index === messages.length - 1}
-                lastSignature={lastSignature}
-                message={message}
-                onSeen={handleMessageSeen}
-                isTemp={!!message?.isTemp}
-                myAddress={myAddress}
-                onReply={onReply}
-                reply={reply}
-                replyIndex={replyIndex}
-                scrollToItem={(idx) => rowVirtualizer.scrollToIndex(idx)}
-                handleReaction={handleReaction}
-                reactions={reactions}
-                isUpdating={isUpdating}
-              />
-            </div>
-          );
-        })}
+              return (
+                <div
+                  data-index={virtualRow.index} //needed for dynamic row height measurement
+                  ref={(node) => rowVirtualizer.measureElement(node)} //measure dynamic row height
+                  key={message.signature}
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: "50%", // Move to the center horizontally
+                    transform: `translateY(${virtualRow.start}px) translateX(-50%)`, // Adjust for centering
+                    width: "100%", // Control width (90% of the parent)
+                    padding: "10px 0",
+                    display: "flex",
+                    justifyContent: "center",
+                    overscrollBehavior: "none",
+                  }}
+                >
+                  <MessageItem
+                    isLast={index === messages.length - 1}
+                    lastSignature={lastSignature}
+                    message={message}
+                    onSeen={handleMessageSeen}
+                    isTemp={!!message?.isTemp}
+                    myAddress={myAddress}
+                    onReply={onReply}
+                    reply={reply}
+                    replyIndex={replyIndex}
+                    scrollToItem={(idx) => rowVirtualizer.scrollToIndex(idx)}
+                    handleReaction={handleReaction}
+                    reactions={reactions}
+                    isUpdating={isUpdating}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        </div>
       </div>
-
-      
+      {showScrollButton && (
+        <button
+          onClick={() => scrollToBottom()}
+          style={{
+            position: "absolute",
+            bottom: 20,
+            right: 20,
+            backgroundColor: "#ff5a5f",
+            color: "white",
+            padding: "10px 20px",
+            borderRadius: "20px",
+            cursor: "pointer",
+            zIndex: 10,
+          }}
+        >
+          Scroll to Unread Messages
+        </button>
+      )}
     </div>
-    {showScrollButton && (
-      <button
-        onClick={() => scrollToBottom()}
-        style={{
-          position: 'absolute',
-          bottom: 20,
-          right: 20,
-          backgroundColor: '#ff5a5f',
-          color: 'white',
-          padding: '10px 20px',
-          borderRadius: '20px',
-          cursor: 'pointer',
-          zIndex: 10,
-        }}
-      >
-        Scroll to Unread Messages
-      </button>
-    )}
-   </div>
- 
   );
 };
