@@ -162,7 +162,7 @@ export const ListOfGroupPromotions = () => {
       });
 
       await Promise.all(getPromos);
-      const groupWithInfo = await getGroupNames(data);
+      const groupWithInfo = await getGroupNames(data.sort((a, b) => b.created - a.created));
       setPromotions(groupWithInfo);
     } catch (error) {
       console.error(error);
@@ -548,10 +548,10 @@ export const ListOfGroupPromotions = () => {
                 }}
               >
                 <Button
-                  variant="contained"
                   onClick={(event) => handlePopoverOpen(event, promotion?.groupId)}
                   sx={{
                     fontSize: "12px",
+                    color: 'white'
                   }}
                 >
                   Join Group: {` ${promotion?.groupName}`}
@@ -687,7 +687,7 @@ export const ListOfGroupPromotions = () => {
           aria-describedby="alert-dialog-description"
         >
           <DialogTitle id="alert-dialog-title">
-            {"Publish Group Promotion"}
+          {"Promote your group to non-members"}
           </DialogTitle>
           <DialogContent>
             <DialogContentText id="alert-dialog-description">
