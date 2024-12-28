@@ -1638,6 +1638,10 @@ export const getWalletBalance = async (data, bypassPermission?: boolean, isFromE
     throw new Error(errorMsg);
   }
 
+  const  isGateway =  await isRunningGateway()
+
+  if(data?.coin === 'ARRR' && isGateway) throw new Error('Cannot view ARRR balance through the gateway. Please use your local node.')
+
   const value = (await getPermission(`qAPPAutoWalletBalance-${appInfo?.name}-${data.coin}`)) || false;
   let skip = false;
   if (value) {
@@ -1691,7 +1695,7 @@ export const getWalletBalance = async (data, bypassPermission?: boolean, isFromE
         case "BTC":
           _url = await createEndpoint(`/crosschain/btc/walletbalance`);
 
-          _body = parsedData.derivedMasterPublicKey;
+          _body = parsedData.btcPublicKey;
           break;
         case "LTC":
           _url = await createEndpoint(`/crosschain/ltc/walletbalance`);

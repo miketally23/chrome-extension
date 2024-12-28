@@ -96,6 +96,7 @@ import LockIcon from '@mui/icons-material/Lock';
 import NoEncryptionGmailerrorredIcon from '@mui/icons-material/NoEncryptionGmailerrorred';
 import { useSetRecoilState } from "recoil";
 import { selectedGroupIdAtom } from "../../atoms/global";
+import { sortArrayByTimestampAndGroupName } from "../../utils/time";
 
 // let touchStartY = 0;
 // let disablePullToRefresh = false;
@@ -976,7 +977,7 @@ export const Group = ({
     chrome?.runtime?.onMessage.addListener((message, sender, sendResponse) => {
       if (message.action === "SET_GROUPS") {
         // Update the component state with the received 'sendqort' state
-        setGroups(message.payload);
+        setGroups(sortArrayByTimestampAndGroupName(message.payload));
         getLatestRegularChat(message.payload)
         setMemberGroups(message.payload);
 
@@ -2630,6 +2631,10 @@ export const Group = ({
                         <Typography>
                           You are not part of the encrypted group of members.
                           Wait until an admin re-encrypts the keys.
+                        </Typography>
+                        <Spacer height="25px" />
+                        <Typography>
+                          <strong>Only unencrypted messages will be displayed.</strong>
                         </Typography>
                         <Spacer height="25px" />
                         <Typography>

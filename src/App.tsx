@@ -43,7 +43,8 @@ import Return from "./assets/svgs/Return.svg";
 import Success from "./assets/svgs/Success.svg";
 import Info from "./assets/svgs/Info.svg";
 import CloseIcon from "@mui/icons-material/Close";
-
+import { JsonView, allExpanded, darkStyles } from 'react-json-view-lite';
+import 'react-json-view-lite/dist/index.css';
 import {
   createAccount,
   generateRandomSentence,
@@ -2797,6 +2798,15 @@ function App() {
             {messageQortalRequestExtension?.highlightedText}
           </TextP>
 
+          {messageQortalRequestExtension?.json && (
+              <>
+                          <Spacer height="15px" />
+
+                          <JsonView data={messageQortalRequestExtension?.json} shouldExpandNode={allExpanded} style={darkStyles} />
+                          <Spacer height="15px" />
+
+              </>
+            )}
           {messageQortalRequestExtension?.fee && (
             <>
                       <Spacer height="15px" />

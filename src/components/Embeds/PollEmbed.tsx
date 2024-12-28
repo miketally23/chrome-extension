@@ -48,16 +48,17 @@ export const PollCard = ({
       });
       setIsLoadingSubmit(true);
   
-      window
-        .sendMessage(
-          "voteOnPoll",
+      chrome?.runtime?.sendMessage(
           {
-            pollName: poll?.info?.pollName,
+            action: "VOTE_ON_POLL",
+            type: "qortalRequest",
+            payload: {
+              pollName: poll?.info?.pollName,
             optionIndex: +selectedOption,
+            }
+            
           },
-          60000
-        )
-        .then((response) => {
+        (response) => {
           setIsLoadingSubmit(false);
           if (response.error) {
             setInfoSnack({
@@ -75,14 +76,6 @@ export const PollCard = ({
             setOpenSnack(true);
           }
         })
-        .catch((error) => {
-          setIsLoadingSubmit(false);
-          setInfoSnack({
-            type: "error",
-            message: error?.message || "Unable to vote.",
-          });
-          setOpenSnack(true);
-        });
     };
   
     const getName = async (owner) => {

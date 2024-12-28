@@ -103,14 +103,15 @@ export const AppRating = ({ app, myName, ratingCountPosition = "right" }) => {
     getRating(app?.name, app?.service);
   }, [getRating, app?.name]);
 
-  const rateFunc = async (event, newValue) => {
+  const rateFunc = async (event, chosenValue, currentValue) => {
     try {
+      const newValue = chosenValue || currentValue
       if (!myName) throw new Error("You need a name to rate.");
       if (!app?.name) return;
-      const fee = await getFee("ARBITRARY");
+      const fee = await getFee("CREATE_POLL");
 
       await show({
-        message: `Would you like to rate this app a rating of ${newValue}?`,
+        message: `Would you like to rate this app a rating of ${newValue}?. It will create a POLL tx.`,
         publishFee: fee.fee + " QORT",
       });
 
@@ -212,7 +213,7 @@ export const AppRating = ({ app, myName, ratingCountPosition = "right" }) => {
 
         <Rating
           value={value}
-          onChange={rateFunc}
+          onChange={(event, rating)=> rateFunc(event, rating, value)}
           precision={1}
           readOnly={hasPublishedRating === null}
           size="small"
