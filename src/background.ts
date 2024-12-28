@@ -44,6 +44,9 @@ export function getProtocol(url) {
   }
 }
 
+export let groupSecretkeys = {}
+
+
 export const gateways = ['ext-node.qortal.link']
 
 
@@ -154,7 +157,7 @@ const getCustomNodesFromStorage = async () => {
 //     return `/arbitrary/resources/searchsimple`;
 //   }
 // }
-const getArbitraryEndpoint = async () => {
+export const getArbitraryEndpoint = async () => {
   const apiKey = await getApiKeyFromStorage(); // Retrieve apiKey asynchronously
   if (apiKey) {
     return `/arbitrary/resources/searchsimple`;
@@ -3006,6 +3009,41 @@ async function addTimestampGroupAnnouncement({
   });
 }
 
+async function getTimestampMention() {
+  const wallet = await getSaveWallet();
+  const address = wallet.address0;
+  const key = `enter-mention-timestamp-${address}`;
+  const res = await chrome.storage.local.get([key]);
+  if (res?.[key]) {
+    const parsedData = JSON.parse(res[key]);
+    return parsedData;
+  } else {
+    return {};
+  }
+}
+
+
+export async function addTimestampMention({ groupId, timestamp }) {
+  const wallet = await getSaveWallet();
+  const address = wallet.address0;
+  const data = await getTimestampMention();
+  data[groupId] = timestamp;
+  const dataString = JSON.stringify(data);
+
+  return await new Promise((resolve, reject) => {
+    chrome.storage.local.set(
+      { [`enter-mention-timestamp-${address}`]: dataString },
+      () => {
+        if (chrome.runtime.lastError) {
+          reject(new Error(chrome.runtime.lastError.message));
+        } else {
+          resolve(true);
+        }
+      }
+    );
+  });
+}
+
 async function getGroupData() {
   const wallet = await getSaveWallet();
   const address = wallet.address0;
@@ -3459,6 +3497,29 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
         }
 
         break;
+        case "addTimestampMention": {
+          const { groupId, timestamp } = request.payload;
+          addTimestampMention({ groupId, timestamp })
+            .then((res) => {
+              sendResponse(res);
+            })
+            .catch((error) => {
+              sendResponse({ error: error.message });
+              console.error(error.message);
+            });
+        }
+          break;
+        case "getTimestampMention": {
+          getTimestampMention()
+            .then((res) => {
+              sendResponse(res);
+            })
+            .catch((error) => {
+              sendResponse({ error: error.message });
+              console.error(error.message);
+            });
+        }
+          break;
       case "makeAdmin":
         {
           const { groupId, qortalAddress } = request.payload;
@@ -4508,7 +4569,7 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
                 // for announcement notification
                 clearInterval(interval);
               }
-
+              groupSecretkeys = {}
               const wallet = await getSaveWallet();
               const address = wallet.address0;
               const key1 = `tempPublish-${address}`;

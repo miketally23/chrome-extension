@@ -13,16 +13,24 @@ import {
   sendQortFee,
   sendCoin as sendCoinFunc,
   isUsingLocal,
-  createBuyOrderTxQortalRequest
+  createBuyOrderTxQortalRequest,
+  groupSecretkeys,
+  getBaseApi,
+  getArbitraryEndpoint
 } from "../background";
-import { getNameInfo } from "../backgroundFunctions/encryption";
+import { decryptGroupEncryption, getNameInfo, uint8ArrayToObject } from "../backgroundFunctions/encryption";
 import { QORT_DECIMALS } from "../constants/constants";
 import Base58 from "../deps/Base58";
 import {
   base64ToUint8Array,
+  createSymmetricKeyAndNonce,
   decryptDeprecatedSingle,
   decryptGroupDataQortalRequest,
+  decryptGroupEncryptionWithSharingKey,
+  decryptSingle,
   encryptDataGroup,
+  encryptSingle,
+  objectToBase64,
   uint8ArrayStartsWith,
   uint8ArrayToBase64,
 } from "../qdn/encryption/group-encryption";
@@ -46,6 +54,7 @@ const sellerForeignFee = {
     ticker: 'LTC'
   }
 }
+
 
 
 function roundUpToDecimals(number, decimals = 8) {
@@ -95,6 +104,139 @@ const _createPoll = async ({pollName, pollDescription, options}, isFromExtension
   } else {
     throw new Error("User declined request");
   }
+};
+
+function validateSecretKey(obj) {
+  // Check if the input is an object
+  if (typeof obj !== "object" || obj === null) {
+    return false;
+  }
+
+  // Iterate over each key in the object
+  for (let key in obj) {
+    // Ensure the key is a string representation of a positive integer
+    if (!/^\d+$/.test(key)) {
+      return false;
+    }
+
+    // Get the corresponding value for the key
+    const value = obj[key];
+
+    // Check that value is an object and not null
+    if (typeof value !== "object" || value === null) {
+      return false;
+    }
+
+    // Check for messageKey 
+    if (!value.hasOwnProperty("messageKey")) {
+      return false;
+    }
+
+    // Ensure messageKey and nonce are non-empty strings
+    if (
+      typeof value.messageKey !== "string" ||
+      value.messageKey.trim() === ""
+    ) {
+      return false;
+    }
+  }
+
+  // If all checks passed, return true
+  return true;
+}
+
+const getPublishesFromAdminsAdminSpace = async (
+  admins: string[],
+  groupId
+) => {
+  const queryString = admins.map((name) => `name=${name}`).join("&");
+  const baseUrl = await getBaseApi()
+  const url = `${baseUrl}/arbitrary/resources/searchsimple?mode=ALL&service=DOCUMENT_PRIVATE&identifier=admins-symmetric-qchat-group-${groupId}&exactmatchnames=true&limit=0&reverse=true&${queryString}&prefix=true`;
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error("network error");
+  }
+  const adminData = await response.json();
+
+  const filterId = adminData.filter(
+    (data: any) => data.identifier === `admins-symmetric-qchat-group-${groupId}`
+  );
+  if (filterId?.length === 0) {
+    return false;
+  }
+  const sortedData = filterId.sort((a: any, b: any) => {
+    // Get the most recent date for both a and b
+    const dateA = a.updated ? new Date(a.updated) : new Date(a.created);
+    const dateB = b.updated ? new Date(b.updated) : new Date(b.created);
+
+    // Sort by most recent
+    return dateB.getTime() - dateA.getTime();
+  });
+
+  return sortedData[0];
+};
+
+ const getPublishesFromAdmins = async (admins: string[], groupId) => {
+  const baseUrl = await getBaseApi()
+
+  const queryString = admins.map((name) => `name=${name}`).join("&");
+  const url = `${baseUrl}/arbitrary/resources/searchsimple?mode=ALL&service=DOCUMENT_PRIVATE&identifier=symmetric-qchat-group-${
+    groupId
+  }&exactmatchnames=true&limit=0&reverse=true&${queryString}&prefix=true`;
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error("network error");
+  }
+  const adminData = await response.json();
+
+  const filterId = adminData.filter(
+    (data: any) =>
+      data.identifier === `symmetric-qchat-group-${groupId}`
+  );
+  if (filterId?.length === 0) {
+    return false;
+  }
+  const sortedData = filterId.sort((a: any, b: any) => {
+    // Get the most recent date for both a and b
+    const dateA = a.updated ? new Date(a.updated) : new Date(a.created);
+    const dateB = b.updated ? new Date(b.updated) : new Date(b.created);
+
+    // Sort by most recent
+    return dateB.getTime() - dateA.getTime();
+  });
+
+
+  return sortedData[0];
+};
+
+ const getGroupAdmins = async (groupNumber: number) => {
+  // const validApi = await findUsableApi();
+  const baseUrl = await getBaseApi()
+
+  const response = await fetch(
+    `${baseUrl}/groups/members/${groupNumber}?limit=0&onlyAdmins=true`
+  );
+  const groupData = await response.json();
+  let members: any = [];
+  let membersAddresses = [];
+  let both = [];
+
+
+  const getMemNames = groupData?.members?.map(async (member) => {
+    if (member?.member) {
+      const name = await  getNameInfo(member.member);
+      if (name) {
+        members.push(name);
+        both.push({ name, address: member.member });
+      }
+      membersAddresses.push(member.member);
+    }
+
+    return true;
+  });
+  await Promise.all(getMemNames);
+console.log('members', members)
+  return { names: members, addresses: membersAddresses, both };
 };
 
 const _deployAt = async (
@@ -2824,46 +2966,102 @@ export const cancelSellOrder = async (data, isFromExtension) => {
 };
 
 export const adminAction = async (data, isFromExtension) => {
-  const requiredFields = [
-    "type",
-  ];
+  const requiredFields = ["type"];
   const missingFields: string[] = [];
   requiredFields.forEach((field) => {
     if (!data[field]) {
       missingFields.push(field);
     }
   });
+  // For actions that require a value, check for 'value' field
+  const actionsRequiringValue = [
+    "addpeer",
+    "removepeer",
+    "forcesync",
+    "addmintingaccount",
+    "removemintingaccount",
+  ];
+  if (
+    actionsRequiringValue.includes(data.type.toLowerCase()) &&
+    !data.value
+  ) {
+    missingFields.push("value");
+  }
   if (missingFields.length > 0) {
     const missingFieldsString = missingFields.join(", ");
     const errorMsg = `Missing fields: ${missingFieldsString}`;
     throw new Error(errorMsg);
   }
-  const  isGateway =  await isRunningGateway()
-  if(isGateway){
-    throw new Error('This action cannot be done through a gateway')
+  const isGateway = await isRunningGateway();
+  if (isGateway) {
+    throw new Error("This action cannot be done through a gateway");
   }
 
-    let apiEndpoint = '';
-    switch (data.type.toLowerCase()) {
-      case 'stop':
-        apiEndpoint = await createEndpoint('/admin/stop');
-        break;
-      case 'restart':
-        apiEndpoint = await createEndpoint('/admin/restart');
-        break;
-      case 'bootstrap':
-        apiEndpoint = await createEndpoint('/admin/bootstrap');
-        break;
-      default:
-        throw new Error(`Unknown admin action type: ${data.type}`);
-    }
+  let apiEndpoint = "";
+  let method = "GET"; // Default method
+  let includeValueInBody = false;
+  switch (data.type.toLowerCase()) {
+    case "stop":
+      apiEndpoint = await createEndpoint("/admin/stop");
+      break;
+    case "restart":
+      apiEndpoint = await createEndpoint("/admin/restart");
+      break;
+    case "bootstrap":
+      apiEndpoint = await createEndpoint("/admin/bootstrap");
+      break;
+    case "addmintingaccount":
+      apiEndpoint = await createEndpoint("/admin/mintingaccounts");
+      method = "POST";
+      includeValueInBody = true;
+      break;
+    case "removemintingaccount":
+      apiEndpoint = await createEndpoint("/admin/mintingaccounts");
+      method = "DELETE";
+      includeValueInBody = true;
+      break;
+    case "forcesync":
+      apiEndpoint = await createEndpoint("/admin/forcesync");
+      method = "POST";
+      includeValueInBody = true;
+      break;
+    case "addpeer":
+      apiEndpoint = await createEndpoint("/peers");
+      method = "POST";
+      includeValueInBody = true;
+      break;
+    case "removepeer":
+      apiEndpoint = await createEndpoint("/peers");
+      method = "DELETE";
+      includeValueInBody = true;
+      break;
+    default:
+      throw new Error(`Unknown admin action type: ${data.type}`);
+  }
+  // Prepare the permission prompt text
+  let permissionText = `Do you give this application permission to perform the admin action: ${data.type}`;
+  if (data.value) {
+    permissionText += ` with value: ${data.value}`;
+  }
 
-    const resPermission = await getUserPermission({
-      text1: `Do you give this application permission to perform a node ${data.type}?`,
-    }, isFromExtension);
-    const { accepted } = resPermission;
-    if (accepted) {
-      const response = await fetch(apiEndpoint);
+  const resPermission = await getUserPermission(
+    {
+      text1: permissionText,
+    },
+    isFromExtension
+  );
+  const { accepted } = resPermission;
+  if (accepted) {
+    // Set up options for the API call
+    const options: RequestInit = {
+      method: method,
+      headers: {},
+    };
+    if (includeValueInBody) {
+      options.headers["Content-Type"] = "text/plain";
+      options.body = data.value;
+    }
+    const response = await fetch(apiEndpoint, options);
     if (!response.ok) throw new Error("Failed to perform request");
 
     let res;
@@ -2876,5 +3074,325 @@ export const adminAction = async (data, isFromExtension) => {
   } else {
     throw new Error("User declined request");
   }
+};
+
+export const signTransaction = async (data, isFromExtension) => {
+  const requiredFields = ["unsignedBytes"];
+  const missingFields: string[] = [];
+  requiredFields.forEach((field) => {
+    if (!data[field]) {
+      missingFields.push(field);
+    }
+  });
+  if (missingFields.length > 0) {
+    const missingFieldsString = missingFields.join(", ");
+    const errorMsg = `Missing fields: ${missingFieldsString}`;
+    throw new Error(errorMsg);
+  }
+
+  let _url = await createEndpoint(
+    "/transactions/decode?ignoreValidityChecks=false"
+  );
+
+  let _body = data.unsignedBytes;
+  const response = await fetch(_url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: _body,
+  });
+  if (!response.ok) throw new Error("Failed to decode transaction");
+  const decodedData = await response.json();
+  const resPermission = await getUserPermission(
+    {
+      text1: `Do you give this application permission to sign a transaction?`,
+      highlightedText: "Read the transaction carefully before accepting!",
+      text2: `Tx type: ${decodedData.type}`,
+      json: decodedData,
+    },
+    isFromExtension
+  );
+  const { accepted } = resPermission;
+  if (accepted) {
+   
+      let urlConverted = await createEndpoint("/transactions/convert");
+
+      const responseConverted = await fetch(urlConverted, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: data.unsignedBytes,
+      });
+      const resKeyPair = await getKeyPair();
+      const parsedData = resKeyPair;
+      const uint8PrivateKey = Base58.decode(parsedData.privateKey);
+      const uint8PublicKey = Base58.decode(parsedData.publicKey);
+      const keyPair = {
+        privateKey: uint8PrivateKey,
+        publicKey: uint8PublicKey,
+      };
+      const convertedBytes = await responseConverted.text();
+      const txBytes = Base58.decode(data.unsignedBytes);
+      const _arbitraryBytesBuffer = Object.keys(txBytes).map(function (key) {
+        return txBytes[key];
+      });
+      const arbitraryBytesBuffer = new Uint8Array(_arbitraryBytesBuffer);
+      const txByteSigned = Base58.decode(convertedBytes);
+      const _bytesForSigningBuffer = Object.keys(txByteSigned).map(function (
+        key
+      ) {
+        return txByteSigned[key];
+      });
+      const bytesForSigningBuffer = new Uint8Array(_bytesForSigningBuffer);
+      const signature = nacl.sign.detached(
+        bytesForSigningBuffer,
+        keyPair.privateKey
+      );
+      const signedBytes = utils.appendBuffer(arbitraryBytesBuffer, signature);
+      return uint8ArrayToBase64(signedBytes);
+   
+  } else {
+    throw new Error("User declined request");
+  }
+};
+
+
+export const decryptQortalGroupData = async (data, sender) => {
+    console.log('data', data)
+  let data64 = data.data64;
+  let groupId = data?.groupId
+  let isAdmins = data?.isAdmins
+  if(!groupId){
+    throw new Error('Please provide a groupId')
+  }
+
+  if (!data64) {
+    throw new Error("Please include data to encrypt");
+  }
+
+  let secretKeyObject
+  if(!isAdmins){
+  if(groupSecretkeys[groupId] && groupSecretkeys[groupId].secretKeyObject && groupSecretkeys[groupId]?.timestamp && (Date.now() - groupSecretkeys[groupId]?.timestamp) <  1200000){
+    secretKeyObject = groupSecretkeys[groupId].secretKeyObject
+  }
+  if(!secretKeyObject){
+    const { names } =
+    await getGroupAdmins(groupId)
+
+    const publish =
+     await getPublishesFromAdmins(names, groupId);
+  if(publish === false) throw new Error('No group key found.')
+  const url = await createEndpoint(`/arbitrary/DOCUMENT_PRIVATE/${publish.name}/${
+    publish.identifier
+  }?encoding=base64`);
+
+  const res = await fetch(
+url
+  );
+  const resData = await res.text();
+  const decryptedKey: any = await decryptGroupEncryption({data: resData});
+
+  const dataint8Array = base64ToUint8Array(decryptedKey.data);
+  const decryptedKeyToObject = uint8ArrayToObject(dataint8Array);
+  if (!validateSecretKey(decryptedKeyToObject))
+    throw new Error("SecretKey is not valid");
+    secretKeyObject = decryptedKeyToObject
+    groupSecretkeys[groupId] = {
+      secretKeyObject,
+      timestamp: Date.now()
+    }
+  }
+} else {
+  if(groupSecretkeys[`admins-${groupId}`] && groupSecretkeys[`admins-${groupId}`].secretKeyObject && groupSecretkeys[`admins-${groupId}`]?.timestamp && (Date.now() - groupSecretkeys[`admins-${groupId}`]?.timestamp) <  1200000){
+    secretKeyObject = groupSecretkeys[`admins-${groupId}`].secretKeyObject
+  }
+  if(!secretKeyObject){
+    const { names } =
+    await getGroupAdmins(groupId)
+
+    const publish =
+     await getPublishesFromAdminsAdminSpace(names, groupId);
+  if(publish === false) throw new Error('No group key found.')
+  const url = await createEndpoint(`/arbitrary/DOCUMENT_PRIVATE/${publish.name}/${
+    publish.identifier
+  }?encoding=base64`);
+
+  const res = await fetch(
+url
+  );
+  const resData = await res.text();
+  const decryptedKey: any = await decryptGroupEncryption({data: resData});
+
+  const dataint8Array = base64ToUint8Array(decryptedKey.data);
+  const decryptedKeyToObject = uint8ArrayToObject(dataint8Array);
+  if (!validateSecretKey(decryptedKeyToObject))
+    throw new Error("SecretKey is not valid");
+    secretKeyObject = decryptedKeyToObject
+    groupSecretkeys[`admins-${groupId}`] = {
+      secretKeyObject,
+      timestamp: Date.now()
+    }
+  }
+
+
+}
+console.log('secretKeyObject', secretKeyObject)
+      
+        const resGroupDecryptResource = decryptSingle({
+          data64, secretKeyObject: secretKeyObject, skipDecodeBase64: true
+        })
+  if (resGroupDecryptResource) {
+    return resGroupDecryptResource;
+  } else {
+    throw new Error("Unable to decrypt");
+  }
+};
+
+export const encryptDataWithSharingKey = async (data, sender) => {
+  let data64 = data.data64;
+  let publicKeys = data.publicKeys || [];
+  if (data.fileId) {
+    data64 = await getFileFromContentScript(data.fileId, sender);
+  }
+  if (!data64) {
+    throw new Error("Please include data to encrypt");
+  }
+  const symmetricKey = createSymmetricKeyAndNonce()
+  const dataObject = {
+    data: data64,
+    key:symmetricKey.messageKey
+  }
+  const dataObjectBase64 = await objectToBase64(dataObject)
+
+  const resKeyPair = await getKeyPair();
+  const parsedData = resKeyPair;
+  const privateKey = parsedData.privateKey;
+  const userPublicKey = parsedData.publicKey;
+
+  const encryptDataResponse = encryptDataGroup({
+    data64: dataObjectBase64,
+    publicKeys: publicKeys,
+    privateKey,
+    userPublicKey,
+    customSymmetricKey: symmetricKey.messageKey
+  });
+  if (encryptDataResponse) {
+    return encryptDataResponse;
+  } else {
+    throw new Error("Unable to encrypt");
+  }
+};
+
+export const decryptDataWithSharingKey = async (data, sender) => {
+  const { encryptedData, key } = data;
+
  
+  if (!encryptedData) {
+    throw new Error("Please include data to decrypt");
+  }
+  const decryptedData = await decryptGroupEncryptionWithSharingKey({data64EncryptedData: encryptedData, key})
+  const base64ToObject = JSON.parse(atob(decryptedData))
+  if(!base64ToObject.data) throw new Error('No data in the encrypted resource')
+  return base64ToObject.data
+};
+
+export const encryptQortalGroupData = async (data, sender) => {
+  let data64 = data.data64;
+  let groupId = data?.groupId
+  let isAdmins = data?.isAdmins
+  if(!groupId){
+    throw new Error('Please provide a groupId')
+  }
+  if (data.fileId) {
+    data64 = await getFileFromContentScript(data.fileId, sender);
+  }
+  if (!data64) {
+    throw new Error("Please include data to encrypt");
+  }
+
+
+  let secretKeyObject
+  if(!isAdmins){
+  if(groupSecretkeys[groupId] && groupSecretkeys[groupId].secretKeyObject && groupSecretkeys[groupId]?.timestamp && (Date.now() - groupSecretkeys[groupId]?.timestamp) <  1200000){
+    secretKeyObject = groupSecretkeys[groupId].secretKeyObject
+  }
+
+  if(!secretKeyObject){
+    const { names } =
+    await getGroupAdmins(groupId)
+
+    const publish =
+     await getPublishesFromAdmins(names, groupId);
+  if(publish === false) throw new Error('No group key found.')
+  const url = await createEndpoint(`/arbitrary/DOCUMENT_PRIVATE/${publish.name}/${
+    publish.identifier
+  }?encoding=base64`);
+
+  const res = await fetch(
+url
+  );
+  const resData = await res.text();
+  const decryptedKey: any = await decryptGroupEncryption({data: resData});
+
+  const dataint8Array = base64ToUint8Array(decryptedKey.data);
+  const decryptedKeyToObject = uint8ArrayToObject(dataint8Array);
+
+  if (!validateSecretKey(decryptedKeyToObject))
+    throw new Error("SecretKey is not valid");
+    secretKeyObject = decryptedKeyToObject
+    groupSecretkeys[groupId] = {
+      secretKeyObject,
+      timestamp: Date.now()
+    }
+  }
+} else {
+
+  if(groupSecretkeys[`admins-${groupId}`] && groupSecretkeys[`admins-${groupId}`].secretKeyObject && groupSecretkeys[`admins-${groupId}`]?.timestamp && (Date.now() - groupSecretkeys[`admins-${groupId}`]?.timestamp) <  1200000){
+    secretKeyObject = groupSecretkeys[`admins-${groupId}`].secretKeyObject
+  }
+
+  if(!secretKeyObject){
+    const { names } =
+    await getGroupAdmins(groupId)
+
+    const publish =
+     await getPublishesFromAdminsAdminSpace(names, groupId);
+  if(publish === false) throw new Error('No group key found.')
+  const url = await createEndpoint(`/arbitrary/DOCUMENT_PRIVATE/${publish.name}/${
+    publish.identifier
+  }?encoding=base64`);
+
+  const res = await fetch(
+url
+  );
+  const resData = await res.text();
+  const decryptedKey: any = await decryptGroupEncryption({data: resData});
+
+  const dataint8Array = base64ToUint8Array(decryptedKey.data);
+  const decryptedKeyToObject = uint8ArrayToObject(dataint8Array);
+
+  if (!validateSecretKey(decryptedKeyToObject))
+    throw new Error("SecretKey is not valid");
+    secretKeyObject = decryptedKeyToObject
+    groupSecretkeys[`admins-${groupId}`] = {
+      secretKeyObject,
+      timestamp: Date.now()
+    }
+  }
+
+
+
+}
+      
+        const resGroupEncryptedResource = encryptSingle({
+          data64, secretKeyObject: secretKeyObject, 
+        })
+  
+  if (resGroupEncryptedResource) {
+    return resGroupEncryptedResource;
+  } else {
+    throw new Error("Unable to encrypt");
+  }
 };

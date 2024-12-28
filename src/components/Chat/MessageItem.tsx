@@ -1,8 +1,8 @@
 import { Message } from "@chatscope/chat-ui-kit-react";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useInView } from "react-intersection-observer";
 import { MessageDisplay } from "./MessageDisplay";
-import { Avatar, Box, ButtonBase, Typography } from "@mui/material";
+import { Avatar, Box, Button, ButtonBase, List, ListItem, ListItemText, Popover, Typography } from "@mui/material";
 import { formatTimestamp } from "../../utils/time";
 import { getBaseApi } from "../../background";
 import { getBaseApiReact } from "../../App";
@@ -16,6 +16,10 @@ import ReplyIcon from "@mui/icons-material/Reply";
 import { Spacer } from "../../common/Spacer";
 import { ReactionPicker } from "../ReactionPicker";
 import KeyOffIcon from '@mui/icons-material/KeyOff';
+import EditIcon from '@mui/icons-material/Edit';
+import Mention from "@tiptap/extension-mention";
+import TextStyle from '@tiptap/extension-text-style';
+
 export const MessageItem = ({
   message,
   onSeen,
@@ -30,21 +34,32 @@ export const MessageItem = ({
   handleReaction,
   reactions,
   isUpdating,
-  lastSignature
+  lastSignature,
+  onEdit,
+  isPrivate,
+  setMobileViewModeKeepOpen
 }) => {
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [selectedReaction, setSelectedReaction] = useState(null);
   const { ref, inView } = useInView({
     threshold: 0.7, // Fully visible
-    triggerOnce: true, // Only trigger once when it becomes visible
+    triggerOnce: false, // Only trigger once when it becomes visible
   });
 
   useEffect(() => {
-    if (inView && message.unread) {
+    if (inView && isLast && onSeen) {
       onSeen(message.id);
     }
-  }, [inView, message.id, message.unread, onSeen]);
+  }, [inView, message.id, isLast]);
 
 
   return (
+    <>
+    {message?.divide && (
+     <div className="unread-divider" id="unread-divider-id">
+     Unread messages below
+   </div>
+    )}
     <div
       ref={lastSignature === message?.signature ? ref : null}
       style={{
@@ -76,9 +91,9 @@ export const MessageItem = ({
               color: "white",
             }}
             alt={message?.senderName}
-            src={`${getBaseApiReact()}/arbitrary/THUMBNAIL/${
+            src={message?.senderName ? `${getBaseApiReact()}/arbitrary/THUMBNAIL/${
               message?.senderName
-            }/qortal_avatar?async=true`}
+            }/qortal_avatar?async=true` : ''}
           >
             {message?.senderName?.charAt(0)}
           </Avatar>
@@ -122,6 +137,15 @@ export const MessageItem = ({
             gap: '10px',
             alignItems: 'center'
           }}>
+              {message?.sender === myAddress && (!message?.isNotEncrypted || isPrivate === false) && (
+            <ButtonBase
+              onClick={() => {
+                onEdit(message);
+              }}
+            >
+              <EditIcon />
+            </ButtonBase>
+          )}
           {!isShowingAsReply && (
             <ButtonBase
               onClick={() => {
@@ -182,13 +206,16 @@ export const MessageItem = ({
                     StarterKit,
                     Underline,
                     Highlight,
+                    Mention,
+                    TextStyle
                   ])}
+                  setMobileViewModeKeepOpen={setMobileViewModeKeepOpen}
                 />
               )}
               {reply?.decryptedData?.type === "notification" ? (
                 <MessageDisplay htmlContent={reply.decryptedData?.data?.message} />
               ) : (
-                <MessageDisplay isReply htmlContent={reply.text} />
+                <MessageDisplay setMobileViewModeKeepOpen={setMobileViewModeKeepOpen} isReply htmlContent={reply.text} />
               )}
             </Box>
           </Box>
@@ -200,13 +227,16 @@ export const MessageItem = ({
               StarterKit,
               Underline,
               Highlight,
+              Mention,
+              TextStyle
             ])}
+            setMobileViewModeKeepOpen={setMobileViewModeKeepOpen}
           />
         )}
         {message?.decryptedData?.type === "notification" ? (
           <MessageDisplay htmlContent={message.decryptedData?.data?.message} />
         ) : (
-          <MessageDisplay htmlContent={message.text} />
+          <MessageDisplay setMobileViewModeKeepOpen={setMobileViewModeKeepOpen} htmlContent={message.text} />
         )}
         <Box
           sx={{
@@ -225,18 +255,16 @@ export const MessageItem = ({
               // const myReaction = reactions
               if(numberOfReactions === 0) return null
               return (
-                <ButtonBase sx={{
+                <ButtonBase key={reaction} sx={{
                   height: '30px',
                   minWidth:  '45px',
                   background: 'var(--bg-2)',
                   borderRadius: '7px'
-                }} onClick={()=> {
-                  if(reactions[reaction] && reactions[reaction]?.find((item)=> item?.sender === myAddress)){
-                    handleReaction(reaction, message, false)
-                  } else {
-                    handleReaction(reaction, message, true)
-                  }
-                }}>
+                }} onClick={(event) => {
+                  event.stopPropagation(); // Prevent event bubbling
+                  setAnchorEl(event.currentTarget);
+                  setSelectedReaction(reaction);
+              }}>
                <div>{reaction}</div>  {numberOfReactions > 1 && (
                 <Typography sx={{
                   marginLeft: '4px'
@@ -246,12 +274,79 @@ export const MessageItem = ({
               )
             })}
           </Box>
+          {selectedReaction && (
+            <Popover
+              open={Boolean(anchorEl)}
+              anchorEl={anchorEl}
+              onClose={() => {
+                setAnchorEl(null);
+                setSelectedReaction(null);
+              }}
+              anchorOrigin={{
+                vertical: "top",
+                horizontal: "center",
+              }}
+              transformOrigin={{
+                vertical: "bottom",
+                horizontal: "center",
+              }}
+              PaperProps={{
+                style: {
+                  backgroundColor: "#232428",
+                  color: "white",
+                },
+              }}
+            >
+              <Box sx={{ p: 2 }}>
+                <Typography variant="subtitle1" sx={{ marginBottom: 1 }}>
+                  People who reacted with {selectedReaction}
+                </Typography>
+                <List sx={{
+                  overflow: 'auto',
+                  maxWidth: '80vw',
+                  maxHeight: '300px'
+                }}>
+                  {reactions[selectedReaction]?.map((reactionItem) => (
+                    <ListItem key={reactionItem.sender}>
+                      <ListItemText
+                        primary={reactionItem.senderName || reactionItem.sender}
+                      />
+                    </ListItem>
+                  ))}
+                </List>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={() => {
+                    if (
+                      reactions[selectedReaction]?.find(
+                        (item) => item?.sender === myAddress
+                      )
+                    ) {
+                      handleReaction(selectedReaction, message, false); // Remove reaction
+                    } else {
+                      handleReaction(selectedReaction, message, true); // Add reaction
+                    }
+                    setAnchorEl(null);
+                    setSelectedReaction(null);
+                  }}
+                  sx={{ marginTop: 2 }}
+                >
+                  {reactions[selectedReaction]?.find(
+                    (item) => item?.sender === myAddress
+                  )
+                    ? "Remove Reaction"
+                    : "Add Reaction"}
+                </Button>
+              </Box>
+            </Popover>
+          )}
           <Box sx={{
             display: 'flex',
             alignItems: 'center',
             gap: '15px'
           }}>
-          {message?.isNotEncrypted && (
+           {message?.isNotEncrypted && isPrivate && (
               <KeyOffIcon sx={{
                 color: 'white',
                 marginLeft: '10px'
@@ -279,6 +374,19 @@ export const MessageItem = ({
               {message?.status === 'failed-permanent' ? 'Failed to send' : 'Sending...'}
             </Typography>
           ) : (
+            <>
+            {message?.isEdit && (
+              <Typography
+              sx={{
+                fontSize: "14px",
+                color: "gray",
+                fontFamily: "Inter",
+                fontStyle: 'italic'
+              }}
+            >
+              Edited
+            </Typography>
+            )}
             <Typography
               sx={{
                 fontSize: "14px",
@@ -288,6 +396,7 @@ export const MessageItem = ({
             >
               {formatTimestamp(message.timestamp)}
             </Typography>
+            </>
           )}
              </Box>
         </Box>
@@ -305,11 +414,12 @@ export const MessageItem = ({
     ></Message> */}
       {/* {!message.unread && <span style={{ color: 'green' }}> Seen</span>} */}
     </div>
+    </>
   );
 };
 
 
-export const ReplyPreview = ({message})=> {
+export const ReplyPreview = ({message, isEdit})=> {
 
   return (
     <Box
@@ -333,16 +443,26 @@ export const ReplyPreview = ({message})=> {
             <Box sx={{
               padding: '5px'
             }}>
-              <Typography sx={{
-                fontSize: '12px',
-                fontWeight: 600
-              }}>Replied to {message?.senderName || message?.senderAddress}</Typography>
+             {isEdit ? (
+                    <Typography sx={{
+                      fontSize: '12px',
+                      fontWeight: 600
+                    }}>Editing Message</Typography>
+              ) : (
+                    <Typography sx={{
+                      fontSize: '12px',
+                      fontWeight: 600
+                    }}>Replied to {message?.senderName || message?.senderAddress}</Typography>
+              )}
+          
               {message?.messageText && (
                 <MessageDisplay
                   htmlContent={generateHTML(message?.messageText, [
                     StarterKit,
                     Underline,
                     Highlight,
+                    Mention,
+                    TextStyle
                   ])}
                 />
               )}

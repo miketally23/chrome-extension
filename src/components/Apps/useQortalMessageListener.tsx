@@ -3,6 +3,105 @@ import FileSaver from 'file-saver';
 import { executeEvent } from '../../utils/events';
 import { useSetRecoilState } from 'recoil';
 import { navigationControllerAtom } from '../../atoms/global';
+import { extractComponents } from '../Chat/MessageDisplay';
+
+
+const missingFieldsFunc = (data, requiredFields)=> {
+  const missingFields: string[] = [];
+  requiredFields.forEach((field) => {
+    if (!data[field]) {
+      missingFields.push(field);
+    }
+  });
+  if (missingFields.length > 0) {
+    const missingFieldsString = missingFields.join(", ");
+    const errorMsg = `Missing fields: ${missingFieldsString}`;
+    throw new Error(errorMsg);
+  }
+}
+
+const encode = (value) => encodeURIComponent(value.trim()); // Helper to encode values
+const buildQueryParams = (data) => {
+const allowedParams= ["name", "service", "identifier", "mimeType", "fileName", "encryptionType", "key"]
+  return Object.entries(data)
+    .map(([key, value]) => {
+      if (value === undefined || value === null || value === false || !allowedParams.includes(key)) return null; // Skip null, undefined, or false
+      if (typeof value === "boolean") return `${key}=${value}`; // Handle boolean values
+      return `${key}=${encode(value)}`; // Encode other values
+    })
+    .filter(Boolean) // Remove null values
+    .join("&"); // Join with `&`
+};
+export const createAndCopyEmbedLink = async (data) => {
+  const requiredFields = [
+    "type",
+  ];
+  const missingFields: string[] = [];
+  requiredFields.forEach((field) => {
+    if (!data[field]) {
+      missingFields.push(field);
+    }
+  });
+  if (missingFields.length > 0) {
+    const missingFieldsString = missingFields.join(", ");
+    const errorMsg = `Missing fields: ${missingFieldsString}`;
+    throw new Error(errorMsg);
+  }
+
+
+  switch (data.type) {
+    case "POLL": {
+      missingFieldsFunc(data, [
+        "type",
+        "name"
+      ])
+     
+      const queryParams = [
+        `name=${encode(data.name)}`,
+        data.ref ? `ref=${encode(data.ref)}` : null, // Add only if ref exists
+      ]
+        .filter(Boolean) // Remove null values
+        .join("&"); // Join with `&`
+        const link = `qortal://use-embed/POLL?${queryParams}`
+        try {
+          await navigator.clipboard.writeText(link);
+        } catch (error) {
+          throw new Error('Failed to copy to clipboard.')
+        }
+      return link;
+    }
+    case "IMAGE": 
+    case "ATTACHMENT":
+    {
+      missingFieldsFunc(data, [
+        "type",
+        "name",
+        "service",
+        "identifier"
+      ])
+      if(data?.encryptionType === 'private' && !data?.key){
+        throw new Error('For an encrypted resource, you must provide the key to create the shared link')
+      }
+      const queryParams = buildQueryParams(data)
+
+      const link = `qortal://use-embed/${data.type}?${queryParams}`;
+
+      try {
+        await navigator.clipboard.writeText(link);
+      } catch (error) {
+        throw new Error('Failed to copy to clipboard.')
+      }
+
+      return link;
+    }
+
+ 
+    default:
+      throw new Error('Invalid type')
+  }
+
+};
+
 class Semaphore {
 	constructor(count) {
 		this.count = count
@@ -140,7 +239,7 @@ const UIQortalRequests = [
   'GET_TX_ACTIVITY_SUMMARY', 'GET_FOREIGN_FEE', 'UPDATE_FOREIGN_FEE',
   'GET_SERVER_CONNECTION_HISTORY', 'SET_CURRENT_FOREIGN_SERVER',
   'ADD_FOREIGN_SERVER', 'REMOVE_FOREIGN_SERVER', 'GET_DAY_SUMMARY', 'CREATE_TRADE_BUY_ORDER',
-  'CREATE_TRADE_SELL_ORDER', 'CANCEL_TRADE_SELL_ORDER', 'IS_USING_GATEWAY', 'ADMIN_ACTION'
+  'CREATE_TRADE_SELL_ORDER', 'CANCEL_TRADE_SELL_ORDER', 'IS_USING_GATEWAY', 'ADMIN_ACTION', 'SIGN_TRANSACTION',  'DECRYPT_QORTAL_GROUP_DATA'
 ];
 
 
@@ -350,6 +449,37 @@ isDOMContentLoaded: false
     })
   }, [])
 
+   const openNewTab = async (data) => {
+    const requiredFields = [
+      "qortalLink",
+    ];
+    const missingFields: string[] = [];
+    requiredFields.forEach((field) => {
+      if (!data[field]) {
+        missingFields.push(field);
+      }
+    });
+    if (missingFields.length > 0) {
+      const missingFieldsString = missingFields.join(", ");
+      const errorMsg = `Missing fields: ${missingFieldsString}`;
+      throw new Error(errorMsg);
+    }
+  
+    const res = extractComponents(data.qortalLink);
+        if (res) {
+          const { service, name, identifier, path } = res;
+          if(!service && !name) throw new Error('Invalid qortal link')
+          executeEvent("addTab", { data: { service, name, identifier, path } });
+          executeEvent("open-apps-mode", { });
+          return true
+        } else {
+          throw new Error("Invalid qortal link")
+        }
+      
+     
+  
+  };
+
 
   const resetHistory = useCallback(()=> {
     setHistory({
@@ -395,7 +525,7 @@ isDOMContentLoaded: false
       } else if (
         event?.data?.action === 'PUBLISH_MULTIPLE_QDN_RESOURCES' ||
         event?.data?.action === 'PUBLISH_QDN_RESOURCE' ||
-        event?.data?.action === 'ENCRYPT_DATA' || event?.data?.action === 'SAVE_FILE'
+        event?.data?.action === 'ENCRYPT_DATA' || event?.data?.action === 'SAVE_FILE' || event?.data?.action === 'ENCRYPT_DATA_WITH_SHARING_KEY' || event?.data?.action === 'ENCRYPT_QORTAL_GROUP_DATA'
         
       ) {
         let data;
@@ -469,6 +599,33 @@ isDOMContentLoaded: false
             name: event?.data?.payload?.name
           }  }, '*'
         );
+      } else if(event?.data?.action === 'OPEN_NEW_TAB'){
+       try {
+        await openNewTab(event?.data?.payload)
+        event.ports[0].postMessage({
+          result: true,
+          error: null,
+        });
+       } catch (error) {
+        event.ports[0].postMessage({
+          result: null,
+          error: error?.message,
+        });
+       }
+        
+      } else if(event?.data?.action === 'CREATE_AND_COPY_EMBED_LINK'){
+        try {
+         const link = await createAndCopyEmbedLink(event?.data?.payload)
+          event.ports[0].postMessage({
+            result: link,
+            error: null,
+          });
+         } catch (error) {
+          event.ports[0].postMessage({
+            result: null,
+            error: error?.message,
+          });
+         }
       }
     };
 

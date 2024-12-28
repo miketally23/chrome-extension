@@ -2,6 +2,7 @@
 
 import { crypto, walletVersion } from '../../constants/decryptWallet';
 import { doInitWorkers, kdf } from '../../deps/kdf';
+import { mimeToExtensionMap } from '../memeTypes';
 import PhraseWallet from './phrase-wallet';
 import * as WORDLISTS from './wordlists';
 import { saveAs } from 'file-saver';
@@ -74,6 +75,10 @@ export function generateRandomSentence(template = 'adverb verb noun adjective no
     return parse(template);
 }
 
+const hasExtension = (filename) => {
+    return filename.includes(".") && filename.split(".").pop().length > 0;
+  };
+
 export const createAccount = async()=> {
     const generatedSeedPhrase = generateRandomSentence()
     const threads = doInitWorkers(crypto.kdfThreads)
@@ -99,4 +104,17 @@ export const createAccount = async()=> {
         // This fallback will only be executed if the `showSaveFilePicker` method fails.
         FileSaver.saveAs(blob, fileName); // Ensure FileSaver is properly imported or available in your environment.
     }
+}
+
+export const saveFileToDiskGeneric = async (blob, filename) => {
+    const timestamp = new Date()
+                        .toISOString()
+                        .replace(/:/g, "-"); // Safe timestamp for filenames
+                
+                        const fileExtension = mimeToExtensionMap[blob.type]
+let fileName = filename ||  "qortal_file_" + timestamp + "." + fileExtension;
+fileName = hasExtension(fileName) ? fileName : fileName  + "." + fileExtension;
+
+await saveAs(blob, fileName);
+
 }

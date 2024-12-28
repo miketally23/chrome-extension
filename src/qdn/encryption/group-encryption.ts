@@ -137,7 +137,7 @@ export const encryptDataGroup = ({ data64, publicKeys, privateKey, userPublicKey
 	}
 }
 
-export const encryptSingle = async ({ data64, secretKeyObject, typeNumber = 1 }: any) => {
+export const encryptSingle = async ({ data64, secretKeyObject, typeNumber = 2 }: any) => {
 	// Find the highest key in the secretKeyObject
 	const highestKey = Math.max(...Object.keys(secretKeyObject).filter(item => !isNaN(+item)).map(Number));
 	const highestKeyObject = secretKeyObject[highestKey];
@@ -180,26 +180,42 @@ export const encryptSingle = async ({ data64, secretKeyObject, typeNumber = 1 }:
   
 	  // Concatenate the highest key, type number, nonce, and encrypted data (new format)
 	  const highestKeyStr = highestKey.toString().padStart(10, '0');  // Fixed length of 10 digits
-	  finalEncryptedData = btoa(highestKeyStr + typeNumberStr + nonceBase64 + encryptedDataBase64);
+
+	  const highestKeyBytes = new TextEncoder().encode(highestKeyStr.padStart(10, '0'));
+const typeNumberBytes = new TextEncoder().encode(typeNumberStr.padStart(3, '0'));
+
+// Step 3: Concatenate all binary
+const combinedBinary = new Uint8Array(
+  highestKeyBytes.length + typeNumberBytes.length + nonce.length + encryptedData.length
+);
+	//   finalEncryptedData = btoa(highestKeyStr) + btoa(typeNumberStr) + nonceBase64 + encryptedDataBase64;
+	  combinedBinary.set(highestKeyBytes, 0);
+combinedBinary.set(typeNumberBytes, highestKeyBytes.length);
+combinedBinary.set(nonce, highestKeyBytes.length + typeNumberBytes.length);
+combinedBinary.set(encryptedData, highestKeyBytes.length + typeNumberBytes.length + nonce.length);
+
+// Step 4: Base64 encode once
+ finalEncryptedData = uint8ArrayToBase64(combinedBinary);
 	}
   
 	return finalEncryptedData;
   };
 
 
-export const decodeBase64ForUIChatMessages = (messages)=> {
+
+  export const decodeBase64ForUIChatMessages = (messages)=> {
 	
 	let msgs = []
 	for(const msg of messages){
 		try {
 			const decoded = atob(msg?.data);
-			const parseDecoded = JSON.parse(decoded)
-			if(parseDecoded?.messageText){
+			const parseDecoded =JSON.parse(decodeURIComponent(escape(decoded)))
+		
 				msgs.push({
 					...msg,
 					...parseDecoded
 				})
-			}
+		
 		} catch (error) {
 			
 		}
@@ -207,9 +223,8 @@ export const decodeBase64ForUIChatMessages = (messages)=> {
 	return msgs
 }
   
-  
 
-  export const decryptSingle = async ({ data64, secretKeyObject, skipDecodeBase64 }: any) => {
+export const decryptSingle = async ({ data64, secretKeyObject, skipDecodeBase64 }: any) => {
 	// First, decode the base64-encoded input (if skipDecodeBase64 is not set)
 	const decodedData = skipDecodeBase64 ? data64 : atob(data64);
 	
@@ -241,6 +256,28 @@ export const decodeBase64ForUIChatMessages = (messages)=> {
 	  encryptedDataBase64 = decodeForNumber.slice(10); // The remaining part is the encrypted data
 	} else {
 	  if (hasTypeNumber) {
+		// const typeNumberStr = new TextDecoder().decode(typeNumberBytes);
+		if(decodeForNumber.slice(10, 13) !== '001'){
+			const decodedBinary = base64ToUint8Array(decodedData);
+			const highestKeyBytes = decodedBinary.slice(0, 10); // if ASCII digits only
+			const highestKeyStr = new TextDecoder().decode(highestKeyBytes);
+
+const nonce = decodedBinary.slice(13, 13 + 24);
+const encryptedData = decodedBinary.slice(13 + 24);
+const highestKey = parseInt(highestKeyStr, 10);
+
+const messageKey = base64ToUint8Array(secretKeyObject[+highestKey].messageKey);
+const decryptedBytes = nacl.secretbox.open(encryptedData, nonce, messageKey);
+  
+	// Check if decryption was successful
+	if (!decryptedBytes) {
+	  throw new Error("Decryption failed");
+	}
+  
+	// Convert the decrypted Uint8Array back to a Base64 string
+	return uint8ArrayToBase64(decryptedBytes);
+		
+		}
 		// New format: Extract type number and nonce
 		typeNumberStr = possibleTypeNumberStr;  // Extract type number
 		nonceBase64 = decodeForNumber.slice(13, 45);   // Extract nonce (next 32 characters after type number)
@@ -272,6 +309,7 @@ export const decodeBase64ForUIChatMessages = (messages)=> {
 	// Convert the decrypted Uint8Array back to a Base64 string
 	return uint8ArrayToBase64(decryptedData);
   };
+  
   
   
   
@@ -421,3 +459,43 @@ export function decryptDeprecatedSingle(uint8Array, publicKey, privateKey) {
 	}
 	return uint8ArrayToBase64(_decryptedData)
 }
+
+export const decryptGroupEncryptionWithSharingKey = async ({ data64EncryptedData, key }: any) => {
+	
+	const allCombined = base64ToUint8Array(data64EncryptedData)
+	const str = "qortalGroupEncryptedData"
+	const strEncoder = new TextEncoder()
+	const strUint8Array = strEncoder.encode(str)
+	// Extract the nonce
+	const nonceStartPosition = strUint8Array.length
+	const nonceEndPosition = nonceStartPosition + 24 // Nonce is 24 bytes
+	const nonce = allCombined.slice(nonceStartPosition, nonceEndPosition)
+	// Extract the shared keyNonce
+	const keyNonceStartPosition = nonceEndPosition
+	const keyNonceEndPosition = keyNonceStartPosition + 24 // Nonce is 24 bytes
+	const keyNonce = allCombined.slice(keyNonceStartPosition, keyNonceEndPosition)
+	// Extract the sender's public key
+	const senderPublicKeyStartPosition = keyNonceEndPosition
+	const senderPublicKeyEndPosition = senderPublicKeyStartPosition + 32 // Public keys are 32 bytes
+
+	// Calculate count first
+	const countStartPosition = allCombined.length - 4 // 4 bytes before the end, since count is stored in Uint32 (4 bytes)
+	const countArray = allCombined.slice(countStartPosition, countStartPosition + 4)
+	const count = new Uint32Array(countArray.buffer)[0]
+	// Then use count to calculate encryptedData
+	const encryptedDataStartPosition = senderPublicKeyEndPosition // start position of encryptedData
+	const encryptedDataEndPosition = allCombined.length - ((count * (32 + 16)) + 4)
+	const encryptedData = allCombined.slice(encryptedDataStartPosition, encryptedDataEndPosition)
+	const symmetricKey = base64ToUint8Array(key);
+	
+	// Decrypt the data using the nonce and messageKey
+	const decryptedData = nacl.secretbox.open(encryptedData, nonce, symmetricKey)
+
+  
+	// Check if decryption was successful
+	if (!decryptedData) {
+	  throw new Error("Decryption failed");
+	}
+	// Convert the decrypted Uint8Array back to a Base64 string
+	return uint8ArrayToBase64(decryptedData);
+  };

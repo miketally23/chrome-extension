@@ -15,16 +15,19 @@ import { CustomizedSnackbars } from '../Snackbar/Snackbar'
 import { PUBLIC_NOTIFICATION_CODE_FIRST_SECRET_KEY } from '../../constants/codes'
 import { useMessageQueue } from '../../MessageQueueContext'
 import { executeEvent } from '../../utils/events'
-import { Box, ButtonBase } from '@mui/material'
+import { Box, ButtonBase, Divider, Typography } from '@mui/material'
 import ShortUniqueId from "short-unique-id";
 import { ReplyPreview } from './MessageItem'
 import { ExitIcon } from '../../assets/Icons/ExitIcon'
 import { RESOURCE_TYPE_NUMBER_GROUP_CHAT_REACTIONS } from '../../constants/resourceTypes'
 import { isExtMsg } from '../../background'
+import { throttle } from 'lodash'
+import AppViewerContainer from '../Apps/AppViewerContainer'
+import CloseIcon from "@mui/icons-material/Close";
 
 const uid = new ShortUniqueId({ length: 5 });
 
-export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey, myAddress, handleNewEncryptionNotification, hide, handleSecretKeyCreationInProgress, triedToFetchSecretKey, myName, balance}) => {
+export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey, myAddress, handleNewEncryptionNotification, hide, handleSecretKeyCreationInProgress, triedToFetchSecretKey, myName, balance, getTimestampEnterChatParent, isPrivate, hideView}) => {
   const [messages, setMessages] = useState([])
   const [chatReferences, setChatReferences] = useState({})
   const [isSending, setIsSending] = useState(false)
@@ -41,8 +44,75 @@ export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey,
   const timeoutIdRef = useRef(null); // Timeout ID reference
   const groupSocketTimeoutRef = useRef(null); // Group Socket Timeout reference
   const editorRef = useRef(null);
+  const [isOpenQManager, setIsOpenQManager] = useState(null)
+  const [onEditMessage, setOnEditMessage] = useState(null)
+  const [messageSize, setMessageSize] = useState(0)
+
   const { queueChats, addToQueue, processWithNewMessages } = useMessageQueue();
   const [, forceUpdate] = useReducer((x) => x + 1, 0);
+
+  const lastReadTimestamp = useRef(null)
+  const handleUpdateRef = useRef(null);
+
+ 
+
+
+
+  const getTimestampEnterChat = async () => {
+    try {
+      return new Promise((res, rej) => {
+        chrome?.runtime?.sendMessage(
+          {
+            action: "getTimestampEnterChat",
+          },
+          (response) => {
+            if (!response?.error && selectedGroup && response[selectedGroup]) {
+              lastReadTimestamp.current = response[selectedGroup]
+              chrome?.runtime?.sendMessage({
+                action: "addTimestampEnterChat",
+                payload: {
+                  timestamp: Date.now(),
+                  groupId: selectedGroup,
+                },
+              }, (response2)=> {
+                setTimeout(() => {
+                  getTimestampEnterChatParent();
+                }, 200);
+              })
+              res(response);
+            }
+            rej(response.error);
+          }
+        );
+      });
+    } catch (error) {}
+  };
+
+  useEffect(()=> {
+    getTimestampEnterChat()
+  }, [])
+
+  const openQManager = useCallback(()=> {
+    setIsOpenQManager(true)
+  }, [])
+  const members = useMemo(() => {
+    const uniqueMembers = new Set();
+
+    messages.forEach((message) => {
+      if (message?.senderName) {
+        uniqueMembers.add(message?.senderName);
+      }
+    });
+
+    return Array.from(uniqueMembers);
+  }, [messages]);
+
+  const onEdit = useCallback((message)=> {
+    setOnEditMessage(message)
+    setReplyMessage(null)
+    editorRef.current.chain().focus().setContent(message?.messageText || message?.text).run();
+
+  }, [])
 
   const triggerRerender = () => {
     forceUpdate(); // Trigger re-render by updating the state
@@ -118,196 +188,215 @@ export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey,
  }
 
  
-    const decryptMessages = (encryptedMessages: any[], isInitiated: boolean )=> {
-      try {
-        if(!secretKeyRef.current){
-          checkForFirstSecretKeyNotification(encryptedMessages)
-          return
-        }
-        return new Promise((res, rej)=> {
-          chrome?.runtime?.sendMessage({ action: "decryptSingle", payload: {
-            data: encryptedMessages,
-            secretKeyObject: secretKey
-        }}, (response) => {
+ const decryptMessages = (encryptedMessages: any[], isInitiated: boolean )=> {
+  try {
+    if(!secretKeyRef.current){
+      checkForFirstSecretKeyNotification(encryptedMessages)
+    }
+    return new Promise((res, rej)=> {
+      chrome?.runtime?.sendMessage({ action: "decryptSingle", payload: {
+        data: encryptedMessages,
+        secretKeyObject: secretKey
+    }}, (response) => {
             if (!response?.error) {
-              const filterUImessages = encryptedMessages.filter((item)=> !isExtMsg(item.data))
-              const decodedUIMessages = decodeBase64ForUIChatMessages(filterUImessages)
-
-              const combineUIAndExtensionMsgs = [...decodedUIMessages, ...response]
-              processWithNewMessages(combineUIAndExtensionMsgs?.map((item)=> {
-                return {
+              const filterUIMessages = encryptedMessages.filter((item) => !isExtMsg(item.data));
+              const decodedUIMessages = decodeBase64ForUIChatMessages(filterUIMessages);
+        
+              const combineUIAndExtensionMsgsBefore = [...decodedUIMessages, ...response];
+              const combineUIAndExtensionMsgs = processWithNewMessages(
+                combineUIAndExtensionMsgsBefore.map((item) => ({
                   ...item,
-                  ...(item?.decryptedData || {})
-                }
-              }), selectedGroup)
-              res(combineUIAndExtensionMsgs)
-              if(isInitiated){
-               
-                const formatted = combineUIAndExtensionMsgs.filter((rawItem)=> !rawItem?.chatReference).map((item: any)=> {
-                  return {
-                    ...item,
-                    id: item.signature,
-                    text: item?.decryptedData?.message || "",
-                    repliedTo: item?.repliedTo || item?.decryptedData?.repliedTo,
-                    unread: item?.sender === myAddress ? false : !!item?.chatReference ? false : true,
-                    isNotEncrypted: !!item?.messageText
-                  }
-                } )
-                setMessages((prev)=> [...prev, ...formatted])
+                  ...(item?.decryptedData || {}),
+                })),
+                selectedGroup
+              );
+              res(combineUIAndExtensionMsgs);
+        
+              if (isInitiated) {
 
-               
+                const formatted = combineUIAndExtensionMsgs
+                  .filter((rawItem) => !rawItem?.chatReference)
+                  .map((item) => {
+                    const additionalFields = item?.data === 'NDAwMQ==' ? {
+                      text: "<p>First group key created.</p>" 
+                   } : {}
+                    return {
+                      ...item,
+                      id: item.signature,
+                      text: item?.decryptedData?.message || "",
+                      repliedTo: item?.repliedTo || item?.decryptedData?.repliedTo,
+                      unread: item?.sender === myAddress ? false : !!item?.chatReference ? false : true,
+                      isNotEncrypted: !!item?.messageText,
+                      ...additionalFields
+                    }
+                  });
+                setMessages((prev) => [...prev, ...formatted]);
+        
                 setChatReferences((prev) => {
-                  let organizedChatReferences = { ...prev };
-                
+                  const organizedChatReferences = { ...prev };
                   combineUIAndExtensionMsgs
-                    .filter((rawItem) => rawItem && rawItem.chatReference && rawItem.decryptedData?.type === 'reaction')
+                    .filter((rawItem) => rawItem && rawItem.chatReference && (rawItem?.decryptedData?.type === "reaction" || rawItem?.decryptedData?.type === "edit" || rawItem?.type === "edit" || rawItem?.isEdited || rawItem?.type === "reaction"))
                     .forEach((item) => {
                       try {
-                        const content = item.decryptedData?.content;
-                        const sender = item.sender;
-                        const newTimestamp = item.timestamp;
-                        const contentState = item.decryptedData?.contentState;
-                
-                        if (!content || typeof content !== 'string' || !sender || typeof sender !== 'string' || !newTimestamp) {
-                          console.warn("Invalid content, sender, or timestamp in reaction data", item);
-                          return;
+                        if(item?.decryptedData?.type === "edit"){
+                          organizedChatReferences[item.chatReference] = {
+                            ...(organizedChatReferences[item.chatReference] || {}),
+                            edit: item.decryptedData,
+                          };
+                        } else if(item?.type === "edit" || item?.isEdited){
+                          organizedChatReferences[item.chatReference] = {
+                            ...(organizedChatReferences[item.chatReference] || {}),
+                            edit: item,
+                          };
+                        } else {
+                          const content = item?.content ||  item.decryptedData?.content;
+                          const sender = item.sender;
+                          const newTimestamp = item.timestamp;
+                          const contentState = item?.contentState || item.decryptedData?.contentState;
+          
+                          if (!content || typeof content !== "string" || !sender || typeof sender !== "string" || !newTimestamp) {
+                            console.warn("Invalid content, sender, or timestamp in reaction data", item);
+                            return;
+                          }
+          
+                          organizedChatReferences[item.chatReference] = {
+                            ...(organizedChatReferences[item.chatReference] || {}),
+                            reactions: organizedChatReferences[item.chatReference]?.reactions || {},
+                          };
+          
+                          organizedChatReferences[item.chatReference].reactions[content] =
+                            organizedChatReferences[item.chatReference].reactions[content] || [];
+          
+                          let latestTimestampForSender = null;
+          
+                          organizedChatReferences[item.chatReference].reactions[content] = 
+                            organizedChatReferences[item.chatReference].reactions[content].filter((reaction) => {
+                              if (reaction.sender === sender) {
+                                latestTimestampForSender = Math.max(latestTimestampForSender || 0, reaction.timestamp);
+                              }
+                              return reaction.sender !== sender;
+                            });
+          
+                          if (latestTimestampForSender && newTimestamp < latestTimestampForSender) {
+                            return;
+                          }
+          
+                          if (contentState !== false) {
+                            organizedChatReferences[item.chatReference].reactions[content].push(item);
+                          }
+          
+                          if (organizedChatReferences[item.chatReference].reactions[content].length === 0) {
+                            delete organizedChatReferences[item.chatReference].reactions[content];
+                          }
                         }
-                
-                        // Initialize chat reference and reactions if not present
-                        organizedChatReferences[item.chatReference] = {
-                          ...(organizedChatReferences[item.chatReference] || {}),
-                          reactions: organizedChatReferences[item.chatReference]?.reactions || {}
-                        };
-                
-                        organizedChatReferences[item.chatReference].reactions[content] =
-                          organizedChatReferences[item.chatReference].reactions[content] || [];
-                
-                        // Remove any existing reactions from the same sender before adding the new one
-                        let latestTimestampForSender = null;
-                
-                        // Track the latest reaction timestamp for the same content and sender
-                        organizedChatReferences[item.chatReference].reactions[content] =
-                          organizedChatReferences[item.chatReference].reactions[content].filter((reaction) => {
-                            if (reaction.sender === sender) {
-                              // Track the latest timestamp for this sender
-                              latestTimestampForSender = Math.max(latestTimestampForSender || 0, reaction.timestamp);
-                            }
-                            return reaction.sender !== sender;
-                          });
-                
-                        // Compare with the latest tracked timestamp for this sender
-                        if (latestTimestampForSender && newTimestamp < latestTimestampForSender) {
-                          // Ignore this item if it's older than the latest known reaction
-                          return;
-                        }
-                
-                        // Add the new reaction only if contentState is true
-                        if (contentState !== false) {
-                          organizedChatReferences[item.chatReference].reactions[content].push(item);
-                        }
-                
-                        // If the reactions for a specific content are empty, clean up the object
-                        if (organizedChatReferences[item.chatReference].reactions[content].length === 0) {
-                          delete organizedChatReferences[item.chatReference].reactions[content];
-                        }
+                      
                       } catch (error) {
-                        console.error("Error processing reaction item:", error, item);
+                        console.error("Error processing reaction/edit item:", error, item);
                       }
                     });
-                
+        
                   return organizedChatReferences;
                 });
-                
-                
-                
               } else {
-                const formatted = combineUIAndExtensionMsgs.filter((rawItem)=> !rawItem?.chatReference).map((item: any)=> {
-                  return {
-                    ...item,
-                    id: item.signature,
-                    text: item?.decryptedData?.message || "",
-                    repliedTo: item?.repliedTo || item?.decryptedData?.repliedTo,
-                    isNotEncrypted: !!item?.messageText,
-                    unread:  false
-                  }
-                } )
-                setMessages(formatted)
-              
+                let firstUnreadFound = false;
+                const formatted = combineUIAndExtensionMsgs
+                  .filter((rawItem) => !rawItem?.chatReference)
+                  .map((item) => {
+                    const additionalFields = item?.data === 'NDAwMQ==' ? {
+                       text: "<p>First group key created.</p>" 
+                    } : {}
+                    const divide = lastReadTimestamp.current && !firstUnreadFound && item.timestamp > lastReadTimestamp.current && myAddress !== item?.sender;
+                   
+                    if(divide){
+                      firstUnreadFound = true
+                    }
+                    return {
+                      ...item,
+                      id: item.signature,
+                      text: item?.decryptedData?.message || "",
+                      repliedTo: item?.repliedTo || item?.decryptedData?.repliedTo,
+                      isNotEncrypted: !!item?.messageText,
+                      unread: false,
+                      divide,
+                      ...additionalFields
+                    }
+                  });
+                setMessages(formatted);
+        
                 setChatReferences((prev) => {
-                  let organizedChatReferences = { ...prev };
-                
+                  const organizedChatReferences = { ...prev };
+        
                   combineUIAndExtensionMsgs
-                    .filter((rawItem) => rawItem && rawItem.chatReference && rawItem.decryptedData?.type === 'reaction')
+                    .filter((rawItem) => rawItem && rawItem.chatReference && (rawItem?.decryptedData?.type === "reaction" || rawItem?.decryptedData?.type === "edit" || rawItem?.type === "edit" || rawItem?.isEdited || rawItem?.type === "reaction"))
                     .forEach((item) => {
                       try {
-                        const content = item.decryptedData?.content;
+                        if(item?.decryptedData?.type === "edit"){
+                          organizedChatReferences[item.chatReference] = {
+                            ...(organizedChatReferences[item.chatReference] || {}),
+                            edit: item.decryptedData,
+                          };
+                        } else if(item?.type === "edit" || item?.isEdited){
+                          organizedChatReferences[item.chatReference] = {
+                            ...(organizedChatReferences[item.chatReference] || {}),
+                            edit: item,
+                          };
+                        } else {
+                        const content = item?.content || item.decryptedData?.content;
                         const sender = item.sender;
                         const newTimestamp = item.timestamp;
-                        const contentState = item.decryptedData?.contentState;
-                
-                        if (!content || typeof content !== 'string' || !sender || typeof sender !== 'string' || !newTimestamp) {
+                        const contentState = item?.contentState ||  item.decryptedData?.contentState;
+        
+                        if (!content || typeof content !== "string" || !sender || typeof sender !== "string" || !newTimestamp) {
                           console.warn("Invalid content, sender, or timestamp in reaction data", item);
                           return;
                         }
-                
-                        // Initialize chat reference and reactions if not present
+        
                         organizedChatReferences[item.chatReference] = {
                           ...(organizedChatReferences[item.chatReference] || {}),
-                          reactions: organizedChatReferences[item.chatReference]?.reactions || {}
+                          reactions: organizedChatReferences[item.chatReference]?.reactions || {},
                         };
-                
+        
                         organizedChatReferences[item.chatReference].reactions[content] =
                           organizedChatReferences[item.chatReference].reactions[content] || [];
-                
-                        // Remove any existing reactions from the same sender before adding the new one
+        
                         let latestTimestampForSender = null;
-                
-                        // Track the latest reaction timestamp for the same content and sender
-                        organizedChatReferences[item.chatReference].reactions[content] =
+        
+                        organizedChatReferences[item.chatReference].reactions[content] = 
                           organizedChatReferences[item.chatReference].reactions[content].filter((reaction) => {
                             if (reaction.sender === sender) {
-                              // Track the latest timestamp for this sender
                               latestTimestampForSender = Math.max(latestTimestampForSender || 0, reaction.timestamp);
                             }
                             return reaction.sender !== sender;
                           });
-                
-                        // Compare with the latest tracked timestamp for this sender
+        
                         if (latestTimestampForSender && newTimestamp < latestTimestampForSender) {
-                          // Ignore this item if it's older than the latest known reaction
                           return;
                         }
-                
-                        // Add the new reaction only if contentState is true
+        
                         if (contentState !== false) {
                           organizedChatReferences[item.chatReference].reactions[content].push(item);
                         }
-                
-                        // If the reactions for a specific content are empty, clean up the object
+        
                         if (organizedChatReferences[item.chatReference].reactions[content].length === 0) {
                           delete organizedChatReferences[item.chatReference].reactions[content];
                         }
+                      }
                       } catch (error) {
                         console.error("Error processing reaction item:", error, item);
                       }
                     });
-                
+        
                   return organizedChatReferences;
                 });
-                
-                
-                
-                
-                
               }
             }
-            rej(response.error)
-          });
-        })  
-      } catch (error) {
-          
-      }
+            rej(response.error);
+        });
+      })  
+    } catch (error) {
+        
     }
+  }
 
    
 
@@ -386,10 +475,11 @@ export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey,
         setIsLoading(true)
         initWebsocketMessageGroup()
       }  
-    }, [triedToFetchSecretKey, secretKey])
+    }, [triedToFetchSecretKey, secretKey, isPrivate])
 
     useEffect(()=> {
-      if(!secretKey || hasInitializedWebsocket.current) return
+      if(isPrivate === null) return
+      if(isPrivate === false || !secretKey || hasInitializedWebsocket.current) return
       forceCloseWebSocket()
       setMessages([])
       setIsLoading(true)
@@ -399,7 +489,7 @@ export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey,
       }, 6000);
         initWebsocketMessageGroup()
         hasInitializedWebsocket.current = true
-    }, [secretKey])
+    }, [secretKey, isPrivate])
 
   
     useEffect(()=> {
@@ -469,74 +559,120 @@ const clearEditorContent = () => {
 };
 
 
-    const sendMessage = async ()=> {
-      try {
-        if(isSending) return
-        if(+balance < 4) throw new Error('You need at least 4 QORT to send a message')
-        pauseAllQueues()
-        if (editorRef.current) {
-          const htmlContent = editorRef.current.getHTML();
-       
-          if(!htmlContent?.trim() || htmlContent?.trim() === '<p></p>') return
-          setIsSending(true)
-        const message = htmlContent
-        const secretKeyObject = await getSecretKey(false, true)
+const sendMessage = async ()=> {
+  try {
+    if(messageSize > 4000) return
+    if(isPrivate === null) throw new Error('Unable to determine if group is private')
+    if(isSending) return
+    if(+balance < 4) throw new Error('You need at least 4 QORT to send a message')
+    pauseAllQueues()
+    if (editorRef.current) {
+      const htmlContent = editorRef.current.getHTML();
+   
+      if(!htmlContent?.trim() || htmlContent?.trim() === '<p></p>') return
+      
 
-        let repliedTo = replyMessage?.signature
+      setIsSending(true)
+    const message = isPrivate === false ? editorRef.current.getJSON() : htmlContent
+    const secretKeyObject = await getSecretKey(false, true)
 
-				if (replyMessage?.chatReference) {
-					repliedTo = replyMessage?.chatReference
-				}
-        const otherData = {
-          specialId: uid.rnd(),
-          repliedTo
-        }
-        const objectMessage = {
-          message,
-          ...(otherData || {})
-        }
-        const message64: any = await objectToBase64(objectMessage)
-     
-        const encryptSingle = await encryptChatMessage(message64, secretKeyObject)
-        // const res = await sendChatGroup({groupId: selectedGroup,messageText: encryptSingle})
-       
-        const sendMessageFunc = async () => {
-          await sendChatGroup({groupId: selectedGroup,messageText: encryptSingle})
-        };
-  
-        // Add the function to the queue
-        const messageObj = {
-          message: {
-            text: message,
-            timestamp: Date.now(),
-          senderName: myName,
-          sender: myAddress,
-             ...(otherData || {})
-          },
-         
-        }
-        addToQueue(sendMessageFunc, messageObj, 'chat',
-        selectedGroup );
-        setTimeout(() => {
-          executeEvent("sent-new-message-group", {})
-        }, 150);
-        clearEditorContent()
-        setReplyMessage(null)
-        }
-        // send chat message
-      } catch (error) {
-        const errorMsg = error?.message || error
-        setInfoSnack({
-          type: "error",
-          message: errorMsg,
-        });
-        setOpenSnack(true);
-        console.error(error)
-      } finally {
-        setIsSending(false)
-        resumeAllQueues()
-      }
+    let repliedTo = replyMessage?.signature
+
+    if (replyMessage?.chatReference) {
+      repliedTo = replyMessage?.chatReference
     }
+    let chatReference = onEditMessage?.signature
+
+    const publicData = isPrivate ? {} : {
+      isEdited : chatReference ? true : false,
+    }
+    const otherData = {
+      repliedTo,
+      ...(onEditMessage?.decryptedData || {}),
+      type: chatReference ? 'edit' : '',
+      specialId: uid.rnd(),
+      ...publicData
+    }
+    const objectMessage = {
+      ...(otherData || {}),
+      [isPrivate ? 'message' : 'messageText']: message,
+      version: 3
+    }
+    const message64: any = await objectToBase64(objectMessage)
+ 
+    const encryptSingle = isPrivate === false ? JSON.stringify(objectMessage) : await encryptChatMessage(message64, secretKeyObject)
+    // const res = await sendChatGroup({groupId: selectedGroup,messageText: encryptSingle})
+   
+    const sendMessageFunc = async () => {
+     return await sendChatGroup({groupId: selectedGroup,messageText: encryptSingle, chatReference})
+    };
+
+    // Add the function to the queue
+    const messageObj = {
+      message: {
+        text: htmlContent,
+        timestamp: Date.now(),
+      senderName: myName,
+      sender: myAddress,
+         ...(otherData || {})
+      },
+     chatReference
+    }
+    addToQueue(sendMessageFunc, messageObj, 'chat',
+    selectedGroup );
+    setTimeout(() => {
+      executeEvent("sent-new-message-group", {})
+    }, 150);
+    clearEditorContent()
+    setReplyMessage(null)
+    setOnEditMessage(null)
+    }
+    // send chat message
+  } catch (error) {
+    const errorMsg = error?.message || error
+    setInfoSnack({
+      type: "error",
+      message: errorMsg,
+    });
+    setOpenSnack(true);
+    console.error(error)
+  } finally {
+    setIsSending(false)
+    resumeAllQueues()
+  }
+}
+
+useEffect(() => {
+  if (!editorRef?.current) return;
+
+  handleUpdateRef.current = throttle(async () => {
+   try {
+    if(isPrivate){
+      const htmlContent = editorRef.current.getHTML();
+      const message64 =  await objectToBase64(JSON.stringify(htmlContent))
+      const secretKeyObject = await getSecretKey(false, true)
+      const encryptSingle = await encryptChatMessage(message64, secretKeyObject)
+      setMessageSize((encryptSingle?.length || 0) + 200);
+    } else {
+      const htmlContent = editorRef.current.getJSON();
+      const message =  JSON.stringify(htmlContent)
+      const size = new Blob([message]).size
+      setMessageSize(size + 300);
+    }
+   
+   } catch (error) {
+    // calc size error
+   }
+  }, 1200); 
+
+  const currentEditor = editorRef.current;
+
+  currentEditor.on("update", handleUpdateRef.current);
+
+  return () => {
+    currentEditor.off("update", handleUpdateRef.current);
+  };
+}, [editorRef, setMessageSize, isPrivate]); 
 
   useEffect(() => {
     if (hide) {
@@ -547,7 +683,11 @@ const clearEditorContent = () => {
   }, [hide]);
     
   const onReply = useCallback((message)=> {
+    if(onEditMessage){
+      clearEditorContent()
+    }
     setReplyMessage(message)
+    setOnEditMessage(null)
     editorRef?.current?.chain().focus()
   }, [])
 
@@ -576,11 +716,11 @@ const clearEditorContent = () => {
       }
       const message64: any = await objectToBase64(objectMessage)
       const reactiontypeNumber = RESOURCE_TYPE_NUMBER_GROUP_CHAT_REACTIONS
-      const encryptSingle = await encryptChatMessage(message64, secretKeyObject, reactiontypeNumber)
+      const encryptSingle = isPrivate === false ? JSON.stringify(objectMessage) : await encryptChatMessage(message64, secretKeyObject, reactiontypeNumber)
       // const res = await sendChatGroup({groupId: selectedGroup,messageText: encryptSingle})
      
       const sendMessageFunc = async () => {
-        await sendChatGroup({groupId: selectedGroup,messageText: encryptSingle, chatReference: chatMessage.signature})
+       return await sendChatGroup({groupId: selectedGroup,messageText: encryptSingle, chatReference: chatMessage.signature})
       };
 
       // Add the function to the queue
@@ -616,6 +756,8 @@ const clearEditorContent = () => {
       resumeAllQueues()
     }
   }, [])
+
+  console.log('isPrivate', isPrivate)
   
   return (
     <div style={{
@@ -628,17 +770,16 @@ const clearEditorContent = () => {
     left: hide && '-100000px',
     }}>
  
-              <ChatList onReply={onReply} chatId={selectedGroup} initialMessages={messages} myAddress={myAddress} tempMessages={tempMessages} handleReaction={handleReaction} chatReferences={chatReferences} tempChatReferences={tempChatReferences}/>
-
+ <ChatList isPrivate={isPrivate} hasSecretKey={!!secretKey} openQManager={openQManager} enableMentions onReply={onReply} onEdit={onEdit} chatId={selectedGroup} initialMessages={messages} myAddress={myAddress} tempMessages={tempMessages} handleReaction={handleReaction} chatReferences={chatReferences} tempChatReferences={tempChatReferences} members={members} myName={myName} selectedGroup={selectedGroup} />
    
+ {(!!secretKey || isPrivate === false) && (
       <div style={{
         // position: 'fixed',
         // bottom: '0px',
         backgroundColor: "#232428",
         minHeight: isMobile ? '0px' : '150px',
-        maxHeight: isMobile ? 'auto' : '400px',
         display: 'flex',
-        flexDirection: 'column',
+        flexDirection: 'row',
         overflow: 'hidden',
         width: '100%',
         boxSizing: 'border-box',
@@ -649,12 +790,15 @@ const clearEditorContent = () => {
         zIndex: isFocusedParent ? 5 : 'unset',
         flexShrink: 0
       }}>
+      
       <div style={{
             display: 'flex',
             flexDirection: 'column',
             flexGrow: isMobile && 1,
             overflow: !isMobile &&  "auto",
-            flexShrink: 0
+            flexShrink: 0,
+            width: 'calc(100% - 100px)',
+            justifyContent: 'flex-end'
       }}>
         {replyMessage && (
         <Box sx={{
@@ -668,6 +812,31 @@ const clearEditorContent = () => {
            <ButtonBase
                onClick={() => {
                 setReplyMessage(null)
+              
+                setOnEditMessage(null)
+
+               }}
+             >
+             <ExitIcon />
+             </ButtonBase>
+        </Box>
+      )}
+      {onEditMessage && (
+        <Box sx={{
+          display: 'flex',
+          gap: '5px',
+          alignItems: 'flex-start',
+          width: '100%'
+        }}>
+                  <ReplyPreview isEdit message={onEditMessage} />
+
+           <ButtonBase
+               onClick={() => {
+                setReplyMessage(null)
+                setOnEditMessage(null)
+              
+                  clearEditorContent()
+                
                }}
              >
              <ExitIcon />
@@ -676,40 +845,35 @@ const clearEditorContent = () => {
       )}
      
      
-      <Tiptap setEditorRef={setEditorRef} onEnter={sendMessage} isChat disableEnter={isMobile ? true : false} isFocusedParent={isFocusedParent} setIsFocusedParent={setIsFocusedParent} />
+       <Tiptap enableMentions setEditorRef={setEditorRef} onEnter={sendMessage} isChat disableEnter={isMobile ? true : false} isFocusedParent={isFocusedParent} setIsFocusedParent={setIsFocusedParent} membersWithNames={members} />
+       {messageSize > 750 && (
+        <Box sx={{
+          display: 'flex',
+          width: '100%',
+          justifyContent: 'flex-start',
+          position: 'relative',
+        }}>
+                <Typography sx={{
+                  fontSize: '12px',
+                  color: messageSize > 4000 ? 'var(--danger)' : 'unset'
+                }}>{`Your message size is of ${messageSize} bytes out of a maximum of 4000`}</Typography>
+
+          </Box>
+      )}
       </div>
+      
       <Box sx={{
         display: 'flex',
-        width: '100&',
+        width: '100px',
         gap: '10px',
         justifyContent: 'center',
         flexShrink: 0,
         position: 'relative',
       }}>
-         {isFocusedParent && (
-               <CustomButton
-               onClick={()=> {
-                 if(isSending) return
-                 setIsFocusedParent(false)
-                 clearEditorContent()
-                 // Unfocus the editor
-               }}
-               style={{
-                 marginTop: 'auto',
-                 alignSelf: 'center',
-                 cursor: isSending ? 'default' : 'pointer',
-                 background: 'red',
-                 flexShrink: 0,
-                 padding: isMobile && '5px'
-               }}
-             >
-               
-               {` Close`}
-             </CustomButton>
-           
-            )}
+
       <CustomButton
               onClick={()=> {
+              
                 if(isSending) return
                 sendMessage()
               }}
@@ -719,7 +883,9 @@ const clearEditorContent = () => {
                 cursor: isSending ? 'default' : 'pointer',
                 background: isSending && 'rgba(0, 0, 0, 0.8)',
                 flexShrink: 0,
-                padding: isMobile && '5px',
+                padding: '5px',
+                width: '100px',
+                minWidth: 'auto'
                 
               }}
             >
@@ -740,8 +906,57 @@ const clearEditorContent = () => {
             </CustomButton>
            
               </Box>
-      {/* <button onClick={sendMessage}>send</button> */}
       </div>
+              )}
+      {isOpenQManager !== null && (
+ <Box sx={{
+  position: 'fixed',
+  height: '600px',
+  
+  maxHeight: '100vh',
+  width: '400px',
+  maxWidth: '100vw',
+  backgroundColor: '#27282c',
+  zIndex: 100,
+  bottom: 0,
+  right: 0,
+  overflow: 'hidden',
+  borderTopLeftRadius: '10px',
+  borderTopRightRadius: '10px',
+  display:  isOpenQManager === true ? 'block' : 'none',
+  boxShadow: 4,
+  
+}}>
+   <Box sx={{
+  height: '100%',
+  width: '100%',
+
+}}>
+  <Box sx={{
+    height: '40px',
+    display: 'flex',
+    alignItems: 'center',
+    padding: '5px',
+
+    justifyContent: 'space-between'
+  }}>
+            <Typography>Q-Manager</Typography>
+        <ButtonBase onClick={()=> {
+          setIsOpenQManager(false)
+        }}><CloseIcon sx={{
+          color: 'white'
+        }} /></ButtonBase>
+  </Box>
+  <Divider />
+<AppViewerContainer customHeight="560px" app={{
+  tabId: '5558588',
+  name: 'Q-Manager',
+  service: 'APP',
+  path: `?groupId=${selectedGroup}`
+}} isSelected />
+</Box>
+</Box>
+      )}
       {/* <ChatContainerComp messages={formatMessages} /> */}
       <LoadingSnackbar open={isLoading} info={{
         message: "Loading chat... please wait."

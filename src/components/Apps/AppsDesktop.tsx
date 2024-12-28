@@ -366,7 +366,7 @@ export const AppsDesktop = ({ mode, setMode, show , myName, goToHome, setDesktop
             />
      
         </ButtonBase>
-        <Save isDesktop />
+        <Save isDesktop myName={myName} />
         {mode !== 'home' && (
                  <AppsNavBarDesktop  />
 

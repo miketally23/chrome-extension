@@ -1,5 +1,5 @@
-import { getApiKeyFromStorage } from "./background";
-import { addForeignServer, addListItems, adminAction, cancelSellOrder, createBuyOrder, createPoll, createSellOrder, decryptData, deleteListItems, deployAt, encryptData, getCrossChainServerInfo, getDaySummary, getForeignFee, getListItems, getServerConnectionHistory, getTxActivitySummary, getUserAccount, getUserWallet, getUserWalletInfo, getWalletBalance, joinGroup, publishMultipleQDNResources, publishQDNResource, removeForeignServer, saveFile, sendChatMessage, sendCoin, setCurrentForeignServer, updateForeignFee, voteOnPoll } from "./qortalRequests/get";
+import { gateways, getApiKeyFromStorage } from "./background";
+import { addForeignServer, addListItems, adminAction, cancelSellOrder, createBuyOrder, createPoll, createSellOrder, decryptData, decryptDataWithSharingKey, decryptQortalGroupData, deleteListItems, deployAt, encryptData, encryptDataWithSharingKey, encryptQortalGroupData, getCrossChainServerInfo, getDaySummary, getForeignFee, getListItems, getServerConnectionHistory, getTxActivitySummary, getUserAccount, getUserWallet, getUserWalletInfo, getWalletBalance, joinGroup, publishMultipleQDNResources, publishQDNResource, removeForeignServer, saveFile, sendChatMessage, sendCoin, setCurrentForeignServer, signTransaction, updateForeignFee, voteOnPoll } from "./qortalRequests/get";
 
 
 
@@ -480,7 +480,72 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
       }
 
       case "ADMIN_ACTION": {
+        const data = request.payload;
+
         adminAction(data, isFromExtension).then((res) => {
+          sendResponse(res);
+        })
+        .catch((error) => {
+          sendResponse({ error: error?.message });
+        });
+
+        break;
+      }
+
+      case "SIGN_TRANSACTION": {
+        const data = request.payload;
+
+        signTransaction(data, isFromExtension).then((res) => {
+          sendResponse(res);
+        })
+        .catch((error) => {
+          sendResponse({ error: error?.message });
+        });
+
+        break;
+      }
+
+      case "DECRYPT_QORTAL_GROUP_DATA": {
+        const data = request.payload;
+
+        decryptQortalGroupData(data, isFromExtension).then((res) => {
+          sendResponse(res);
+        })
+        .catch((error) => {
+          sendResponse({ error: error?.message });
+        });
+
+        break;
+      }
+
+      case "ENCRYPT_DATA_WITH_SHARING_KEY": {
+        const data = request.payload;
+
+        encryptDataWithSharingKey(data, isFromExtension).then((res) => {
+          sendResponse(res);
+        })
+        .catch((error) => {
+          sendResponse({ error: error?.message });
+        });
+
+        break;
+      }
+      case "DECRYPT_DATA_WITH_SHARING_KEY": {
+        const data = request.payload;
+
+        decryptDataWithSharingKey(data, isFromExtension).then((res) => {
+          sendResponse(res);
+        })
+        .catch((error) => {
+          sendResponse({ error: error?.message });
+        });
+
+        break;
+      }
+      case "ENCRYPT_QORTAL_GROUP_DATA": {
+        const data = request.payload;
+
+        encryptQortalGroupData(data, isFromExtension).then((res) => {
           sendResponse(res);
         })
         .catch((error) => {

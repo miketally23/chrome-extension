@@ -103,9 +103,13 @@ import { MainAvatar } from "./components/MainAvatar";
 import { useRetrieveDataLocalStorage } from "./useRetrieveDataLocalStorage";
 import { useQortalGetSaveSettings } from "./useQortalGetSaveSettings";
 import { useRecoilState, useResetRecoilState } from "recoil";
-import { canSaveSettingToQdnAtom, fullScreenAtom, hasSettingsChangedAtom, oldPinnedAppsAtom, settingsLocalLastUpdatedAtom, settingsQDNLastUpdatedAtom, sortablePinnedAppsAtom } from "./atoms/global";
+import { canSaveSettingToQdnAtom, fullScreenAtom, hasSettingsChangedAtom, isUsingImportExportSettingsAtom, oldPinnedAppsAtom, settingsLocalLastUpdatedAtom, settingsQDNLastUpdatedAtom, sortablePinnedAppsAtom } from "./atoms/global";
 import { useAppFullScreen } from "./useAppFullscreen";
 import { NotAuthenticated } from "./ExtStates/NotAuthenticated";
+import { useFetchResources } from "./common/useFetchResources";
+import { Tutorials } from "./components/Tutorials/Tutorials";
+import { useHandleTutorials } from "./components/Tutorials/useHandleTutorials";
+import { CoreSyncStatus } from "./components/CoreSyncStatus";
 
 type extStates =
   | "not-authenticated"
@@ -217,8 +221,12 @@ export const resumeAllQueues = () => {
     payload: {},
   });
 };
-
+const defaultValuesGlobal = {
+  openTutorialModal: null,
+  setOpenTutorialModal: ()=> {}
+}
 export const MyContext = createContext<MyContextInterface>(defaultValues);
+export const GlobalContext = createContext<MyContextInterface>(defaultValuesGlobal);
 
 export let globalApiKey: string | null = null;
 
@@ -308,6 +316,7 @@ function App() {
   const isFocusedRef = useRef<boolean>(true);
   const { isShow, onCancel, onOk, show, message } = useModal();
   const { isShow: isShowUnsavedChanges, onCancel:  onCancelUnsavedChanges, onOk: onOkUnsavedChanges, show:  showUnsavedChanges, message: messageUnsavedChanges } = useModal();
+  const {downloadResource} = useFetchResources()
 
   const {
     onCancel: onCancelQortalRequest,
@@ -339,10 +348,11 @@ function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const qortalRequestCheckbox1Ref = useRef(null);
   useRetrieveDataLocalStorage()
-  useQortalGetSaveSettings(userInfo?.name)
+  useQortalGetSaveSettings(userInfo?.name, extState === "authenticated")
   const [fullScreen, setFullScreen] = useRecoilState(fullScreenAtom);
-
+  const resetAtomIsUsingImportExportSettingsAtom = useResetRecoilState(isUsingImportExportSettingsAtom)
   const { toggleFullScreen } = useAppFullScreen(setFullScreen);
+  const {showTutorial, openTutorialModal, shownTutorialsInitiated, setOpenTutorialModal} = useHandleTutorials()
 
   useEffect(() => {
       // Attach a global event listener for double-click
@@ -371,6 +381,7 @@ function App() {
     resetAtomSettingsQDNLastUpdatedAtom();
     resetAtomSettingsLocalLastUpdatedAtom();
     resetAtomOldPinnedAppsAtom();
+    resetAtomIsUsingImportExportSettingsAtom()
   };
   useEffect(() => {
     if (!isMobile) return;
@@ -1472,18 +1483,20 @@ function App() {
             Get QORT at Q-Trade
           </TextP>
         </AuthenticatedContainerInnerLeft>
-        <AuthenticatedContainerInnerRight>
-          <Spacer height="20px" />
-          <img
-            onClick={() => {
-              setExtstate("download-wallet");
-              setIsOpenDrawerProfile(false);
+        <AuthenticatedContainerInnerRight  sx={{
+            height: "100%",
+            justifyContent: "space-between",
+          }}>
+        <Box
+            sx={{
+              width: "100%",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: 'center'
             }}
-            src={Download}
-            style={{
-              cursor: "pointer",
-            }}
-          />
+          >
+            <Spacer height="20px" />
+         
           {!isMobile && (
             <>
               <Spacer height="20px" />
@@ -1539,6 +1552,29 @@ function App() {
               }}
             />
           )}
+            <Spacer height="20px" />
+            <CoreSyncStatus />
+        </Box>
+        <Box
+            sx={{
+              width: "100%",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: 'center'
+            }}
+          >
+          <img
+            onClick={() => {
+              setExtstate("download-wallet");
+              setIsOpenDrawerProfile(false);
+            }}
+            src={Download}
+            style={{
+              cursor: "pointer",
+            }}
+          />
+          <Spacer height="40px" />
+          </Box>
         </AuthenticatedContainerInnerRight>
       </AuthenticatedContainer>
     );
@@ -1554,7 +1590,14 @@ function App() {
         backgroundRepeat: desktopViewMode === 'apps' &&  'no-repeat',
       }}
     >
-   
+    <GlobalContext.Provider value={{
+            showTutorial,
+            openTutorialModal,
+            setOpenTutorialModal,
+            downloadResource
+      }}>
+                    <Tutorials />
+
       {extState === "not-authenticated" && (
        <NotAuthenticated getRootProps={getRootProps} getInputProps={getInputProps} setExtstate={setExtstate}     apiKey={apiKey}  globalApiKey={globalApiKey} setApiKey={setApiKey}  handleSetGlobalApikey={handleSetGlobalApikey}/>
       )}
@@ -1574,6 +1617,7 @@ function App() {
             show,
             message,
             rootHeight,
+            downloadResource
           }}
         >
           <Box
@@ -2920,6 +2964,7 @@ function App() {
       >
         {renderProfile()}
       </DrawerComponent>
+      </GlobalContext.Provider>
     </AppContainer>
   );
 }

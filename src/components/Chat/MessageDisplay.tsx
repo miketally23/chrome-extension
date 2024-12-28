@@ -1,15 +1,20 @@
-import React, { useEffect } from "react";
-import DOMPurify from "dompurify";
-import "./styles.css";
-import { executeEvent } from "../../utils/events";
+import React, { useEffect } from 'react';
+import DOMPurify from 'dompurify';
+import './styles.css';
+import { executeEvent } from '../../utils/events';
+import { Embed } from '../Embeds/Embed';
 
-const extractComponents = (url) => {
+export const extractComponents = (url) => {
   if (!url || !url.startsWith("qortal://")) {
-    // Check if url exists and starts with "qortal://"
     return null;
   }
 
-  url = url.replace(/^(qortal\:\/\/)/, ""); // Safe to use replace now
+  // Skip links starting with "qortal://use-"
+  if (url.startsWith("qortal://use-")) {
+    return null;
+  }
+
+  url = url.replace(/^(qortal\:\/\/)/, "");
   if (url.includes("/")) {
     let parts = url.split("/");
     const service = parts[0].toUpperCase();
@@ -26,19 +31,20 @@ const extractComponents = (url) => {
 
 function processText(input) {
   const linkRegex = /(qortal:\/\/\S+)/g;
+
   function processNode(node) {
     if (node.nodeType === Node.TEXT_NODE) {
       const parts = node.textContent.split(linkRegex);
       if (parts.length > 0) {
         const fragment = document.createDocumentFragment();
         parts.forEach((part) => {
-          if (part.startsWith("qortal://")) {
-            const link = document.createElement("span");
-            link.setAttribute("data-url", part);
+          if (part.startsWith('qortal://')) {
+            const link = document.createElement('span');
+            link.setAttribute('data-url', part);
             link.textContent = part;
-            link.style.color = "var(--code-block-text-color)";
-            link.style.textDecoration = "underline";
-            link.style.cursor = "pointer";
+            link.style.color = 'var(--code-block-text-color)';
+            link.style.textDecoration = 'underline';
+            link.style.cursor = 'pointer';
             fragment.appendChild(link);
           } else {
             fragment.appendChild(document.createTextNode(part));
@@ -51,7 +57,7 @@ function processText(input) {
     }
   }
 
-  const wrapper = document.createElement("div");
+  const wrapper = document.createElement('div');
   wrapper.innerHTML = input;
   processNode(wrapper);
   return wrapper.innerHTML;
@@ -60,102 +66,64 @@ function processText(input) {
 export const MessageDisplay = ({ htmlContent, isReply }) => {
   const linkify = (text) => {
     if (!text) return ""; // Return an empty string if text is null or undefined
-
+  
     let textFormatted = text;
     const urlPattern = /(\bhttps?:\/\/[^\s<]+|\bwww\.[^\s<]+)/g;
     textFormatted = text.replace(urlPattern, (url) => {
-      const href = url.startsWith("http") ? url : `https://${url}`;
-      return `<a href="${DOMPurify.sanitize(
-        href
-      )}" class="auto-link">${DOMPurify.sanitize(url)}</a>`;
+      const href = url.startsWith('http') ? url : `https://${url}`;
+      return `<a href="${DOMPurify.sanitize(href)}" class="auto-link">${DOMPurify.sanitize(url)}</a>`;
     });
     return processText(textFormatted);
   };
+  
 
   const sanitizedContent = DOMPurify.sanitize(linkify(htmlContent), {
     ALLOWED_TAGS: [
-      "a",
-      "b",
-      "i",
-      "em",
-      "strong",
-      "p",
-      "br",
-      "div",
-      "span",
-      "img",
-      "ul",
-      "ol",
-      "li",
-      "h1",
-      "h2",
-      "h3",
-      "h4",
-      "h5",
-      "h6",
-      "blockquote",
-      "code",
-      "pre",
-      "table",
-      "thead",
-      "tbody",
-      "tr",
-      "th",
-      "td",
+      'a', 'b', 'i', 'em', 'strong', 'p', 'br', 'div', 'span', 'img', 
+      'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'code', 'pre', 'table', 'thead', 'tbody', 'tr', 'th', 'td'
     ],
     ALLOWED_ATTR: [
-      "href",
-      "target",
-      "rel",
-      "class",
-      "src",
-      "alt",
-      "title",
-      "width",
-      "height",
-      "style",
-      "align",
-      "valign",
-      "colspan",
-      "rowspan",
-      "border",
-      "cellpadding",
-      "cellspacing",
-      "data-url",
+      'href', 'target', 'rel', 'class', 'src', 'alt', 'title', 
+      'width', 'height', 'style', 'align', 'valign', 'colspan', 'rowspan', 'border', 'cellpadding', 'cellspacing', 'data-url'
     ],
-  });
+  }).replace(/<span[^>]*data-url="qortal:\/\/use-embed\/[^"]*"[^>]*>.*?<\/span>/g, '');;
 
   const handleClick = async (e) => {
     e.preventDefault();
 
     const target = e.target;
-    if (target.tagName === "A") {
-      const href = target.getAttribute("href");
-      if (chrome && chrome.tabs) {
-        chrome.tabs.create({ url: href }, (tab) => {
-          if (chrome.runtime.lastError) {
-            console.error("Error opening tab:", chrome.runtime.lastError);
-          } else {
-            console.log("Tab opened successfully:", tab);
-          }
-        });
-      }
-    } else if (target.getAttribute("data-url")) {
-      const url = target.getAttribute("data-url");
+    if (target.tagName === 'A') {
+      const href = target.getAttribute('href');
+      window.electronAPI.openExternal(href);
+    } else if (target.getAttribute('data-url')) {
+      const url = target.getAttribute('data-url');
       const res = extractComponents(url);
       if (res) {
         const { service, name, identifier, path } = res;
         executeEvent("addTab", { data: { service, name, identifier, path } });
-        executeEvent("open-apps-mode", {});
+        executeEvent("open-apps-mode", { });
       }
     }
   };
 
+  const embedLink = htmlContent?.match(/qortal:\/\/use-embed\/[^\s<>]+/);
+
+  let embedData = null;
+
+  if (embedLink) {
+    embedData = embedLink[0]
+  }
+
   return (
+    <>
+    {embedLink && (
+      <Embed embedLink={embedData} />
+    )}
     <div
-      className={`tiptap ${isReply ? "isReply" : ""}`}
+      className={`tiptap ${isReply ? 'isReply' : ''}`}
       dangerouslySetInnerHTML={{ __html: sanitizedContent }}
       onClick={handleClick}
     />
+    </>
   );
 };

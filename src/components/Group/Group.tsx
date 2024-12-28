@@ -92,6 +92,10 @@ import { Apps } from "../Apps/Apps";
 import { AppsNavBar } from "../Apps/AppsNavBar";
 import { AppsDesktop } from "../Apps/AppsDesktop";
 import { formatEmailDate } from "./QMailMessages";
+import LockIcon from '@mui/icons-material/Lock';
+import NoEncryptionGmailerrorredIcon from '@mui/icons-material/NoEncryptionGmailerrorred';
+import { useSetRecoilState } from "recoil";
+import { selectedGroupIdAtom } from "../../atoms/global";
 
 // let touchStartY = 0;
 // let disablePullToRefresh = false;
@@ -185,6 +189,19 @@ export function validateSecretKey(obj) {
 
   // If all checks passed, return true
   return true;
+}
+
+function areKeysEqual(array1, array2) {
+  // If lengths differ, the arrays cannot be equal
+  if (array1?.length !== array2?.length) {
+    return false;
+  }
+
+  // Sort both arrays and compare their elements
+  const sortedArray1 = [...array1].sort();
+  const sortedArray2 = [...array2].sort();
+
+  return sortedArray1.every((key, index) => key === sortedArray2[index]);
 }
 
 export const getGroupMembers = async (groupNumber: number) => {
@@ -441,6 +458,17 @@ export const Group = ({
   const [appsMode, setAppsMode] = useState('home')
   const [isOpenSideViewDirects, setIsOpenSideViewDirects] = useState(false)
   const [isOpenSideViewGroups, setIsOpenSideViewGroups] = useState(false)
+  const [isForceShowCreationKeyPopup, setIsForceShowCreationKeyPopup] = useState(false)
+  const setSelectedGroupId = useSetRecoilState(selectedGroupIdAtom)
+
+  const [groupsProperties, setGroupsProperties] = useState({})
+
+  const isPrivate = useMemo(()=> {
+    if(!selectedGroup?.groupId || !groupsProperties[selectedGroup?.groupId]) return null
+    if(groupsProperties[selectedGroup?.groupId]?.isOpen === true) return false
+    if(groupsProperties[selectedGroup?.groupId]?.isOpen === false) return true
+    return null
+  }, [selectedGroup])
 
   const toggleSideViewDirects = ()=> {
     if(isOpenSideViewGroups){
@@ -467,6 +495,8 @@ export const Group = ({
 
   useEffect(() => {
     selectedGroupRef.current = selectedGroup;
+    setSelectedGroupId(selectedGroup?.groupId)
+
   }, [selectedGroup]);
 
   useEffect(() => {
@@ -833,15 +863,63 @@ export const Group = ({
   };
 
 
+  const getAdminsForPublic = async(selectedGroup)=> {
+    try {
+      const { names, addresses, both } =
+      await getGroupAdmins(selectedGroup?.groupId)
+    setAdmins(addresses);
+    setAdminsWithNames(both);
+    } catch (error) {
+      //error
+    }
+  }
 
 
   useEffect(() => {
-    if (selectedGroup) {
-      setTriedToFetchSecretKey(false);
-      getSecretKey(true);
+    if (selectedGroup && isPrivate !== null) {
+      if(isPrivate){
+        setTriedToFetchSecretKey(false);
+        getSecretKey(true);
+      }
+      
       getGroupOwner(selectedGroup?.groupId);
     }
-  }, [selectedGroup]);
+    if(isPrivate === false){
+      setTriedToFetchSecretKey(true);
+      getAdminsForPublic(selectedGroup)
+
+    }
+  }, [selectedGroup, isPrivate]);
+
+
+
+
+
+  const getGroupsProperties = useCallback(async(address)=> {
+    try {
+      const url = `${getBaseApiReact()}/groups/member/${address}`;
+      const response = await fetch(url);
+      if(!response.ok) throw new Error('Cannot get group properties')
+      let data = await response.json();
+    const transformToObject = data.reduce((result, item) => {
+     
+      result[item.groupId] = item
+      return result;
+    }, {});
+      setGroupsProperties(transformToObject)
+    } catch (error) {
+      // error
+    }
+  }, [])
+
+
+  useEffect(()=> {
+    if(!myAddress) return
+    if(areKeysEqual(groups?.map((grp)=> grp?.groupId), Object.keys(groupsProperties))){
+    } else {
+      getGroupsProperties(myAddress)
+    }
+  }, [groups, myAddress])
 
  
 
@@ -2089,16 +2167,36 @@ export const Group = ({
                     }}
                   >
                     <ListItemAvatar>
-                      <Avatar
-                        sx={{
+                      {groupsProperties[group?.groupId]?.isOpen === false ? (
+                        <Box sx={{
+                          width: '40px',
+                          height: '40px',
+                          borderRadius: '50%',
                           background: "#232428",
-                          color: "white",
-                        }}
-                        alt={group?.groupName}
-                        //  src={`${getBaseApiReact()}/arbitrary/THUMBNAIL/${groupOwner?.name}/qortal_group_avatar_${group.groupId}?async=true`}
-                      >
-                        {group.groupName?.charAt(0)}
-                      </Avatar>
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}>
+                        <LockIcon sx={{
+                          color: 'var(--green)'
+                        }} />
+                        </Box>
+                      ): (
+                        <Box sx={{
+                          width: '40px',
+                          height: '40px',
+                          borderRadius: '50%',
+                          background: "#232428",
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}>
+                        <NoEncryptionGmailerrorredIcon sx={{
+                          color: 'var(--danger)'
+                        }} />
+                        </Box>
+                      )}
+                      
                     </ListItemAvatar>
                     <ListItemText
                       primary={group.groupName}
@@ -2354,6 +2452,7 @@ export const Group = ({
             {!isMobile && selectedGroup && (
         
         <DesktopHeader
+        isPrivate={isPrivate}
         selectedGroup={selectedGroup}
         groupSection={groupSection}
         isUnread={isUnread}
@@ -2469,6 +2568,7 @@ export const Group = ({
               >
                 {triedToFetchSecretKey && (
                   <ChatGroup
+                    isPrivate={isPrivate}
                     myAddress={myAddress}
                     selectedGroup={selectedGroup?.groupId}
                     getSecretKey={getSecretKey}
@@ -2477,16 +2577,18 @@ export const Group = ({
                     handleNewEncryptionNotification={
                       setNewEncryptionNotification
                     }
-                    hide={groupSection !== "chat" || !secretKey}
+                    hide={groupSection !== "chat" || selectedDirect || newChat}
+                    // hideView={!(desktopViewMode === 'chat' && selectedGroup)}
                     handleSecretKeyCreationInProgress={
                       handleSecretKeyCreationInProgress
                     }
                     triedToFetchSecretKey={triedToFetchSecretKey}
                     myName={userInfo?.name}
                     balance={balance}
+                    getTimestampEnterChatParent={getTimestampEnterChat}
                   />
                 )}
-                {firstSecretKeyInCreation &&
+                {isPrivate && firstSecretKeyInCreation &&
                   triedToFetchSecretKey &&
                   !secretKeyPublishDate && (
                     <div
@@ -2507,7 +2609,7 @@ export const Group = ({
                       </Typography>
                     </div>
                   )}
-                {!admins.includes(myAddress) &&
+                {isPrivate && !admins.includes(myAddress) &&
                 !secretKey &&
                 triedToFetchSecretKey ? (
                   <>
@@ -2560,10 +2662,11 @@ export const Group = ({
                     ) : null}
                   </>
                 ) : admins.includes(myAddress) &&
-                  !secretKey &&
-                  triedToFetchSecretKey ? null : !triedToFetchSecretKey ? null : (
+                (!secretKey && isPrivate) &&
+                triedToFetchSecretKey ? null : !triedToFetchSecretKey ? null : (
                   <>
                     <GroupAnnouncements
+                     isPrivate={isPrivate}
                       myAddress={myAddress}
                       selectedGroup={selectedGroup?.groupId}
                       getSecretKey={getSecretKey}
@@ -2577,6 +2680,7 @@ export const Group = ({
                       hide={groupSection !== "announcement"}
                     />
                     <GroupForum
+                     isPrivate={isPrivate}
                       myAddress={myAddress}
                       selectedGroup={selectedGroup}
                       userInfo={userInfo}
@@ -2600,11 +2704,11 @@ export const Group = ({
                     zIndex: 100,
                   }}
                 >
-                  {admins.includes(myAddress) &&
+                  {((isPrivate && admins.includes(myAddress) &&
                     shouldReEncrypt &&
                     triedToFetchSecretKey &&
                     !firstSecretKeyInCreation &&
-                    !hideCommonKeyPopup && (
+                    !hideCommonKeyPopup) || isForceShowCreationKeyPopup) && (
                       <CreateCommonSecret
                         setHideCommonKeyPopup={setHideCommonKeyPopup}
                         groupId={selectedGroup?.groupId}
@@ -2678,6 +2782,7 @@ export const Group = ({
           )}
            {!isMobile && groupSection === "home" && (
         <DesktopFooter 
+        isPrivate={isPrivate}
         selectedGroup={selectedGroup}
         groupSection={groupSection}
         isUnread={isUnread}

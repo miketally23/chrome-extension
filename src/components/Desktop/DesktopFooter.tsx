@@ -78,7 +78,8 @@ export const DesktopFooter = ({
   desktopViewMode,
   hide,
   setIsOpenSideViewDirects,
-  setIsOpenSideViewGroups
+  setIsOpenSideViewGroups,
+  myName
   
 }) => {
   
@@ -178,7 +179,7 @@ export const DesktopFooter = ({
           </IconWrapper>
         </ButtonBase>
         
-        <Save isDesktop />
+        <Save isDesktop myName={myName} />
       </Box>
     </Box>
   );
