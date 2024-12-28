@@ -30,6 +30,7 @@ import { validateAddress } from "./utils/validateAddress";
 import { Sha256 } from "asmcrypto.js";
 import { TradeBotRespondMultipleRequest } from "./transactions/TradeBotRespondMultipleRequest";
 import { RESOURCE_TYPE_NUMBER_GROUP_CHAT_REACTIONS } from "./constants/resourceTypes";
+import TradeBotRespondRequest from './transactions/TradeBotRespondRequest';
 
 export function cleanUrl(url) {
   return url?.replace(/^(https?:\/\/)?(www\.)?/, '');
@@ -1274,7 +1275,7 @@ async function getDataPublishes(groupId, type) {
   });
 }
 
-async function sendChatForBuyOrder({ qortAddress, recipientPublicKey, message }) {
+async function sendChatForBuyOrder({ qortAddress, recipientPublicKey, message, isSingle }) {
   let _reference = new Uint8Array(64);
   self.crypto.getRandomValues(_reference);
 
@@ -1299,7 +1300,9 @@ async function sendChatForBuyOrder({ qortAddress, recipientPublicKey, message })
   };
   const finalJson = {
     callRequest: jsonData,
-    extra: "whatever additional data goes here",
+    extra: {
+      type: isSingle ? "single" : "multiple"
+    },
   };
   const messageStringified = JSON.stringify(finalJson);
 
@@ -2063,24 +2066,45 @@ async function createBuyOrderTx({ crosschainAtInfo, useLocal }) {
 
 export async function createBuyOrderTxQortalRequest({ crosschainAtInfo, isGateway, foreignBlockchain }) {
   try {
+
     if (!isGateway) {
       const wallet = await getSaveWallet();
 
       const address = wallet.address0;
-
-      const message = {
-        addresses: crosschainAtInfo.map((order)=> order.qortalAtAddress),
-        foreignKey: await getForeignKey(foreignBlockchain),
-        receivingAddress: address,
-      };
-      let responseVar;
-      const txn = new TradeBotRespondMultipleRequest().createTransaction(
-        message
-      );
+      let message
+      if(foreignBlockchain === 'PIRATECHAIN'){
+         message = {
+          atAddress: crosschainAtInfo[0].qortalAtAddress,
+          foreignKey: await getForeignKey(foreignBlockchain),
+          receivingAddress: address,
+        };
+      } else {
+         message = {
+          addresses: crosschainAtInfo.map((order)=> order.qortalAtAddress),
+          foreignKey: await getForeignKey(foreignBlockchain),
+          receivingAddress: address,
+        };
+      }
      
-   
-       const url =  await createEndpoint('/crosschain/tradebot/respondmultiple')
-      
+      let responseVar;
+      let txn
+      let url
+      if(foreignBlockchain === 'PIRATECHAIN'){
+         txn = new TradeBotRespondRequest().createTransaction(
+          message
+        );
+       
+     
+          url =  await createEndpoint('/crosschain/tradebot/respond')
+      } else {
+         txn = new TradeBotRespondMultipleRequest().createTransaction(
+          message
+        );
+       
+     
+          url =  await createEndpoint('/crosschain/tradebot/respondmultiple')
+      }
+    
       const responseFetch = await fetch(
         url,
         {
@@ -2093,6 +2117,10 @@ export async function createBuyOrderTxQortalRequest({ crosschainAtInfo, isGatewa
       );
 
       const res = await responseFetch.json();
+      if(res?.error && res?.message){
+        throw new Error(res?.message)
+      }
+      if(!responseFetch?.ok) throw new Error('Failed to submit buy order')
 
       if (res === false) {
         responseVar = {
@@ -2109,7 +2137,7 @@ export async function createBuyOrderTxQortalRequest({ crosschainAtInfo, isGatewa
           callResponse: response,
           extra: {
             message: "Transaction processed successfully!",
-            atAddresses: crosschainAtInfo.map((order)=> order.qortalAtAddress),
+            atAddresses: foreignBlockchain === 'PIRATECHAIN' ? [crosschainAtInfo[0].qortalAtAddress]  : crosschainAtInfo.map((order)=> order.qortalAtAddress),
             senderAddress: address,
             node: url
           },
@@ -2119,7 +2147,7 @@ export async function createBuyOrderTxQortalRequest({ crosschainAtInfo, isGatewa
           callResponse: "ERROR",
           extra: {
             message: response,
-            atAddresses: crosschainAtInfo.map((order)=> order.qortalAtAddress),
+            atAddresses: foreignBlockchain === 'PIRATECHAIN' ? [crosschainAtInfo[0].qortalAtAddress]  : crosschainAtInfo.map((order)=> order.qortalAtAddress),
             senderAddress: address,
             node: url
           },
@@ -2133,7 +2161,7 @@ export async function createBuyOrderTxQortalRequest({ crosschainAtInfo, isGatewa
 
  
     const message = {
-      addresses: crosschainAtInfo.map((order)=> order.qortalAtAddress),
+      addresses: foreignBlockchain === 'PIRATECHAIN' ? [crosschainAtInfo[0].qortalAtAddress]  : crosschainAtInfo.map((order)=> order.qortalAtAddress),
       foreignKey: await getForeignKey(foreignBlockchain),
       receivingAddress: address,
     };
@@ -2141,8 +2169,10 @@ export async function createBuyOrderTxQortalRequest({ crosschainAtInfo, isGatewa
       qortAddress: proxyAccountAddress,
       recipientPublicKey: proxyAccountPublicKey,
       message,
-      atAddresses: crosschainAtInfo.map((order)=> order.qortalAtAddress),
+      atAddresses: foreignBlockchain === 'PIRATECHAIN' ? [crosschainAtInfo[0].qortalAtAddress]  : crosschainAtInfo.map((order)=> order.qortalAtAddress),
+      isSingle: foreignBlockchain === 'PIRATECHAIN'
     });
+
 
     
     if (res?.signature) {
@@ -2159,8 +2189,7 @@ export async function createBuyOrderTxQortalRequest({ crosschainAtInfo, isGatewa
             extra: {
               message: message?.extra?.message,
               senderAddress: address,
-              node: buyTradeNodeBaseUrl,
-              atAddresses: crosschainAtInfo.map((order)=> order.qortalAtAddress),
+              atAddresses: foreignBlockchain === 'PIRATECHAIN' ? [crosschainAtInfo[0].qortalAtAddress]  : crosschainAtInfo.map((order)=> order.qortalAtAddress),
             }
           }
     
