@@ -6,6 +6,7 @@ import { constant, isArray } from "lodash";
 import {
   decryptGroupEncryption,
   encryptAndPublishSymmetricKeyGroupChat,
+  encryptAndPublishSymmetricKeyGroupChatForAdmins,
   publishGroupEncryptedResource,
   publishOnQDN,
   uint8ArrayToObject,
@@ -2549,8 +2550,7 @@ async function createGroup({
   const signedBytes = Base58.encode(tx.signedBytes);
 
   const res = await processTransactionVersion2(signedBytes);
-  if (!res?.signature)
-    throw new Error("Transaction was not able to be processed");
+  if (!res?.signature) throw new Error(res?.message || "Transaction was not able to be processed");
   return res;
 }
 async function inviteToGroup({ groupId, qortalAddress, inviteTime }) {
@@ -4287,6 +4287,22 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
             sendResponse({ error: error.message });
           });
 
+        break;
+      }
+      case "encryptAndPublishSymmetricKeyGroupChatForAdmins": {
+        const { groupId, previousData, admins } = request.payload;
+
+        encryptAndPublishSymmetricKeyGroupChatForAdmins({
+          groupId, previousData, admins
+        })
+          .then((data) => {
+            sendResponse(data);
+          })
+          .catch((error) => {
+            console.error(error.message);
+            sendResponse({ error: error.message });
+          });
+        return true;
         break;
       }
       case "publishGroupEncryptedResource": {

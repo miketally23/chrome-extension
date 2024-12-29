@@ -58,7 +58,7 @@ export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey,
 
 
 
-  const getTimestampEnterChat = async () => {
+  const getTimestampEnterChat = async (selectedGroup) => {
     try {
       return new Promise((res, rej) => {
         chrome?.runtime?.sendMessage(
@@ -66,8 +66,8 @@ export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey,
             action: "getTimestampEnterChat",
           },
           (response) => {
-            if (!response?.error && selectedGroup && response[selectedGroup]) {
-              lastReadTimestamp.current = response[selectedGroup]
+            if(response && selectedGroup){
+              lastReadTimestamp.current = response[selectedGroup] || undefined
               chrome?.runtime?.sendMessage({
                 action: "addTimestampEnterChat",
                 payload: {
@@ -89,8 +89,9 @@ export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey,
   };
 
   useEffect(()=> {
-    getTimestampEnterChat()
-  }, [])
+    if(!selectedGroup) return
+    getTimestampEnterChat(selectedGroup)
+  }, [selectedGroup])
 
   const openQManager = useCallback(()=> {
     setIsOpenQManager(true)

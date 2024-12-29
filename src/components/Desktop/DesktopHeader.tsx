@@ -18,8 +18,11 @@ import { NotificationIcon2 } from "../../assets/Icons/NotificationIcon2";
 import { ChatIcon } from "../../assets/Icons/ChatIcon";
 import { ThreadsIcon } from "../../assets/Icons/ThreadsIcon";
 import { MembersIcon } from "../../assets/Icons/MembersIcon";
+import LockIcon from '@mui/icons-material/Lock';
+import NoEncryptionGmailerrorredIcon from '@mui/icons-material/NoEncryptionGmailerrorred';
+import { AdminsIcon } from "../../assets/Icons/AdminsIcon";
 
-const IconWrapper = ({ children, label, color, selected, selectColor }) => {
+const IconWrapper = ({ children, label, color, selected, selectColor, customHeight }) => {
   return (
     <Box
       sx={{
@@ -28,8 +31,8 @@ const IconWrapper = ({ children, label, color, selected, selectColor }) => {
         alignItems: "center",
         gap: "5px",
         flexDirection: "column",
-        height: "65px",
-        width: "65px",
+        height: customHeight ? customHeight : "65px",
+        width: customHeight ? customHeight :  "65px",
         borderRadius: "50%",
         backgroundColor: selected ? selectColor || "rgba(28, 29, 32, 1)" : "transparent",
       }}
@@ -79,7 +82,8 @@ export const DesktopHeader = ({
   hasUnreadChat,
   isChat,
   isForum,
-  setGroupSection
+  setGroupSection,
+  isPrivate
 }) => {
   const [value, setValue] = React.useState(0);
   return (
@@ -94,7 +98,20 @@ export const DesktopHeader = ({
         padding: "10px",
       }}
     >
-      <Box>
+     <Box sx={{
+        display: 'flex',
+        gap: '10px'
+      }}>
+        {isPrivate && (
+          <LockIcon sx={{
+            color: 'var(--green)'
+          }} />
+        )}
+        {isPrivate === false && (
+          <NoEncryptionGmailerrorredIcon sx={{
+            color: 'var(--danger)'
+          }} />
+        )}
         <Typography
           sx={{
             fontSize: "16px",
@@ -269,6 +286,30 @@ export const DesktopHeader = ({
               color={
                 isForum
                   ? "white"
+                  : "rgba(250, 250, 250, 0.5)"
+              }
+            />
+          </IconWrapper>
+        </ButtonBase>
+        <ButtonBase
+          onClick={() => {
+            setGroupSection("adminSpace");
+          
+          }}
+        >
+          <IconWrapper
+            color={groupSection === 'adminSpace' ? 'black' : "rgba(250, 250, 250, 0.5)"}
+            label="Admins"
+            selected={groupSection === 'adminSpace'}
+            customHeight="55px"
+            selectColor="#09b6e8"
+          >
+            <AdminsIcon
+              height={25}
+              width={20}
+              color={
+                groupSection === 'adminSpace'
+                  ? "black"
                   : "rgba(250, 250, 250, 0.5)"
               }
             />

@@ -255,7 +255,6 @@ const getPublishesFromAdminsAdminSpace = async (
     return true;
   });
   await Promise.all(getMemNames);
-console.log('members', members)
   return { names: members, addresses: membersAddresses, both };
 };
 
@@ -1778,7 +1777,8 @@ export const getUserWalletFunc = async (coin) => {
   const wallet = await getSaveWallet();
   const address = wallet.address0;
   const resKeyPair = await getKeyPair();
-  const parsedData = resKeyPair;
+  const parsedData = JSON.parse(resKeyPair);
+
   switch (coin) {
     case "QORT":
       userWallet["address"] = address;
@@ -3179,7 +3179,8 @@ export const signTransaction = async (data, isFromExtension) => {
         body: data.unsignedBytes,
       });
       const resKeyPair = await getKeyPair();
-      const parsedData = resKeyPair;
+      const parsedData = JSON.parse(resKeyPair);
+
       const uint8PrivateKey = Base58.decode(parsedData.privateKey);
       const uint8PublicKey = Base58.decode(parsedData.publicKey);
       const keyPair = {
@@ -3213,7 +3214,6 @@ export const signTransaction = async (data, isFromExtension) => {
 
 
 export const decryptQortalGroupData = async (data, sender) => {
-    console.log('data', data)
   let data64 = data.data64;
   let groupId = data?.groupId
   let isAdmins = data?.isAdmins
@@ -3291,7 +3291,6 @@ url
 
 
 }
-console.log('secretKeyObject', secretKeyObject)
       
         const resGroupDecryptResource = decryptSingle({
           data64, secretKeyObject: secretKeyObject, skipDecodeBase64: true
@@ -3320,7 +3319,8 @@ export const encryptDataWithSharingKey = async (data, sender) => {
   const dataObjectBase64 = await objectToBase64(dataObject)
 
   const resKeyPair = await getKeyPair();
-  const parsedData = resKeyPair;
+  const parsedData = JSON.parse(resKeyPair);
+
   const privateKey = parsedData.privateKey;
   const userPublicKey = parsedData.publicKey;
 

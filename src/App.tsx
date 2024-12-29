@@ -61,6 +61,7 @@ import {
   AuthenticatedContainerInnerLeft,
   AuthenticatedContainerInnerRight,
   CustomButton,
+  CustomButtonAccept,
   CustomInput,
   CustomLabel,
   TextItalic,
@@ -320,6 +321,14 @@ function App() {
   const {downloadResource} = useFetchResources()
 
   const {
+    isShow: isShowInfo,
+    onCancel: onCancelInfo,
+    onOk: onOkInfo,
+    show: showInfo,
+    message: messageInfo,
+  } = useModal();
+  
+  const {
     onCancel: onCancelQortalRequest,
     onOk: onOkQortalRequest,
     show: showQortalRequest,
@@ -354,6 +363,13 @@ function App() {
   const resetAtomIsUsingImportExportSettingsAtom = useResetRecoilState(isUsingImportExportSettingsAtom)
   const { toggleFullScreen } = useAppFullScreen(setFullScreen);
   const {showTutorial, openTutorialModal, shownTutorialsInitiated, setOpenTutorialModal} = useHandleTutorials()
+
+  const passwordRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (extState === "wallet-dropped" && passwordRef.current) {
+      passwordRef.current.focus();
+    }
+  }, [extState]);
 
   useEffect(() => {
       // Attach a global event listener for double-click
@@ -1618,7 +1634,12 @@ function App() {
             show,
             message,
             rootHeight,
-            downloadResource
+            downloadResource,
+            showInfo,
+            openSnackGlobal: openSnack,
+            setOpenSnackGlobal: setOpenSnack,
+            infoSnackCustom: infoSnack,
+            setInfoSnackCustom: setInfoSnack,
           }}
         >
           <Box
@@ -1763,6 +1784,7 @@ function App() {
               value={paymentPassword}
               onChange={(e) => setPaymentPassword(e.target.value)}
               autoComplete="off"
+              ref={passwordRef}
             />
           </Box>
           <Spacer height="10px" />
@@ -2636,11 +2658,48 @@ function App() {
             </DialogContentText>
           </DialogContent>
           <DialogActions>
-            <Button variant="contained" onClick={onCancel}>
-              Disagree
+          <Button sx={{
+                  backgroundColor: 'var(--green)',
+                  color: 'black',
+                  opacity: 0.7,
+                  '&:hover': {
+                    backgroundColor: 'var(--green)',
+                  color: 'black',
+                  opacity: 1
+                  },
+                }} variant="contained" onClick={onOk} autoFocus>
+              accept
             </Button>
-            <Button variant="contained" onClick={onOk} autoFocus>
-              Agree
+            <Button sx={{
+                  backgroundColor: 'var(--unread)',
+                  color: 'black',
+                  opacity: 0.7,
+                  '&:hover': {
+                    backgroundColor: 'var(--unread)',
+                  color: 'black',
+                  opacity: 1
+                  },
+                }}  variant="contained" onClick={onCancel}>
+              decline
+            </Button>
+          </DialogActions>
+        </Dialog>
+      )}
+       {isShowInfo && (
+        <Dialog
+          open={isShowInfo}
+          aria-labelledby="alert-dialog-title"
+          aria-describedby="alert-dialog-description"
+        >
+          <DialogTitle id="alert-dialog-title">{"Important Info"}</DialogTitle>
+          <DialogContent>
+            <DialogContentText id="alert-dialog-description">
+              {messageInfo.message}
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button variant="contained" onClick={onOkInfo} autoFocus>
+              Close
             </Button>
           </DialogActions>
         </Dialog>
@@ -2892,22 +2951,26 @@ function App() {
               gap: "14px",
             }}
           >
-            <CustomButton
-              sx={{
-                minWidth: "102px",
-              }}
-              onClick={() => onOkQortalRequestExtension("accepted")}
-            >
-              accept
-            </CustomButton>
-            <CustomButton
-              sx={{
-                minWidth: "102px",
-              }}
-              onClick={() => onCancelQortalRequestExtension()}
-            >
-              decline
-            </CustomButton>
+              <CustomButtonAccept
+              color="black"
+              bgColor="var(--green)"
+                sx={{
+                  minWidth: "102px",
+                }}
+                onClick={() => onOkQortalRequestExtension("accepted")}
+              >
+                accept
+              </CustomButtonAccept>
+              <CustomButtonAccept
+               color="black"
+               bgColor="var(--unread)"
+                sx={{
+                  minWidth: "102px",
+                }}
+                onClick={() => onCancelQortalRequestExtension()}
+              >
+                decline
+              </CustomButtonAccept>
           </Box>
           <ErrorText>{sendPaymentError}</ErrorText>
         </Box>

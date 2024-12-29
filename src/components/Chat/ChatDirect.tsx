@@ -572,7 +572,7 @@ const sendMessage = async ()=> {
         minHeight: isMobile ? '0px' : '150px',
         maxHeight: isMobile ? 'auto' : '400px',
         display: 'flex',
-        flexDirection: 'column',
+        flexDirection: 'row',
         overflow: 'hidden',
         width: '100%',
         boxSizing: 'border-box',
@@ -588,14 +588,17 @@ const sendMessage = async ()=> {
             flexDirection: 'column',
             flexGrow: isMobile && 1,
             overflow: !isMobile &&  "auto",
-            flexShrink: 0
+            flexShrink: 0,
+            width: 'calc(100% - 100px)',
+            justifyContent: 'flex-end'
       }}>
       {replyMessage && (
         <Box sx={{
           display: 'flex',
           gap: '5px',
           alignItems: 'flex-start',
-          width: '100%'
+          width: 'calc(100% - 100px)',
+          justifyContent: 'flex-end'
         }}>
                   <ReplyPreview message={replyMessage} />
 
@@ -651,7 +654,7 @@ const sendMessage = async ()=> {
       </div>
       <Box sx={{
         display: 'flex',
-        width: '100&',
+        width: '100px',
         gap: '10px',
         justifyContent: 'center',
         flexShrink: 0,
@@ -690,7 +693,9 @@ const sendMessage = async ()=> {
                 cursor: isSending ? 'default' : 'pointer',
                 background: isSending && 'rgba(0, 0, 0, 0.8)',
                 flexShrink: 0,
-                padding: isMobile && '5px'
+                padding: isMobile && '5px',
+                width: '100px',
+                minWidth: 'auto'
               }}
             >
               {isSending && (

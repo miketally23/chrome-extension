@@ -97,6 +97,7 @@ import NoEncryptionGmailerrorredIcon from '@mui/icons-material/NoEncryptionGmail
 import { useSetRecoilState } from "recoil";
 import { selectedGroupIdAtom } from "../../atoms/global";
 import { sortArrayByTimestampAndGroupName } from "../../utils/time";
+import { AdminSpace } from "../Chat/AdminSpace";
 
 // let touchStartY = 0;
 // let disablePullToRefresh = false;
@@ -151,6 +152,37 @@ export const getGroupAdminsAddress = async (groupNumber: number) => {
 
     return members;
   }
+};
+
+export const getPublishesFromAdmins = async (admins: string[], groupId) => {
+  const queryString = admins.map((name) => `name=${name}`).join("&");
+  const url = `${getBaseApiReact()}${getArbitraryEndpointReact()}?mode=ALL&service=DOCUMENT_PRIVATE&identifier=symmetric-qchat-group-${
+    groupId
+  }&exactmatchnames=true&limit=0&reverse=true&${queryString}&prefix=true`;
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error("network error");
+  }
+  const adminData = await response.json();
+
+  const filterId = adminData.filter(
+    (data: any) =>
+      data.identifier === `symmetric-qchat-group-${groupId}`
+  );
+  if (filterId?.length === 0) {
+    return false;
+  }
+  const sortedData = filterId.sort((a: any, b: any) => {
+    // Get the most recent date for both a and b
+    const dateA = a.updated ? new Date(a.updated) : new Date(a.created);
+    const dateB = b.updated ? new Date(b.updated) : new Date(b.created);
+
+    // Sort by most recent
+    return dateB.getTime() - dateA.getTime();
+  });
+
+
+  return sortedData[0];
 };
 
 export function validateSecretKey(obj) {
@@ -676,9 +708,8 @@ export const Group = ({
 
       if (
         group?.data &&
-        isExtMsg(group?.data) &&
         group?.sender !== myAddress &&
-        group?.timestamp && (!isUpdateMsg(group?.data) || groupChatTimestamps[group?.groupId]) &&
+        group?.timestamp && groupChatTimestamps[group?.groupId] &&
         ((!timestampEnterData[group?.groupId]  &&
           Date.now() - group?.timestamp < timeDifferenceForNotificationChats) ||
           timestampEnterData[group?.groupId] < group?.timestamp)
@@ -712,36 +743,7 @@ export const Group = ({
   //   };
   // }, [checkGroupListFunc, myAddress]);
 
-  const getPublishesFromAdmins = async (admins: string[]) => {
-    // const validApi = await findUsableApi();
-    const queryString = admins.map((name) => `name=${name}`).join("&");
-    const url = `${getBaseApiReact()}${getArbitraryEndpointReact()}?mode=ALL&service=DOCUMENT_PRIVATE&identifier=symmetric-qchat-group-${
-      selectedGroup?.groupId
-    }&exactmatchnames=true&limit=0&reverse=true&${queryString}&prefix=true`;
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error("network error");
-    }
-    const adminData = await response.json();
-
-    const filterId = adminData.filter(
-      (data: any) =>
-        data.identifier === `symmetric-qchat-group-${selectedGroup?.groupId}`
-    );
-    if (filterId?.length === 0) {
-      return false;
-    }
-    const sortedData = filterId.sort((a: any, b: any) => {
-      // Get the most recent date for both a and b
-      const dateA = a.updated ? new Date(a.updated) : new Date(a.created);
-      const dateB = b.updated ? new Date(b.updated) : new Date(b.created);
-
-      // Sort by most recent
-      return dateB.getTime() - dateA.getTime();
-    });
-
-    return sortedData[0];
-  };
+  
   const getSecretKey = async (
     loadingGroupParam?: boolean,
     secretKeyToPublish?: boolean
@@ -768,7 +770,7 @@ export const Group = ({
         secretKeyToPublish &&
         secretKey &&
         lastFetchedSecretKey.current &&
-        Date.now() - lastFetchedSecretKey.current < 1800000
+        Date.now() - lastFetchedSecretKey.current < 600000
       )
         return secretKey;
       if (loadingGroupParam) {
@@ -790,7 +792,7 @@ export const Group = ({
         throw new Error("Network error");
       }
       const publish =
-        publishFromStorage || (await getPublishesFromAdmins(names));
+        publishFromStorage || (await getPublishesFromAdmins(names, selectedGroup?.groupId));
 
       if (prevGroupId !== selectedGroupRef.current.groupId) {
         if (settimeoutForRefetchSecretKey.current) {
@@ -944,16 +946,14 @@ export const Group = ({
       
     }
   }
-
   const getLatestRegularChat = async (groups)=> {
     try {
       
       const groupData = {}
 
      const getGroupData = groups.map(async(group)=> {
-        const isUpdate = isUpdateMsg(group?.data)
         if(!group.groupId || !group?.timestamp) return null
-        if(isUpdate && (!groupData[group.groupId] || groupData[group.groupId] < group.timestamp)){
+        if((!groupData[group.groupId] || groupData[group.groupId] < group.timestamp)){
           const hasMoreRecentMsg = await getCountNewMesg(group.groupId, timestampEnterDataRef.current[group?.groupId] || Date.now() - 24 * 60 * 60 * 1000)
           if(hasMoreRecentMsg){
             groupData[group.groupId] = hasMoreRecentMsg
@@ -969,7 +969,6 @@ export const Group = ({
       
     }
   }
-
  
 
   useEffect(() => {
@@ -1154,9 +1153,9 @@ export const Group = ({
       .filter((group) => group?.sender !== myAddress)
       .find((gr) => gr?.groupId === selectedGroup?.groupId);
     if (!findGroup) return false;
-    if (!findGroup?.data || !isExtMsg(findGroup?.data)) return false;
+    if (!findGroup?.data) return false;
     return (
-      findGroup?.timestamp && (!isUpdateMsg(findGroup?.data) || groupChatTimestamps[findGroup?.groupId]) &&
+      findGroup?.timestamp && groupChatTimestamps[findGroup?.groupId] &&
       ((!timestampEnterData[selectedGroup?.groupId] &&
         Date.now() - findGroup?.timestamp <
           timeDifferenceForNotificationChats) ||
@@ -2233,7 +2232,7 @@ export const Group = ({
                         />
                       )}
                     {group?.data &&
-                      isExtMsg(group?.data) && (!isUpdateMsg(group?.data) || groupChatTimestamps[group?.groupId]) &&
+                        groupChatTimestamps[group?.groupId] &&
                       group?.sender !== myAddress &&
                       group?.timestamp &&
                       ((!timestampEnterData[group?.groupId] &&
@@ -2272,7 +2271,7 @@ export const Group = ({
                   color: "white",
                 }}
               />
-              Add Group
+             Group Mgmt
             </CustomButton>
           )}
           {chatMode === "directs" && (
@@ -2596,7 +2595,7 @@ export const Group = ({
                       style={{
                         display: "flex",
                         width: "100%",
-                        height: "100$",
+                        height: "100%",
                         flexDirection: "column",
                         alignItems: "flex-start",
                         padding: "20px",
@@ -2697,6 +2696,10 @@ export const Group = ({
                       defaultThread={defaultThread}
                       setDefaultThread={setDefaultThread}
                     />
+                    {groupSection === "adminSpace" && (
+                       <AdminSpace setIsForceShowCreationKeyPopup={setIsForceShowCreationKeyPopup} adminsWithNames={adminsWithNames} selectedGroup={selectedGroup?.groupId} myAddress={myAddress} userInfo={userInfo} hide={groupSection !== "adminSpace"}  isAdmin={admins.includes(myAddress)}
+                       />
+                    )}
                   </>
                 )}
 
@@ -2727,6 +2730,8 @@ export const Group = ({
                           !secretKey &&
                           triedToFetchSecretKey
                         }
+                        isForceShowCreationKeyPopup={isForceShowCreationKeyPopup}
+                        setIsForceShowCreationKeyPopup={setIsForceShowCreationKeyPopup}
                       />
                     )}
                 </Box>
