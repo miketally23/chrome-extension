@@ -2601,14 +2601,14 @@ export async function sendCoin({ password, amount, receiver }, skipConfirmPasswo
       };
     } else {
       const response = await decryptStoredWallet(password, wallet);
-      const wallet2 = new PhraseWallet(response, walletVersion);
+      const wallet2 = new PhraseWallet(response, wallet?.version || walletVersion);
 
       keyPair = wallet2._addresses[0].keyPair;
     }
 
     const lastRef = await getLastRef();
     const fee = await sendQortFee();
-    const validApi = await findUsableApi();
+    const validApi = null;
 
     const res = await makeTransactionRequest(
       confirmReceiver,
@@ -3254,7 +3254,7 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
           decryptWallet({
             password,
             wallet,
-            walletVersion,
+            walletVersion: wallet?.version || walletVersion,
           })
             .then((hasDecrypted) => {
               sendResponse(hasDecrypted);

@@ -1,7 +1,7 @@
 import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { AppsHomeDesktop } from "./AppsHomeDesktop";
 import { Spacer } from "../../common/Spacer";
-import { MyContext, getBaseApiReact } from "../../App";
+import { GlobalContext, MyContext, getBaseApiReact } from "../../App";
 import { AppInfo } from "./AppInfo";
 import {
   executeEvent,
@@ -32,6 +32,8 @@ export const AppsDesktop = ({ mode, setMode, show , myName, goToHome, setDesktop
   const [isNewTabWindow, setIsNewTabWindow] = useState(false);
   const [categories, setCategories] = useState([])
   const iframeRefs = useRef({});
+  const { showTutorial } = useContext(GlobalContext);
+
   const myApp = useMemo(()=> {
    
    return availableQapps.find((app)=> app.name === myName && app.service === 'APP')
@@ -52,6 +54,13 @@ export const AppsDesktop = ({ mode, setMode, show , myName, goToHome, setDesktop
       });
     }, 100);
   }, [show, tabs, selectedTab, isNewTabWindow]);
+
+  useEffect(()=> {
+    if(show){
+      showTutorial('qapps')
+    }
+  }, [show])
+
 
   const getCategories = React.useCallback(async () => {
     try {

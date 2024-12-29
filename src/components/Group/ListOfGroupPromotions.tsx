@@ -499,7 +499,7 @@ export const ListOfGroupPromotions = () => {
         )}
         {promotion?.isOpen === true && (
           <NoEncryptionGmailerrorredIcon sx={{
-            color: 'var(--unread)'
+            color: 'var(--danger)'
           }} />
         )}
          <Typography

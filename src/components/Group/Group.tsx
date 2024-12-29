@@ -718,7 +718,7 @@ export const Group = ({
       }
     });
     return hasUnread;
-  }, [timestampEnterData, groups, myAddress]);
+  }, [timestampEnterData, groups, myAddress, groupChatTimestamps]);
 
   const groupsAnnHasUnread = useMemo(() => {
     let hasUnread = false;
@@ -1318,6 +1318,7 @@ export const Group = ({
     setSecretKeyDetails(null);
     setNewEncryptionNotification(null);
     setMemberCountFromSecretKeyData(null);
+    setIsForceShowCreationKeyPopup(false)
     setSelectedGroup(null);
     setSelectedDirect(null);
     setGroups([]);
@@ -1384,6 +1385,7 @@ export const Group = ({
     setAdminsWithNames([]);
     setMembers([]);
     setMemberCountFromSecretKeyData(null);
+    setIsForceShowCreationKeyPopup(false)
     setTriedToFetchSecretKey(false);
     setFirstSecretKeyInCreation(false);
     setIsOpenSideViewDirects(false)
@@ -1439,6 +1441,7 @@ export const Group = ({
       setAdminsWithNames([]);
       setMembers([]);
       setMemberCountFromSecretKeyData(null);
+      setIsForceShowCreationKeyPopup(false)
       setTriedToFetchSecretKey(false);
       setFirstSecretKeyInCreation(false);
       setGroupSection("chat");
@@ -1490,6 +1493,7 @@ export const Group = ({
       setAdminsWithNames([]);
       setMembers([]);
       setMemberCountFromSecretKeyData(null);
+      setIsForceShowCreationKeyPopup(false)
       setTriedToFetchSecretKey(false);
       setFirstSecretKeyInCreation(false);
       setGroupSection("announcement");
@@ -1551,6 +1555,7 @@ export const Group = ({
       setAdminsWithNames([]);
       setMembers([]);
       setMemberCountFromSecretKeyData(null);
+      setIsForceShowCreationKeyPopup(false)
       setTriedToFetchSecretKey(false);
       setFirstSecretKeyInCreation(false);
       setGroupSection("forum");
@@ -1607,6 +1612,7 @@ export const Group = ({
     setAdminsWithNames([]);
     setMembers([]);
     setMemberCountFromSecretKeyData(null);
+    setIsForceShowCreationKeyPopup(false)
     setTriedToFetchSecretKey(false);
     setFirstSecretKeyInCreation(false);
     setIsOpenSideViewDirects(false)
@@ -1843,7 +1849,7 @@ export const Group = ({
                         direct?.timestamp) && (
                       <MarkChatUnreadIcon
                         sx={{
-                          color: "red",
+                          color: "var(--unread)",
                         }}
                       />
                     )}
@@ -2105,6 +2111,7 @@ export const Group = ({
                   setGroupOwner(null)
                   setMembers([]);
                   setMemberCountFromSecretKeyData(null);
+                  setIsForceShowCreationKeyPopup(false)
                   setHideCommonKeyPopup(false);
                   setFirstSecretKeyInCreation(false);
                   // setGroupSection("announcement");
@@ -2226,7 +2233,7 @@ export const Group = ({
                       !groupAnnouncements[group?.groupId]?.seentimestamp && (
                         <CampaignIcon
                           sx={{
-                            color: "red",
+                             color: "var(--unread)",
                             marginRight: "5px",
                           }}
                         />
@@ -2242,7 +2249,7 @@ export const Group = ({
                           group?.timestamp) && (
                         <MarkChatUnreadIcon
                           sx={{
-                            color: "red",
+                             color: "var(--unread)",
                           }}
                         />
                       )}
