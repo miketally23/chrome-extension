@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useContext, useEffect, useRef, useState } from "react";
 import { Spacer } from "../common/Spacer";
 import { CustomButton, TextItalic, TextP, TextSpan } from "../App-styles";
 import {
@@ -14,6 +14,7 @@ import {
   Switch,
   Tooltip,
   Typography,
+  ButtonBase
 } from "@mui/material";
 import Logo1 from "../assets/svgs/Logo1.svg";
 import Logo1Dark from "../assets/svgs/Logo1Dark.svg";
@@ -21,6 +22,8 @@ import Info from "../assets/svgs/Info.svg";
 import { CustomizedSnackbars } from "../components/Snackbar/Snackbar";
 import { set } from "lodash";
 import { cleanUrl, isUsingLocal } from "../background";
+import HelpIcon from '@mui/icons-material/Help';
+import { GlobalContext } from "../App";
 
 const manifestData = chrome?.runtime?.getManifest();
 
@@ -55,6 +58,8 @@ export const NotAuthenticated = ({
     const importedApiKeyRef = useRef(null)
     const currentNodeRef = useRef(null)
   const hasLocalNodeRef = useRef(null)
+  const { showTutorial  } = useContext(GlobalContext);
+
   const isLocal = cleanUrl(currentNode?.url) === "127.0.0.1:12391";
   const handleFileChangeApiKey = (event) => {
     const file = event.target.files[0]; // Get the selected file
@@ -627,6 +632,17 @@ export const NotAuthenticated = ({
           </DialogActions>
         </Dialog>
       )}
+       <ButtonBase onClick={()=> {
+         showTutorial('create-account', true)
+      }} sx={{
+        position: 'fixed',
+        bottom: '25px',
+        right: '25px'
+      }}>
+        <HelpIcon sx={{
+          color: 'var(--unread)'
+        }} />
+        </ButtonBase>
     </>
   );
 };

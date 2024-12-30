@@ -34,45 +34,7 @@ import { RESOURCE_TYPE_NUMBER_GROUP_CHAT_REACTIONS } from "./constants/resourceT
 import TradeBotRespondRequest from './transactions/TradeBotRespondRequest';
 
 
-let inMemoryKey: CryptoKey | null = null;
-let inMemoryIV: Uint8Array | null = null;
 
-
-async function initializeKeyAndIV() {
-  if (!inMemoryKey) {
-    inMemoryKey = await generateKey();  // Generates the key in memory
-  }
-}
-
-async function generateKey(): Promise<CryptoKey> {
-  return await crypto.subtle.generateKey(
-    {
-      name: "AES-GCM",
-      length: 256
-    },
-    true,
-    ["encrypt", "decrypt"]
-  );
-}
-
-async function encryptData(data: string, key: CryptoKey): Promise<{ iv: Uint8Array; encryptedData: ArrayBuffer }> {
-  const encoder = new TextEncoder();
-  const encodedData = encoder.encode(data);
-
-  // Generate a random IV each time you encrypt
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-
-  const encryptedData = await crypto.subtle.encrypt(
-    {
-      name: "AES-GCM",
-      iv: iv
-    },
-    key,
-    encodedData
-  );
-
-  return { iv, encryptedData };
-}
 
 export function cleanUrl(url) {
   return url?.replace(/^(https?:\/\/)?(www\.)?/, '');
@@ -1064,15 +1026,7 @@ function base64ToJson(base64) {
 export async function getKeyPair() {
   const res = await chrome.storage.local.get(["keyPair"]);
   if (res?.keyPair) {
-    const combinedData = atob(res?.keyPair)
-    .split("")
-    .map((c) => c.charCodeAt(0));
-
-  const iv = new Uint8Array(combinedData.slice(0, 12)); // First 12 bytes are the IV
-  const encryptedData = new Uint8Array(combinedData.slice(12)).buffer;
-
-  const decryptedBase64Data = await decryptData(encryptedData, inMemoryKey, iv);
-  return decryptedBase64Data
+    return res.keyPair;
   } else {
     throw new Error("Wallet not authenticated");
   }
@@ -1573,14 +1527,8 @@ async function decryptWallet({ password, wallet, walletVersion }) {
       rvnPrivateKey: wallet2._addresses[0].rvnWallet.derivedMasterPrivateKey
     };
     const dataString = JSON.stringify(toSave);
-    await initializeKeyAndIV();
-    const { iv, encryptedData } = await encryptData(dataString, inMemoryKey);
-
-    // Combine IV and encrypted data into a single Uint8Array
-    const combinedData = new Uint8Array([...iv, ...new Uint8Array(encryptedData)]);
-    const encryptedBase64Data = btoa(String.fromCharCode(...combinedData));
     await new Promise((resolve, reject) => {
-      chrome.storage.local.set({ keyPair: encryptedBase64Data }, () => {
+      chrome.storage.local.set({ keyPair: dataString }, () => {
         if (chrome.runtime.lastError) {
           reject(new Error(chrome.runtime.lastError.message));
         } else {

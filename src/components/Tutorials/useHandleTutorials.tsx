@@ -57,6 +57,8 @@ useEffect(()=> {
   }, [])
   const showTutorial = useCallback(async (type, isForce) => {
     try {
+      console.log('type, isForce', type, isForce)
+
         const isOnline = await checkIfGatewayIsOnline()
         if(!isOnline) return
         switch (type) {

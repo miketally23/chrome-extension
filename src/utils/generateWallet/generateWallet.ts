@@ -79,8 +79,8 @@ const hasExtension = (filename) => {
     return filename.includes(".") && filename.split(".").pop().length > 0;
   };
 
-export const createAccount = async()=> {
-    const generatedSeedPhrase = generateRandomSentence()
+export const createAccount = async(generatedSeedPhrase)=> {
+    if(!generatedSeedPhrase) throw new Error('No generated seed-phrase')
     const threads = doInitWorkers(crypto.kdfThreads)
 
     const seed = await kdf(generatedSeedPhrase, void 0, threads)
@@ -114,6 +114,15 @@ export const saveFileToDiskGeneric = async (blob, filename) => {
                         const fileExtension = mimeToExtensionMap[blob.type]
 let fileName = filename ||  "qortal_file_" + timestamp + "." + fileExtension;
 fileName = hasExtension(fileName) ? fileName : fileName  + "." + fileExtension;
+
+await saveAs(blob, fileName);
+
+}
+
+export const saveSeedPhraseToDisk = async (data) => {
+   
+    const blob = new Blob([data], { type: 'text/plain;charset=utf-8' })
+    const fileName = "qortal_seedphrase.txt"
 
 await saveAs(blob, fileName);
 

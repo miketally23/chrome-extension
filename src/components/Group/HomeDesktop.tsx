@@ -21,6 +21,7 @@ export const HomeDesktop = ({
   setOpenManageMembers,
   setOpenAddGroup,
   setMobileViewMode,
+  setDesktopViewMode
 }) => {
   return (
     <Box
@@ -67,7 +68,7 @@ export const HomeDesktop = ({
             display: "flex",
             gap: "15px",
             flexWrap: "wrap",
-            justifyContent: "flex-start",
+            justifyContent: "center",
           }}
         >
           <Box sx={{
@@ -106,6 +107,7 @@ export const HomeDesktop = ({
             myAddress={myAddress}
             groups={groups}
             setMobileViewMode={setMobileViewMode}
+            setDesktopViewMode={setDesktopViewMode}
           />
           </Box>
           <Box sx={{

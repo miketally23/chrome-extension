@@ -18,7 +18,7 @@ import AppIcon from "../../assets/svgs/AppIcon.svg";
 import { HomeIcon } from "../../assets/Icons/HomeIcon";
 import { Save } from "../Save/Save";
 
-export const IconWrapper = ({ children, label, color, selected }) => {
+export const IconWrapper = ({ children, label, color, selected, disableWidth, customWidth }) => {
   return (
     <Box
       sx={{
@@ -27,8 +27,8 @@ export const IconWrapper = ({ children, label, color, selected }) => {
         alignItems: "center",
         gap:  "5px",
         flexDirection: "column",
-        height: "89px",
-        width: "89px",
+        height: customWidth ? customWidth : disableWidth ? 'auto' :  "89px",
+        width: customWidth? customWidth : disableWidth ? 'auto' : "89px",
         borderRadius: "50%",
         backgroundColor: selected ? "rgba(28, 29, 32, 1)" : "transparent",
       }}

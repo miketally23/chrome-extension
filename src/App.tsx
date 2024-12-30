@@ -51,6 +51,7 @@ import {
   createAccount,
   generateRandomSentence,
   saveFileToDisk,
+  saveSeedPhraseToDisk
 } from "./utils/generateWallet/generateWallet";
 import { kdf } from "./deps/kdf";
 import { generateSaveWalletData } from "./utils/generateWallet/storeWallet";
@@ -116,6 +117,8 @@ import { useHandleTutorials } from "./components/Tutorials/useHandleTutorials";
 import { CoreSyncStatus } from "./components/CoreSyncStatus";
 import BoundedNumericTextField from "./common/BoundedNumericTextField";
 import { Wallets } from "./Wallets";
+import './utils/seedPhrase/RandomSentenceGenerator';
+import { test } from "vitest";
 
 type extStates =
   | "not-authenticated"
@@ -323,7 +326,8 @@ function App() {
   const { isShow, onCancel, onOk, show, message } = useModal();
   const { isShow: isShowUnsavedChanges, onCancel:  onCancelUnsavedChanges, onOk: onOkUnsavedChanges, show:  showUnsavedChanges, message: messageUnsavedChanges } = useModal();
   const {downloadResource} = useFetchResources()
-
+  const [showSeed, setShowSeed] = useState(false)
+  const [creationStep, setCreationStep] = useState(1)
   const {
     isShow: isShowInfo,
     onCancel: onCancelInfo,
@@ -366,6 +370,11 @@ function App() {
   const [fullScreen, setFullScreen] = useRecoilState(fullScreenAtom);
   const resetAtomIsUsingImportExportSettingsAtom = useResetRecoilState(isUsingImportExportSettingsAtom)
   const { toggleFullScreen } = useAppFullScreen(setFullScreen);
+  const generatorRef = useRef(null)
+  const exportSeedphrase = ()=> {
+    const seedPhrase = generatorRef.current.parsedString
+    saveSeedPhraseToDisk(seedPhrase)
+  }
   const {showTutorial, openTutorialModal, shownTutorialsInitiated, setOpenTutorialModal} = useHandleTutorials()
 
   const passwordRef = useRef<HTMLInputElement>(null);
@@ -1028,7 +1037,8 @@ function App() {
           res();
         }, 250);
       });
-      const res = await createAccount();
+      const res = await createAccount(generatorRef.current.parsedString);
+
       const wallet = await res.generateSaveWalletData(
         walletToBeDownloadedPassword,
         crypto.kdfThreads,
@@ -1102,6 +1112,8 @@ function App() {
     setExtstate("authenticated");
     setIsOpenSendQort(false);
     setIsOpenSendQortSuccess(false);
+    setShowSeed(false)
+    setCreationStep(1)
   };
 
   const resetAllStates = () => {
@@ -1131,6 +1143,8 @@ function App() {
     setTxList([]);
     setMemberGroups([]);
     resetAllRecoil()
+    setShowSeed(false)
+    setCreationStep(1)
   };
 
    function roundUpToDecimals(number, decimals = 8) {
@@ -1353,9 +1367,10 @@ function App() {
     return (
       <AuthenticatedContainer
         sx={{
-          width: isMobile ? "100vw" : "350px",
+          width: isMobile ? "100vw" : "auto",
           display: "flex",
           backgroundColor: "var(--bg-2)",
+          justifyContent: 'flex-end'
         }}
       >
         {isMobile && (
@@ -1378,11 +1393,13 @@ function App() {
           </Box>
         )}
 
-        <AuthenticatedContainerInnerLeft
-          sx={{
-            overflowY: isMobile && "auto",
-          }}
-        >
+{desktopViewMode !== "apps" && desktopViewMode !== "dev" && desktopViewMode !== "chat" && (
+      <AuthenticatedContainerInnerLeft
+      sx={{
+        overflowY: isMobile && "auto",
+        padding: '0px 20px'
+      }}
+    >
           <Spacer height="48px" />
 
           {authenticatedMode === "ltc" ? (
@@ -1534,6 +1551,7 @@ function App() {
             Get QORT at Q-Trade
           </TextP>
         </AuthenticatedContainerInnerLeft>
+          )}
         <AuthenticatedContainerInnerRight  sx={{
             height: "100%",
             justifyContent: "space-between",
@@ -1620,7 +1638,7 @@ function App() {
                   showTutorial('qapps', true)
   
                 } else {
-                  showTutorial('create-account', true)
+                  showTutorial('getting-started', true)
   
                 }
                 }} >
@@ -1652,10 +1670,10 @@ function App() {
     <AppContainer
       sx={{
         height: isMobile ? "100%" : "100vh",
-        backgroundImage: desktopViewMode === 'apps' && 'url("appsBg.svg")',
-        backgroundSize: desktopViewMode === 'apps' &&  'cover',
-        backgroundPosition: desktopViewMode === 'apps' &&  'center',
-        backgroundRepeat: desktopViewMode === 'apps' &&  'no-repeat',
+        // backgroundImage: desktopViewMode === 'apps' && 'url("appsBg.svg")',
+        // backgroundSize: desktopViewMode === 'apps' &&  'cover',
+        // backgroundPosition: desktopViewMode === 'apps' &&  'center',
+        // backgroundRepeat: desktopViewMode === 'apps' &&  'no-repeat',
       }}
     >
     <GlobalContext.Provider value={{
@@ -1714,7 +1732,7 @@ function App() {
               desktopViewMode={desktopViewMode}
               setDesktopViewMode={setDesktopViewMode}
             />
-            {(!isMobile && desktopViewMode !== 'apps') && renderProfile()}
+             {!isMobile &&  renderProfile()}
           </Box>
 
           <Box
@@ -2519,7 +2537,7 @@ function App() {
           )}
         </>
       )}
-      {extState === "create-wallet" && (
+ {extState === "create-wallet" && (
         <>
           {!walletToBeDownloaded && (
             <>
@@ -2538,7 +2556,15 @@ function App() {
                     cursor: "pointer",
                   }}
                   onClick={() => {
+                    if(creationStep === 2){
+                      setCreationStep(1)
+                      return
+                    }
                     setExtstate("not-authenticated");
+                    setShowSeed(false)
+                    setCreationStep(1)
+                    setWalletToBeDownloadedPasswordConfirm('')
+                    setWalletToBeDownloadedPassword('')
                   }}
                   src={Return}
                 />
@@ -2563,6 +2589,117 @@ function App() {
               >
                 Set up your Qortal account
               </TextP>
+              <Spacer height="14px" />
+              <Box sx={{
+                display: 'flex',
+                maxWidth: '100%',
+                justifyContent: 'center',
+                padding: '10px'
+              }}>
+                <Box sx={{
+                display: creationStep === 1 ? 'flex' :  'none',
+                flexDirection: 'column',
+                alignItems: 'center',
+                width: '350px',
+                maxWidth: '95%'
+              }}>
+                <Typography sx={{
+                  fontSize: '14px'
+                }}>
+                A ‘ <span onClick={()=> {
+                  setShowSeed(true)
+                }} style={{
+                  fontSize: '14px',
+                  color: 'steelblue',
+                  cursor: 'pointer'
+                }}>SEEDPHRASE</span> ’ has been randomly generated in the background. 
+
+
+                </Typography>
+                <Typography sx={{
+                  fontSize: '14px',
+                  marginTop: '5px'
+                }}>
+                If you wish to VIEW THE SEEDPHRASE, click the word 'SEEDPHRASE' in this text. Seedphrases are used to generate the private key for your Qortal account. For security by default, seedphrases are NOT displayed unless specifically chosen.
+                </Typography>
+                <Typography sx={{
+                  fontSize: '16px',
+                  marginTop: '15px',
+                 
+                  textAlign: 'center'
+                }}>
+               Create your Qortal account by clicking <span style={{
+                fontWeight: 'bold'
+               }}>NEXT</span> below.
+
+                </Typography>
+                <Spacer height="17px" />
+                <CustomButton onClick={()=> {
+                  setCreationStep(2)
+                }}>
+                Next
+              </CustomButton>
+                </Box>
+                <div style={{
+                  display: 'none'
+                }}>
+                <random-sentence-generator
+              ref={generatorRef}
+											template="adverb verb noun adjective noun adverb verb noun adjective noun adjective verbed adjective noun"
+									
+										></random-sentence-generator>
+                    </div>
+                <Dialog
+          open={showSeed}
+          aria-labelledby="alert-dialog-title"
+          aria-describedby="alert-dialog-description"
+        >
+          <DialogContent>
+          <Box sx={{
+                flexDirection: 'column',
+                maxWidth: '400px',
+                alignItems: 'center',
+                gap: '10px',
+                display: showSeed ? 'flex' : 'none'
+              }}>
+                <Typography sx={{
+                  fontSize: '14px'
+                }}>Your seedphrase</Typography>
+               
+                <Box sx={{
+                  textAlign: 'center',
+                  width: '100%',
+                  backgroundColor: '#1f2023',
+                  borderRadius: '5px',
+                  padding: '10px',
+                }}>
+                  {generatorRef.current?.parsedString}
+                </Box>
+             
+                    <CustomButton sx={{
+                padding: '7px',
+                fontSize: '12px'
+              }} onClick={exportSeedphrase}>
+                Export Seedphrase
+              </CustomButton>
+                </Box>
+          </DialogContent>
+          <DialogActions>
+           
+            <Button  variant="contained" onClick={()=> setShowSeed(false)}>
+              close
+            </Button>
+            
+          </DialogActions>
+        </Dialog>
+            
+                </Box>
+                <Box sx={{
+                display: creationStep === 2 ? 'flex' :  'none',
+                flexDirection: 'column',
+                alignItems: 'center',
+
+              }}>
               <Spacer height="14px" />
               <CustomLabel htmlFor="standard-adornment-password">
                 Wallet Password
@@ -2592,6 +2729,7 @@ function App() {
               <CustomButton onClick={createAccountFunc}>
                 Create Account
               </CustomButton>
+              </Box>
               <ErrorText>{walletToBeDownloadedError}</ErrorText>
             </>
           )}
@@ -2611,9 +2749,12 @@ function App() {
               </TextP>
               <Spacer height="100px" />
               <CustomButton
-                onClick={() => {
-                  saveFileToDiskFunc();
+                onClick={async () => {
+                  await saveFileToDiskFunc();
                   returnToMain();
+                  await showInfo({
+                    message: `Keep your wallet file secure.`,
+                  });
                 }}
               >
                 Backup Account
