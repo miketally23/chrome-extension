@@ -758,7 +758,6 @@ useEffect(() => {
     }
   }, [isPrivate])
 
-  console.log('isPrivate', isPrivate)
   
   return (
     <div style={{

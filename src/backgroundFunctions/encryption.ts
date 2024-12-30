@@ -106,7 +106,6 @@ export const encryptAndPublishSymmetricKeyGroupChatForAdmins = async ({groupId, 
   previousData: Object,
 }) => {
   try {
-    console.log({groupId, previousData, admins})
       let highestKey = 0
       if(previousData){
          highestKey = Math.max(...Object.keys((previousData || {})).filter(item=> !isNaN(+item)).map(Number));
@@ -129,10 +128,7 @@ export const encryptAndPublishSymmetricKeyGroupChatForAdmins = async ({groupId, 
       }
   
       const symmetricKeyAndNonceBase64 = await objectToBase64(objectToSave)
-      console.log({ data64: symmetricKeyAndNonceBase64,
-        publicKeys: groupmemberPublicKeys,
-        privateKey,
-        userPublicKey})
+     
       const encryptedData =  encryptDataGroup({
           data64: symmetricKeyAndNonceBase64,
           publicKeys: groupmemberPublicKeys,

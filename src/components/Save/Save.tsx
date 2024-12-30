@@ -520,7 +520,6 @@ export const Save = ({ isDesktop, disableWidth, myName }) => {
                               },
                             },
                             (response) => {
-                              console.log('response', response)
                               if (response.error) {
                                 rej(response?.message);
                                 return;
@@ -536,7 +535,6 @@ export const Save = ({ isDesktop, disableWidth, myName }) => {
                         const responseData = uint8ArrayToObject(
                           decryptToUnit8ArraySubject
                         );
-                        console.log('responseData', responseData)
                         if(Array.isArray(responseData)){
                           saveToLocalStorage("ext_saved_settings_import_export", "sortablePinnedApps", responseData, {
                             isUsingImportExport: true
@@ -555,7 +553,6 @@ export const Save = ({ isDesktop, disableWidth, myName }) => {
           </ButtonBase>
           <ButtonBase  onClick={async () => {
                       try {
-                        console.log('pinnedApps', pinnedApps)
                         const data64 = await objectToBase64(pinnedApps);
   
                         const encryptedData = await new Promise((res, rej) => {

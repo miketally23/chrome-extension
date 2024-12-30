@@ -127,7 +127,6 @@ export const AdminSpaceInner = ({
           previousData: adminGroupSecretKey,
           admins: adminsWithNames,
       } }, (response) => {
-        console.log('response', response)
             if (!response?.error) {
               setInfoSnackCustom({
                 type: "success",

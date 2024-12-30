@@ -102,7 +102,6 @@ export const AppsHomeDesktop = ({
               }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && qortalUrl) {
-                  console.log('hello')
                   openQortalUrl();
                 }
               }}

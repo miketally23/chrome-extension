@@ -38,7 +38,6 @@ export const ChatList = ({
   const hasLoadedInitialRef = useRef(false);
   const scrollingIntervalRef = useRef(null);
   const lastSeenUnreadMessageTimestamp = useRef(null);
-  console.log('messages', messages)
   // Initialize the virtualizer
   const rowVirtualizer = useVirtualizer({
     count: messages.length,
