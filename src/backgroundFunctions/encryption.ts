@@ -1,4 +1,4 @@
-import { getBaseApi } from "../background";
+import { getBaseApi, getKeyPair } from "../background";
 import { createSymmetricKeyAndNonce, decryptGroupData, encryptDataGroup, objectToBase64 } from "../qdn/encryption/group-encryption";
 import { publishData } from "../qdn/publish/pubish";
 
@@ -55,14 +55,14 @@ export async function getNameInfo() {
       return "";
     }
   }
-async function getKeyPair() {
-    const res = await chrome.storage.local.get(["keyPair"]);
-    if (res?.keyPair) {
-      return res.keyPair;
-    } else {
-      throw new Error("Wallet not authenticated");
-    }
-  }
+// async function getKeyPair() {
+//     const res = await chrome.storage.local.get(["keyPair"]);
+//     if (res?.keyPair) {
+//       return res.keyPair;
+//     } else {
+//       throw new Error("Wallet not authenticated");
+//     }
+//   }
 const getPublicKeys = async (groupNumber: number) => {
     const validApi = await getBaseApi()
       const response = await fetch(`${validApi}/groups/members/${groupNumber}?limit=0`);

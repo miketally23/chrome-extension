@@ -115,6 +115,7 @@ import { Tutorials } from "./components/Tutorials/Tutorials";
 import { useHandleTutorials } from "./components/Tutorials/useHandleTutorials";
 import { CoreSyncStatus } from "./components/CoreSyncStatus";
 import BoundedNumericTextField from "./common/BoundedNumericTextField";
+import { Wallets } from "./Wallets";
 
 type extStates =
   | "not-authenticated"
@@ -919,7 +920,12 @@ function App() {
           )
             return;
 
-          setExtstate("authenticated");
+            if(response?.hasKeyPair){
+              setExtstate("authenticated");
+
+            } else {
+              setExtstate("wallet-dropped");
+            }
         }
       });
     } catch (error) {
@@ -1069,7 +1075,7 @@ function App() {
     try {
       if(hasSettingsChanged){
         await showUnsavedChanges({message: 'Your settings have changed. If you logout you will lose your changes. Click on the save button in the header to keep your changed settings.'})
-      } if(extState === 'authenticated') {
+      } else if(extState === 'authenticated') {
         await showUnsavedChanges({
           message:
             "Are you sure you would like to logout?",
@@ -1831,7 +1837,7 @@ function App() {
               value={paymentPassword}
               onChange={(e) => setPaymentPassword(e.target.value)}
               autoComplete="off"
-              ref={passwordRef}
+              
             />
           </Box>
           <Spacer height="10px" />
@@ -2322,6 +2328,34 @@ function App() {
           </CustomButton>
         </>
       )}
+        {extState === "wallets" && (
+        <>
+         <Spacer height="22px" />
+          <Box
+            sx={{
+              display: "flex",
+              width: "100%",
+              justifyContent: "flex-start",
+              paddingLeft: "22px",
+              boxSizing: "border-box",
+            }}
+          >
+            <img
+              style={{
+                cursor: "pointer",
+              }}
+              onClick={() => {
+                setRawWallet(null);
+                setExtstate("not-authenticated");
+                logoutFunc();
+              }}
+              src={Return}
+            />
+          </Box>
+         <Wallets setRawWallet={setRawWallet} setExtState={setExtstate} rawWallet={rawWallet} />
+
+        </>
+      )}
       {rawWallet && extState === "wallet-dropped" && (
         <>
           <Spacer height="22px" />
@@ -2340,7 +2374,8 @@ function App() {
               }}
               onClick={() => {
                 setRawWallet(null);
-                setExtstate("not-authenticated");
+                setExtstate("wallets");
+                logoutFunc();
               }}
               src={Return}
             />
@@ -2361,9 +2396,11 @@ function App() {
             sx={{
               display: "flex",
               flexDirection: "column",
-              alignItems: "flex-start",
+              alignItems: "center",
             }}
           >
+            <Typography>{rawWallet?.name ? rawWallet?.name : rawWallet?.address0}</Typography>
+            <Spacer height="10px" />
             <TextP
               sx={{
                 textAlign: "start",
@@ -2391,6 +2428,7 @@ function App() {
                   authenticateWallet();
                 }
               }}
+              ref={passwordRef}
             />
             <Spacer height="20px" />
             <CustomButton onClick={authenticateWallet}>

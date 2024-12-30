@@ -33,6 +33,47 @@ import { TradeBotRespondMultipleRequest } from "./transactions/TradeBotRespondMu
 import { RESOURCE_TYPE_NUMBER_GROUP_CHAT_REACTIONS } from "./constants/resourceTypes";
 import TradeBotRespondRequest from './transactions/TradeBotRespondRequest';
 
+
+let inMemoryKey: CryptoKey | null = null;
+let inMemoryIV: Uint8Array | null = null;
+
+
+async function initializeKeyAndIV() {
+  if (!inMemoryKey) {
+    inMemoryKey = await generateKey();  // Generates the key in memory
+  }
+}
+
+async function generateKey(): Promise<CryptoKey> {
+  return await crypto.subtle.generateKey(
+    {
+      name: "AES-GCM",
+      length: 256
+    },
+    true,
+    ["encrypt", "decrypt"]
+  );
+}
+
+async function encryptData(data: string, key: CryptoKey): Promise<{ iv: Uint8Array; encryptedData: ArrayBuffer }> {
+  const encoder = new TextEncoder();
+  const encodedData = encoder.encode(data);
+
+  // Generate a random IV each time you encrypt
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+
+  const encryptedData = await crypto.subtle.encrypt(
+    {
+      name: "AES-GCM",
+      iv: iv
+    },
+    key,
+    encodedData
+  );
+
+  return { iv, encryptedData };
+}
+
 export function cleanUrl(url) {
   return url?.replace(/^(https?:\/\/)?(www\.)?/, '');
 }
@@ -997,11 +1038,41 @@ async function getAddressInfo(address) {
   }
   return data;
 }
+async function decryptData(encryptedData: ArrayBuffer, key: CryptoKey, iv: Uint8Array): Promise<string> {
+  const decryptedData = await crypto.subtle.decrypt(
+    {
+      name: "AES-GCM",
+      iv: iv
+    },
+    key,
+    encryptedData
+  );
+
+  const decoder = new TextDecoder();
+  return decoder.decode(decryptedData);
+}
+
+function base64ToJson(base64) {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return JSON.parse(new TextDecoder().decode(bytes));
+}
 
 export async function getKeyPair() {
   const res = await chrome.storage.local.get(["keyPair"]);
   if (res?.keyPair) {
-    return res.keyPair;
+    const combinedData = atob(res?.keyPair)
+    .split("")
+    .map((c) => c.charCodeAt(0));
+
+  const iv = new Uint8Array(combinedData.slice(0, 12)); // First 12 bytes are the IV
+  const encryptedData = new Uint8Array(combinedData.slice(12)).buffer;
+
+  const decryptedBase64Data = await decryptData(encryptedData, inMemoryKey, iv);
+  return decryptedBase64Data
   } else {
     throw new Error("Wallet not authenticated");
   }
@@ -1014,6 +1085,25 @@ export async function getSaveWallet() {
   } else {
     throw new Error("No wallet saved");
   }
+}
+
+export async function getWallets() {
+  const res = await chrome.storage.local.get(["wallets"]);
+  if (res['wallets']) {
+    return res['wallets'];
+  } else {
+    throw new Error("No wallet saved");
+  }
+}
+
+export async function storeWallets(wallets) {
+  chrome.storage.local.set({ wallets: wallets }, () => {
+    if (chrome.runtime.lastError) {
+      reject(new Error(chrome.runtime.lastError.message));
+    } else {
+      resolve(true);
+    }
+  });
 }
 
 async function clearAllNotifications() {
@@ -1483,8 +1573,14 @@ async function decryptWallet({ password, wallet, walletVersion }) {
       rvnPrivateKey: wallet2._addresses[0].rvnWallet.derivedMasterPrivateKey
     };
     const dataString = JSON.stringify(toSave);
+    await initializeKeyAndIV();
+    const { iv, encryptedData } = await encryptData(dataString, inMemoryKey);
+
+    // Combine IV and encrypted data into a single Uint8Array
+    const combinedData = new Uint8Array([...iv, ...new Uint8Array(encryptedData)]);
+    const encryptedBase64Data = btoa(String.fromCharCode(...combinedData));
     await new Promise((resolve, reject) => {
-      chrome.storage.local.set({ keyPair: dataString }, () => {
+      chrome.storage.local.set({ keyPair: encryptedBase64Data }, () => {
         if (chrome.runtime.lastError) {
           reject(new Error(chrome.runtime.lastError.message));
         } else {
@@ -3209,14 +3305,22 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
               if (chrome.runtime.lastError) {
                 sendResponse({ error: chrome.runtime.lastError.message });
               } else if (result.walletInfo) {
-                sendResponse({ walletInfo: result.walletInfo });
+                sendResponse({ walletInfo: result.walletInfo, hasKeyPair: true });
               } else {
                 sendResponse({ error: "No wallet info found" });
               }
             });
           })
           .catch((error) => {
-            sendResponse({ error: error.message });
+            chrome.storage.local.get(["walletInfo"], (result) => {
+              if (chrome.runtime.lastError) {
+                sendResponse({ error: chrome.runtime.lastError.message });
+              } else if (result.walletInfo) {
+                sendResponse({ walletInfo: result.walletInfo, hasKeyPair: false });
+              } else {
+                sendResponse({ error: "Wallet not authenticated" });
+              }
+            });
           });
 
         break;

@@ -4,7 +4,7 @@ import { Buffer } from "buffer"
 import Base58 from "../../deps/Base58"
 import nacl from "../../deps/nacl-fast"
 import utils from "../../utils/utils"
-import {  createEndpoint, getBaseApi } from "../../background";
+import {  createEndpoint, getBaseApi, getKeyPair } from "../../background";
 
 export async function reusableGet(endpoint){
 	const validApi = await getBaseApi();
@@ -33,14 +33,14 @@ export async function reusableGet(endpoint){
   return data
   }
 
-async function getKeyPair() {
-	const res = await chrome.storage.local.get(["keyPair"]);
-	if (res?.keyPair) {
-	  return res.keyPair;
-	} else {
-	  throw new Error("Wallet not authenticated");
-	}
-  }
+// async function getKeyPair() {
+// 	const res = await chrome.storage.local.get(["keyPair"]);
+// 	if (res?.keyPair) {
+// 	  return res.keyPair;
+// 	} else {
+// 	  throw new Error("Wallet not authenticated");
+// 	}
+//   }
 
 export const publishData = async ({
 	registeredName,
