@@ -95,7 +95,7 @@ import { formatEmailDate } from "./QMailMessages";
 import LockIcon from '@mui/icons-material/Lock';
 import NoEncryptionGmailerrorredIcon from '@mui/icons-material/NoEncryptionGmailerrorred';
 import { useSetRecoilState } from "recoil";
-import { selectedGroupIdAtom } from "../../atoms/global";
+import { addressInfoControllerAtom, selectedGroupIdAtom } from "../../atoms/global";
 import { sortArrayByTimestampAndGroupName } from "../../utils/time";
 import { AdminSpace } from "../Chat/AdminSpace";
 import { HubsIcon } from "../../assets/Icons/HubsIcon";
@@ -498,7 +498,7 @@ export const Group = ({
   const setSelectedGroupId = useSetRecoilState(selectedGroupIdAtom)
 
   const [groupsProperties, setGroupsProperties] = useState({})
-
+  const setUserInfoForLevels = useSetRecoilState(addressInfoControllerAtom);
   const isPrivate = useMemo(()=> {
     if(!selectedGroup?.groupId || !groupsProperties[selectedGroup?.groupId]) return null
     if(groupsProperties[selectedGroup?.groupId]?.isOpen === true) return false
@@ -2047,6 +2047,7 @@ export const Group = ({
                   setTriedToFetchSecretKey(false);
                   setNewChat(false);
                   setSelectedGroup(null);
+                  setUserInfoForLevels({})
                   setSecretKey(null);
                   lastFetchedSecretKey.current = null;
                   setSecretKeyPublishDate(null);

@@ -119,6 +119,7 @@ import BoundedNumericTextField from "./common/BoundedNumericTextField";
 import { Wallets } from "./Wallets";
 import './utils/seedPhrase/RandomSentenceGenerator';
 import { test } from "vitest";
+import { useHandleUserInfo } from "./components/Group/useHandleUserInfo";
 
 type extStates =
   | "not-authenticated"
@@ -376,6 +377,7 @@ function App() {
     saveSeedPhraseToDisk(seedPhrase)
   }
   const {showTutorial, openTutorialModal, shownTutorialsInitiated, setOpenTutorialModal} = useHandleTutorials()
+  const {getIndividualUserInfo} = useHandleUserInfo()
 
   const passwordRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
@@ -1709,6 +1711,7 @@ function App() {
             setOpenSnackGlobal: setOpenSnack,
             infoSnackCustom: infoSnack,
             setInfoSnackCustom: setInfoSnack,
+            getIndividualUserInfo
           }}
         >
           <Box
