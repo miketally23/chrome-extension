@@ -2069,17 +2069,17 @@ export const Group = ({
                     // getTimestampEnterChat();
                   }, 200);
 
-                  chrome?.runtime?.sendMessage({
-                    action: "addTimestampEnterChat",
-                    payload: {
-                      timestamp: Date.now(),
-                      groupId: group.groupId,
-                    },
-                  });
+                  // chrome?.runtime?.sendMessage({
+                  //   action: "addTimestampEnterChat",
+                  //   payload: {
+                  //     timestamp: Date.now(),
+                  //     groupId: group.groupId,
+                  //   },
+                  // });
 
-                  setTimeout(() => {
-                    getTimestampEnterChat();
-                  }, 200);
+                  // setTimeout(() => {
+                  //   getTimestampEnterChat();
+                  // }, 200);
 
                   // if (groupSectionRef.current === "announcement") {
                   //   chrome?.runtime?.sendMessage({
