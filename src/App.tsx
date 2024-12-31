@@ -107,8 +107,8 @@ import { Settings } from "./components/Group/Settings";
 import { MainAvatar } from "./components/MainAvatar";
 import { useRetrieveDataLocalStorage } from "./useRetrieveDataLocalStorage";
 import { useQortalGetSaveSettings } from "./useQortalGetSaveSettings";
-import { useRecoilState, useResetRecoilState } from "recoil";
-import { canSaveSettingToQdnAtom, fullScreenAtom, hasSettingsChangedAtom, isUsingImportExportSettingsAtom, oldPinnedAppsAtom, settingsLocalLastUpdatedAtom, settingsQDNLastUpdatedAtom, sortablePinnedAppsAtom } from "./atoms/global";
+import { useRecoilState, useResetRecoilState, useSetRecoilState } from "recoil";
+import { canSaveSettingToQdnAtom, fullScreenAtom, hasSettingsChangedAtom, isDisabledEditorEnterAtom, isUsingImportExportSettingsAtom, oldPinnedAppsAtom, settingsLocalLastUpdatedAtom, settingsQDNLastUpdatedAtom, sortablePinnedAppsAtom } from "./atoms/global";
 import { useAppFullScreen } from "./useAppFullscreen";
 import { NotAuthenticated } from "./ExtStates/NotAuthenticated";
 import { useFetchResources } from "./common/useFetchResources";
@@ -329,6 +329,7 @@ function App() {
   const {downloadResource} = useFetchResources()
   const [showSeed, setShowSeed] = useState(false)
   const [creationStep, setCreationStep] = useState(1)
+  const setIsDisabledEditorEnter = useSetRecoilState(isDisabledEditorEnterAtom)
   const {
     isShow: isShowInfo,
     onCancel: onCancelInfo,
@@ -457,6 +458,8 @@ function App() {
       holdRefExtState.current = extState;
     }
   }, [extState]);
+
+  
 
   useEffect(() => {
     isFocusedRef.current = isFocused;
@@ -967,6 +970,20 @@ function App() {
     if (!address) return;
     getUserInfo();
   }, [address]);
+
+  useEffect(()=> {
+    try {
+     const val = localStorage.getItem('settings-disable-editor-enter');
+      if(val){
+        const parsedVal = JSON.parse(val)
+        if(parsedVal === false || parsedVal === true){
+          setIsDisabledEditorEnter(parsedVal)
+        }
+      }
+    } catch (error) {
+      
+    }
+  }, [])
 
   useEffect(() => {
     return () => {

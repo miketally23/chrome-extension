@@ -142,3 +142,8 @@ export const addressInfoKeySelector = selectorFamily({
     return userInfo[key] || null; // Return the value for the key or null if not found
   },
 });
+
+export const isDisabledEditorEnterAtom = atom({
+  key: 'isDisabledEditorEnterAtom', 
+  default: false, 
+});
