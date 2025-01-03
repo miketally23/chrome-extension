@@ -32,6 +32,7 @@ import { Sha256 } from "asmcrypto.js";
 import { TradeBotRespondMultipleRequest } from "./transactions/TradeBotRespondMultipleRequest";
 import { RESOURCE_TYPE_NUMBER_GROUP_CHAT_REACTIONS } from "./constants/resourceTypes";
 import TradeBotRespondRequest from './transactions/TradeBotRespondRequest';
+import { createRewardShareCase, getRewardSharePrivateKeyCase, removeRewardShareCase } from './background-cases';
 
 
 
@@ -1258,7 +1259,7 @@ export const sendQortFee = async (): Promise<number> => {
   return qortFee;
 };
 
-async function getNameOrAddress(receiver) {
+export async function getNameOrAddress(receiver) {
   try {
     const isAddress = validateAddress(receiver);
     if (isAddress) {
@@ -4630,6 +4631,48 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
         //   listenForThreadUpdates()
         // }, 200);
         sendResponse(true);
+
+        break;
+      }
+      case "createRewardShare": {
+        const {
+          recipientPublicKey
+        } = request.payload;     
+        createRewardShareCase({recipientPublicKey})
+          .then((res) => {
+            sendResponse(res);
+          })
+          .catch((error) => {
+            sendResponse({ error: error?.message });
+          });
+
+        break;
+      }
+      case "getRewardSharePrivateKey": {     
+        const {
+          recipientPublicKey
+        } = request.payload;  
+        getRewardSharePrivateKeyCase({recipientPublicKey})
+          .then((res) => {
+            sendResponse(res);
+          })
+          .catch((error) => {
+            sendResponse({ error: error?.message });
+          });
+
+        break;
+      }
+      case "removeRewardShare": {     
+        const {
+          rewardShareKeyPairPublicKey, recipient, percentageShare
+        } = request.payload;     
+        removeRewardShareCase({rewardShareKeyPairPublicKey, recipient, percentageShare})
+          .then((res) => {
+            sendResponse(res);
+          })
+          .catch((error) => {
+            sendResponse({ error: error?.message });
+          });
 
         break;
       }
