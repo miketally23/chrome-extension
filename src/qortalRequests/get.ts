@@ -41,6 +41,8 @@ import { mimeToExtensionMap } from "../utils/memeTypes";
 import TradeBotCreateRequest from "../transactions/TradeBotCreateRequest";
 import DeleteTradeOffer from "../transactions/TradeBotDeleteRequest";
 import signTradeBotTransaction from "../transactions/signTradeBotTransaction";
+import nacl from "../deps/nacl-fast";
+import utils from "../utils/utils";
 
 const btcFeePerByte = 0.00000100
 const ltcFeePerByte = 0.00000030
@@ -3142,6 +3144,7 @@ export const signTransaction = async (data, isFromExtension) => {
     const errorMsg = `Missing fields: ${missingFieldsString}`;
     throw new Error(errorMsg);
   }
+  const shouldProcess = data?.process || false;
 
   let _url = await createEndpoint(
     "/transactions/decode?ignoreValidityChecks=false"
@@ -3159,7 +3162,7 @@ export const signTransaction = async (data, isFromExtension) => {
   const decodedData = await response.json();
   const resPermission = await getUserPermission(
     {
-      text1: `Do you give this application permission to sign a transaction?`,
+      text1: `Do you give this application permission to ${ shouldProcess ? 'SIGN and PROCESS' : 'SIGN' } a transaction?`,
       highlightedText: "Read the transaction carefully before accepting!",
       text2: `Tx type: ${decodedData.type}`,
       json: decodedData,
@@ -3205,7 +3208,17 @@ export const signTransaction = async (data, isFromExtension) => {
         keyPair.privateKey
       );
       const signedBytes = utils.appendBuffer(arbitraryBytesBuffer, signature);
-      return uint8ArrayToBase64(signedBytes);
+      const signedBytesToBase58 = Base58.encode(signedBytes);
+
+      if(!shouldProcess){
+        return uint8ArrayToBase64(signedBytes);
+      }
+
+      const res = await processTransactionVersion2(signedBytesToBase58);
+      if (!res?.signature)
+      throw new Error(
+        res?.message || "Transaction was not able to be processed"
+      );
    
   } else {
     throw new Error("User declined request");
