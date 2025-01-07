@@ -147,3 +147,13 @@ export const isDisabledEditorEnterAtom = atom({
   key: 'isDisabledEditorEnterAtom', 
   default: false, 
 });
+
+export const qMailLastEnteredTimestampAtom = atom({
+  key: 'qMailLastEnteredTimestampAtom', 
+  default: null, 
+});
+
+export const mailsAtom = atom({
+  key: 'mailsAtom', 
+  default: [], 
+});

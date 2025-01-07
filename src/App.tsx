@@ -109,7 +109,7 @@ import { MainAvatar } from "./components/MainAvatar";
 import { useRetrieveDataLocalStorage } from "./useRetrieveDataLocalStorage";
 import { useQortalGetSaveSettings } from "./useQortalGetSaveSettings";
 import { useRecoilState, useResetRecoilState, useSetRecoilState } from "recoil";
-import { canSaveSettingToQdnAtom, fullScreenAtom, hasSettingsChangedAtom, isDisabledEditorEnterAtom, isUsingImportExportSettingsAtom, oldPinnedAppsAtom, settingsLocalLastUpdatedAtom, settingsQDNLastUpdatedAtom, sortablePinnedAppsAtom } from "./atoms/global";
+import { canSaveSettingToQdnAtom, fullScreenAtom, hasSettingsChangedAtom, isDisabledEditorEnterAtom, isUsingImportExportSettingsAtom, mailsAtom, oldPinnedAppsAtom, qMailLastEnteredTimestampAtom, settingsLocalLastUpdatedAtom, settingsQDNLastUpdatedAtom, sortablePinnedAppsAtom } from "./atoms/global";
 import { useAppFullScreen } from "./useAppFullscreen";
 import { NotAuthenticated } from "./ExtStates/NotAuthenticated";
 import { useFetchResources } from "./common/useFetchResources";
@@ -123,6 +123,7 @@ import { test } from "vitest";
 import { useHandleUserInfo } from "./components/Group/useHandleUserInfo";
 import { Minting } from "./components/Minting/Minting";
 import { isRunningGateway } from "./qortalRequests";
+import { QMailStatus } from "./components/QMailStatus";
 
 type extStates =
   | "not-authenticated"
@@ -412,7 +413,8 @@ function App() {
   const resetAtomSettingsQDNLastUpdatedAtom = useResetRecoilState(settingsQDNLastUpdatedAtom);
   const resetAtomSettingsLocalLastUpdatedAtom = useResetRecoilState(settingsLocalLastUpdatedAtom);
   const resetAtomOldPinnedAppsAtom = useResetRecoilState(oldPinnedAppsAtom);
-
+  const resetAtomQMailLastEnteredTimestampAtom = useResetRecoilState(qMailLastEnteredTimestampAtom)
+  const resetAtomMailsAtom = useResetRecoilState(mailsAtom)
   const resetAllRecoil = () => {
     resetAtomSortablePinnedAppsAtom();
     resetAtomCanSaveSettingToQdnAtom();
@@ -420,6 +422,8 @@ function App() {
     resetAtomSettingsLocalLastUpdatedAtom();
     resetAtomOldPinnedAppsAtom();
     resetAtomIsUsingImportExportSettingsAtom()
+    resetAtomQMailLastEnteredTimestampAtom()
+    resetAtomMailsAtom()
   };
   useEffect(() => {
     if (!isMobile) return;
@@ -1647,6 +1651,8 @@ function App() {
           )}
             <Spacer height="20px" />
             <CoreSyncStatus />
+            <Spacer height="20px" />
+            <QMailStatus />
         </Box>
         <Box
             sx={{

@@ -21,12 +21,13 @@ export const HomeDesktop = ({
   setOpenManageMembers,
   setOpenAddGroup,
   setMobileViewMode,
-  setDesktopViewMode
+  setDesktopViewMode,
+  desktopViewMode
 }) => {
   return (
     <Box
       sx={{
-        display: "flex",
+        display: desktopViewMode === 'home'  ? 'flex' : 'none',
         width: "100%",
         flexDirection: "column",
         height: "100%",
@@ -85,6 +86,8 @@ export const HomeDesktop = ({
             userInfo={userInfo}
           />
           </Box>
+          {desktopViewMode === 'home' && (
+            <>
           <Box sx={{
             width: '330px',
             display: 'flex',
@@ -123,6 +126,8 @@ export const HomeDesktop = ({
             setMobileViewMode={setMobileViewMode}
           />
           </Box>
+          </>
+          )}
         </Box>
       )}
           {!isLoadingGroups && (

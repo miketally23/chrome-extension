@@ -2812,7 +2812,8 @@ export const Group = ({
           )}
       
      
-      {!isMobile && desktopViewMode === 'home'  && (
+      {!isMobile && (
+       
         <HomeDesktop
   refreshHomeDataFunc={refreshHomeDataFunc}
   myAddress={myAddress}
@@ -2827,9 +2828,10 @@ export const Group = ({
   setOpenAddGroup={setOpenAddGroup}
   setMobileViewMode={setMobileViewMode}
   setDesktopViewMode={setDesktopViewMode}
+  desktopViewMode={desktopViewMode}
 
 />
-      )}
+    )}
 
     
         </Box>
