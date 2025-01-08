@@ -33,6 +33,7 @@ const allowedParams= ["name", "service", "identifier", "mimeType", "fileName", "
     .join("&"); // Join with `&`
 };
 export const createAndCopyEmbedLink = async (data) => {
+ 
   const requiredFields = [
     "type",
   ];
@@ -239,7 +240,7 @@ const UIQortalRequests = [
   'GET_TX_ACTIVITY_SUMMARY', 'GET_FOREIGN_FEE', 'UPDATE_FOREIGN_FEE',
   'GET_SERVER_CONNECTION_HISTORY', 'SET_CURRENT_FOREIGN_SERVER',
   'ADD_FOREIGN_SERVER', 'REMOVE_FOREIGN_SERVER', 'GET_DAY_SUMMARY', 'CREATE_TRADE_BUY_ORDER',
-  'CREATE_TRADE_SELL_ORDER', 'CANCEL_TRADE_SELL_ORDER', 'IS_USING_GATEWAY', 'ADMIN_ACTION', 'SIGN_TRANSACTION',  'DECRYPT_QORTAL_GROUP_DATA', 'DELETE_HOSTED_DATA', 'GET_HOSTED_DATA'
+  'CREATE_TRADE_SELL_ORDER', 'CANCEL_TRADE_SELL_ORDER', 'IS_USING_GATEWAY', 'ADMIN_ACTION', 'SIGN_TRANSACTION',  'DECRYPT_QORTAL_GROUP_DATA', 'DELETE_HOSTED_DATA', 'GET_HOSTED_DATA', 'DECRYPT_DATA_WITH_SHARING_KEY'
 ];
 
 
@@ -615,7 +616,7 @@ isDOMContentLoaded: false
         
       } else if(event?.data?.action === 'CREATE_AND_COPY_EMBED_LINK'){
         try {
-         const link = await createAndCopyEmbedLink(event?.data?.payload)
+         const link = await createAndCopyEmbedLink(event?.data)
           event.ports[0].postMessage({
             result: link,
             error: null,

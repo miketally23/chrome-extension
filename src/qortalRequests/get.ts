@@ -841,9 +841,7 @@ export const publishQDNResource = async (data: any, sender, isFromExtension) => 
   ) {
     throw new Error("Encrypting data requires public keys");
   }
-  if (!data.encrypt && data.service.endsWith("_PRIVATE")) {
-    throw new Error("Only encrypted data can go into private services");
-  }
+
   if (data.fileId) {
     data64 = await getFileFromContentScript(data.fileId, sender);
   }
@@ -3353,7 +3351,6 @@ export const encryptDataWithSharingKey = async (data, sender) => {
 
 export const decryptDataWithSharingKey = async (data, sender) => {
   const { encryptedData, key } = data;
-
  
   if (!encryptedData) {
     throw new Error("Please include data to decrypt");

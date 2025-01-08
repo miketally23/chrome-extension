@@ -65,7 +65,7 @@ export const createSymmetricKeyAndNonce = () => {
 };
 
 
-export const encryptDataGroup = ({ data64, publicKeys, privateKey, userPublicKey }: any) => {
+export const encryptDataGroup = ({ data64, publicKeys, privateKey, userPublicKey, customSymmetricKey }: any) => {
 
 	let combinedPublicKeys = [...publicKeys, userPublicKey]
 	const decodedPrivateKey = Base58.decode(privateKey)
@@ -76,9 +76,16 @@ export const encryptDataGroup = ({ data64, publicKeys, privateKey, userPublicKey
 		throw new Error("The Uint8ArrayData you've submitted is invalid")
 	}
 	try {
-		// Generate a random symmetric key for the message.
-		const messageKey = new Uint8Array(32)
+		let messageKey
+		if(customSymmetricKey){
+			messageKey = base64ToUint8Array(customSymmetricKey)
+		} else {
+		 messageKey = new Uint8Array(32)
 		crypto.getRandomValues(messageKey)
+		}
+
+		if(!messageKey) throw new Error('Cannot create symmetric key')
+
 		const nonce = new Uint8Array(24)
 		crypto.getRandomValues(nonce)
 		// Encrypt the data with the symmetric key.
@@ -461,7 +468,6 @@ export function decryptDeprecatedSingle(uint8Array, publicKey, privateKey) {
 }
 
 export const decryptGroupEncryptionWithSharingKey = async ({ data64EncryptedData, key }: any) => {
-	
 	const allCombined = base64ToUint8Array(data64EncryptedData)
 	const str = "qortalGroupEncryptedData"
 	const strEncoder = new TextEncoder()
@@ -487,7 +493,6 @@ export const decryptGroupEncryptionWithSharingKey = async ({ data64EncryptedData
 	const encryptedDataEndPosition = allCombined.length - ((count * (32 + 16)) + 4)
 	const encryptedData = allCombined.slice(encryptedDataStartPosition, encryptedDataEndPosition)
 	const symmetricKey = base64ToUint8Array(key);
-	
 	// Decrypt the data using the nonce and messageKey
 	const decryptedData = nacl.secretbox.open(encryptedData, nonce, symmetricKey)
 
