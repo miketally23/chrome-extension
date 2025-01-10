@@ -1661,6 +1661,7 @@ export const getUserWallet = async (data, isFromExtension) => {
         userWallet["publickey"] = parsedData.rvnPublicKey;
         break;
       case "ARRR":
+        await checkArrrSyncStatus(parsedData.arrrSeed58)
         userWallet["address"] = arrrAddress;
         break;
       default:
