@@ -178,14 +178,14 @@ export const ChatOptions = ({
     if (isPrivate === false) {
       return messages
         .filter((message) =>
-          extractTextFromHTML(message?.messageText)?.includes(`@${myName}`)
+          extractTextFromHTML(message?.messageText)?.includes(`@${myName?.toLowerCase()}`)
         )
         ?.sort((a, b) => b?.timestamp - a?.timestamp);
     }
     return messages
       .filter((message) =>
         extractTextFromHTML(message?.decryptedData?.message)?.includes(
-          `@${myName}`
+          `@${myName?.toLowerCase()}`
         )
       )
       ?.sort((a, b) => b?.timestamp - a?.timestamp);
