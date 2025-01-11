@@ -1254,19 +1254,65 @@ export const createPoll = async (data, isFromExtension) => {
   }
 };
 
-export const sendChatMessage = async (data, isFromExtension) => {
-  const message = data.message;
-  const recipient = data.destinationAddress;
-  const groupId = data.groupId;
-  const isRecipient = !groupId;
-  const resPermission = await getUserPermission({
-    text1: "Do you give this application permission to send this chat message?",
-    text2: `To: ${isRecipient ? recipient : `group ${groupId}`}`,
-    text3: `${message?.slice(0, 25)}${message?.length > 25 ? "..." : ""}`,
-  }, isFromExtension);
+function isBase64(str) {
+  const base64Regex = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
+  return base64Regex.test(str) && str.length % 4 === 0;
+}
 
-  const { accepted } = resPermission;
-  if (accepted) {
+function checkValue(value) {
+  if (typeof value === "string") {
+    if (isBase64(value)) {
+      return 'string'
+    } else {
+      return 'string'
+    }
+  } else if (typeof value === "object" && value !== null) {
+    return 'object'
+  } else {
+    throw new Error('Field fullContent is in an invalid format. Either use a string, base64 or an object.')
+  }
+}
+
+
+export const sendChatMessage = async (data, isFromExtension, appInfo) => {
+  const message = data?.message;
+  const fullMessageObject = data?.fullMessageObject || data?.fullContent
+  const recipient = data?.destinationAddress || data.recipient;
+  const groupId = data.groupId;
+  const isRecipient = groupId === undefined;
+  const chatReference = data?.chatReference
+  if(groupId === undefined && recipient === undefined){
+    throw new Error('Please provide a recipient or groupId')
+  }
+  let fullMessageObjectType
+  if(fullMessageObject){
+    fullMessageObjectType = checkValue(fullMessageObject)
+  }
+
+  const value =
+  (await getPermission(`qAPPSendChatMessage-${appInfo?.name}`)) || false;
+let skip = false;
+if (value) {
+  skip = true;
+}
+let resPermission;
+if (!skip) {
+   resPermission = await getUserPermission({
+    text1:
+    "Do you give this application permission to send this chat message?",
+  text2: `To: ${isRecipient ? recipient : `group ${groupId}`}`,
+  text3: fullMessageObject ? fullMessageObjectType === 'string' ? `${fullMessageObject?.slice(0, 25)}${fullMessageObject?.length > 25 ? "..." : ""}` : `${JSON.stringify(fullMessageObject)?.slice(0, 25)}${JSON.stringify(fullMessageObject)?.length > 25 ? "..." : ""}`  : `${message?.slice(0, 25)}${message?.length > 25 ? "..." : ""}`,
+  checkbox1: {
+    value: false,
+    label: "Always allow chat messages from this app",
+  },
+  }, isFromExtension);
+}
+const { accepted = false, checkbox1 = false } = resPermission || {};
+if (resPermission && accepted) {
+  setPermission(`qAPPSendChatMessage-${appInfo?.name}`, checkbox1);
+}
+if (accepted || skip) {
     const tiptapJson = {
       type: "doc",
       content: [
@@ -1281,14 +1327,18 @@ export const sendChatMessage = async (data, isFromExtension) => {
         },
       ],
     };
-    const messageObject = {
+    const messageObject = fullMessageObject ? fullMessageObject : {
       messageText: tiptapJson,
       images: [""],
       repliedTo: "",
       version: 3,
     };
    
-    const stringifyMessageObject = JSON.stringify(messageObject);
+    let stringifyMessageObject = JSON.stringify(messageObject);
+    if(fullMessageObjectType === 'string'){
+      stringifyMessageObject = messageObject
+    }
+
 
     const balance = await getBalanceInfo();
     const hasEnoughBalance = +balance < 4 ? false : true;
@@ -1345,16 +1395,22 @@ export const sendChatMessage = async (data, isFromExtension) => {
       };
 
       const difficulty = 8;
+      let  handleDynamicValues = {}
+      if(chatReference){
+        handleDynamicValues['chatReference'] = chatReference
+      }
+
       const tx = await createTransaction(18, keyPair, {
         timestamp: sendTimestamp,
         recipient: recipient,
         recipientPublicKey: key,
-        hasChatReference: 0,
+        hasChatReference: chatReference ? 1 : 0,
         message: stringifyMessageObject,
         lastReference: reference,
         proofOfWorkNonce: 0,
         isEncrypted: 1,
         isText: 1,
+        ...handleDynamicValues
       });
       const path = chrome.runtime.getURL("memory-pow.wasm.full");
 
@@ -1384,7 +1440,10 @@ export const sendChatMessage = async (data, isFromExtension) => {
       };
 
       const difficulty = 8;
-
+      let  handleDynamicValues = {}
+      if(chatReference){
+        handleDynamicValues['chatReference'] = chatReference
+      }
       const txBody = {
         timestamp: Date.now(),
         groupID: Number(groupId),
@@ -1395,6 +1454,7 @@ export const sendChatMessage = async (data, isFromExtension) => {
         proofOfWorkNonce: 0,
         isEncrypted: 0, // Set default to not encrypted for groups
         isText: 1,
+        ...handleDynamicValues
       };
 
       const tx = await createTransaction(181, keyPair, txBody);
@@ -1577,7 +1637,7 @@ export const deployAt = async (data, isFromExtension) => {
   }
 };
 
-export const getUserWallet = async (data, isFromExtension) => {
+export const getUserWallet = async (data, isFromExtension, appInfo) => {
   const requiredFields = ["coin"];
   const missingFields: string[] = [];
   requiredFields.forEach((field) => {
@@ -1597,15 +1657,39 @@ export const getUserWallet = async (data, isFromExtension) => {
       "Cannot view ARRR wallet info through the gateway. Please use your local node."
     );
 
-  const resPermission = await getUserPermission({
+    const value =
+    (await getPermission(
+      `qAPPAutoGetUserWallet-${appInfo?.name}-${data.coin}`
+    )) || false;
+  let skip = false;
+  if (value) {
+    skip = true;
+  }
+
+  let resPermission;
+
+  if (!skip) {
+   resPermission = await getUserPermission({
     text1:
       "Do you give this application permission to get your wallet information?",
       highlightedText: `coin: ${data.coin}`,
-
+      checkbox1: {
+        value: true,
+        label: "Always allow wallet to be retrieved automatically",
+      },
   }, isFromExtension);
-  const { accepted } = resPermission;
+}
 
-  if (accepted) {
+const { accepted = false, checkbox1 = false } = resPermission || {};
+
+if (resPermission) {
+  setPermission(
+    `qAPPAutoGetUserWallet-${appInfo?.name}-${data.coin}`,
+    checkbox1
+  );
+}
+
+  if (accepted || skip) {
     let coin = data.coin;
     let userWallet = {};
     let arrrAddress = "";
@@ -1877,7 +1961,7 @@ export const getUserWalletFunc = async (coin) => {
   return userWallet;
 };
 
-export const getUserWalletInfo = async (data, isFromExtension) => {
+export const getUserWalletInfo = async (data, isFromExtension, appInfo) => {
   const requiredFields = ["coin"];
   const missingFields: string[] = [];
   requiredFields.forEach((field) => {
@@ -1898,13 +1982,37 @@ export const getUserWalletInfo = async (data, isFromExtension) => {
     );
   }
 
-  const resPermission = await getUserPermission({
-    text1: "Do you give this application permission to retrieve your wallet information",
-    highlightedText: `coin: ${data.coin}`
-  }, isFromExtension);
-  const { accepted } = resPermission;
+  const value =
+  (await getPermission(
+    `getUserWalletInfo-${appInfo?.name}-${data.coin}`
+  )) || false;
+let skip = false;
+if (value) {
+  skip = true;
+}
+  let resPermission;
 
-  if (accepted) {
+  if (!skip) {
+
+   resPermission = await getUserPermission({
+    text1: "Do you give this application permission to retrieve your wallet information",
+    highlightedText: `coin: ${data.coin}`,
+    checkbox1: {
+      value: true,
+      label: "Always allow wallet info to be retrieved automatically",
+    },
+  }, isFromExtension);
+}
+const { accepted = false, checkbox1 = false } = resPermission || {};
+
+if (resPermission) {
+  setPermission(
+    `getUserWalletInfo-${appInfo?.name}-${data.coin}`,
+    checkbox1
+  );
+}
+
+  if (accepted || skip) {
     let coin = data.coin;
     let walletKeys = await getUserWalletFunc(coin);
     const _url = await createEndpoint(
@@ -2369,7 +2477,7 @@ export const getTxActivitySummary = async (data) => {
   };
   
 export const sendCoin = async (data, isFromExtension) => {
-    const requiredFields = ['coin', 'destinationAddress', 'amount']
+    const requiredFields = ['coin',  'amount']
     const missingFields: string[] = []
     requiredFields.forEach((field) => {
         if (!data[field]) {
@@ -2380,6 +2488,9 @@ export const sendCoin = async (data, isFromExtension) => {
         const missingFieldsString = missingFields.join(', ')
         const errorMsg = `Missing fields: ${missingFieldsString}`
         throw new Error(errorMsg)
+    }
+    if(!data?.destinationAddress && !data?.recipient){
+      throw new Error('Missing fields: recipient')
     }
     let checkCoin = data.coin
     const wallet = await getSaveWallet();
@@ -2395,7 +2506,7 @@ export const sendCoin = async (data, isFromExtension) => {
         // then set the response string from the core to the `response` variable (defined above)
         // If they decline, send back JSON that includes an `error` key, such as `{"error": "User declined request"}`
         const amount = Number(data.amount)
-        const recipient = data.destinationAddress
+        const recipient = data?.recipient || data.destinationAddress;
        
         const url = await createEndpoint(`/addresses/balance/${address}`);
     const response = await fetch(url);
@@ -2444,7 +2555,7 @@ export const sendCoin = async (data, isFromExtension) => {
       
     } else if (checkCoin === "BTC") {
         const amount = Number(data.amount)
-        const recipient = data.destinationAddress
+        const recipient = data?.recipient || data.destinationAddress;
         const xprv58 = parsedData.btcPrivateKey
         const feePerByte = data.fee ? data.fee : btcFeePerByte
         
@@ -2501,7 +2612,7 @@ export const sendCoin = async (data, isFromExtension) => {
     } else if (checkCoin === "LTC") {
     
         const amount = Number(data.amount)
-        const recipient = data.destinationAddress
+        const recipient = data?.recipient || data.destinationAddress;
         const xprv58 = parsedData.ltcPrivateKey
         const feePerByte = data.fee ? data.fee : ltcFeePerByte
         const ltcWalletBalance = await getWalletBalance({coin: checkCoin}, true)
@@ -2555,7 +2666,7 @@ export const sendCoin = async (data, isFromExtension) => {
     } else if (checkCoin === "DOGE") {
        
         const amount = Number(data.amount)
-        const recipient = data.destinationAddress
+        const recipient = data?.recipient || data.destinationAddress;
         const coin = data.coin
         const xprv58 = parsedData.dogePrivateKey
         const feePerByte = data.fee ? data.fee : dogeFeePerByte
@@ -2612,7 +2723,7 @@ export const sendCoin = async (data, isFromExtension) => {
         
     } else if (checkCoin === "DGB") {
         const amount = Number(data.amount)
-        const recipient = data.destinationAddress
+        const recipient = data?.recipient || data.destinationAddress;
         const xprv58 = parsedData.dbgPrivateKey
         const feePerByte = data.fee ? data.fee : dgbFeePerByte
         const dgbWalletBalance = await getWalletBalance({coin: checkCoin}, true)
@@ -2667,7 +2778,7 @@ export const sendCoin = async (data, isFromExtension) => {
        
     } else if (checkCoin === "RVN") {
         const amount = Number(data.amount)
-        const recipient = data.destinationAddress
+        const recipient = data?.recipient || data.destinationAddress;
         const coin = data.coin
         const xprv58 = parsedData.rvnPrivateKey
         const feePerByte = data.fee ? data.fee : rvnFeePerByte
@@ -2724,7 +2835,7 @@ export const sendCoin = async (data, isFromExtension) => {
           }
     } else if (checkCoin === "ARRR") {
         const amount = Number(data.amount)
-        const recipient = data.destinationAddress
+        const recipient = data?.recipient || data.destinationAddress;
         const memo = data.memo
         const arrrWalletBalance = await getWalletBalance({coin: checkCoin}, true)
 

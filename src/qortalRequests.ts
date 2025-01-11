@@ -258,7 +258,7 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
       case "GET_USER_WALLET": {
         const data = request.payload;
       
-        getUserWallet(data, isFromExtension)
+        getUserWallet(data, isFromExtension, appInfo)
           .then((res) => {
             sendResponse(res);
           })
@@ -285,7 +285,7 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
       case "GET_USER_WALLET_INFO": {
         const data = request.payload;
       
-        getUserWalletInfo(data, isFromExtension)
+        getUserWalletInfo(data, isFromExtension, appInfo)
           .then((res) => {
             sendResponse(res);
           })
