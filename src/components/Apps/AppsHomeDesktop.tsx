@@ -116,7 +116,7 @@ export const AppsHomeDesktop = ({
       <Spacer height="45px" />
       <AppsContainer
         sx={{
-          gap: "75px",
+          gap: "50px",
           justifyContent: "flex-start",
         }}
       >
