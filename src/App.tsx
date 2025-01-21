@@ -124,6 +124,7 @@ import { useHandleUserInfo } from "./components/Group/useHandleUserInfo";
 import { Minting } from "./components/Minting/Minting";
 import { isRunningGateway } from "./qortalRequests";
 import { QMailStatus } from "./components/QMailStatus";
+import { GlobalActions } from "./components/GlobalActions/GlobalActions";
 
 type extStates =
   | "not-authenticated"
@@ -1686,6 +1687,7 @@ function App() {
                }}
              >
                  <TaskManger getUserInfo={getUserInfo} />
+                 <GlobalActions memberGroups={memberGroups} />
                  </MyContext.Provider>
             )}
                           <Spacer height="20px" />
