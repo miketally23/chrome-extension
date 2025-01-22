@@ -2439,7 +2439,7 @@ async function registerName({ name }) {
 
   const res = await processTransactionVersion2(signedBytes);
   if (!res?.signature)
-    throw new Error("Transaction was not able to be processed");
+    throw new Error(res?.message || "Transaction was not able to be processed");
   return res;
 }
 async function makeAdmin({ groupId, qortalAddress }) {
