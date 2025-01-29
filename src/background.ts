@@ -987,6 +987,16 @@ async function getNameInfo() {
     return "";
   }
 }
+export async function getNameInfoForOthers(address) {
+  const validApi = await getBaseApi();
+  const response = await fetch(validApi + "/names/address/" + address);
+  const nameData = await response.json();
+  if (nameData?.length > 0) {
+    return nameData[0].name;
+  } else {
+    return "";
+  }
+}
 async function getAddressInfo(address) {
   const validApi = await getBaseApi();
   const response = await fetch(validApi + "/addresses/" + address);
@@ -2305,7 +2315,7 @@ export const getFee = async (txType) => {
   };
 };
 
-async function leaveGroup({ groupId }) {
+export async function leaveGroup({ groupId }) {
   const wallet = await getSaveWallet();
   const address = wallet.address0;
   const lastReference = await getLastRef();
@@ -2627,7 +2637,7 @@ async function createGroup({
   if (!res?.signature) throw new Error(res?.message || "Transaction was not able to be processed");
   return res;
 }
-async function inviteToGroup({ groupId, qortalAddress, inviteTime }) {
+export async function inviteToGroup({ groupId, qortalAddress, inviteTime }) {
   const address = await getNameOrAddress(qortalAddress);
   if (!address) throw new Error("Cannot find user");
   const lastReference = await getLastRef();
