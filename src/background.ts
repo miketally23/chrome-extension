@@ -2535,7 +2535,7 @@ async function removeAdmin({ groupId, qortalAddress }) {
   return res;
 }
 
-async function banFromGroup({
+export async function banFromGroup({
   groupId,
   qortalAddress,
   rBanReason = "",
@@ -2569,7 +2569,7 @@ async function banFromGroup({
   return res;
 }
 
-async function kickFromGroup({ groupId, qortalAddress, rBanReason = "" }) {
+export async function kickFromGroup({ groupId, qortalAddress, rBanReason = "" }) {
   const lastReference = await getLastRef();
   const resKeyPair = await getKeyPair();
   const parsedData = JSON.parse(resKeyPair);

@@ -1,5 +1,5 @@
-import { gateways, getApiKeyFromStorage } from "./background";
-import { addForeignServer, addListItems, adminAction, cancelSellOrder, createBuyOrder, createPoll, createSellOrder, decryptData, decryptDataWithSharingKey, decryptQortalGroupData, deleteHostedData, deleteListItems, deployAt, encryptData, encryptDataWithSharingKey, encryptQortalGroupData, getCrossChainServerInfo, getDaySummary, getForeignFee, getHostedData, getListItems, getServerConnectionHistory, getTxActivitySummary, getUserAccount, getUserWallet, getUserWalletInfo, getWalletBalance, inviteToGroupRequest, joinGroup, leaveGroupRequest, publishMultipleQDNResources, publishQDNResource, registerNameRequest, removeForeignServer, saveFile, sendChatMessage, sendCoin, setCurrentForeignServer, signTransaction, updateForeignFee, updateNameRequest, voteOnPoll } from "./qortalRequests/get";
+import { banFromGroup, gateways, getApiKeyFromStorage } from "./background";
+import { addForeignServer, addListItems, adminAction, cancelSellOrder, createBuyOrder, createPoll, createSellOrder, decryptData, decryptDataWithSharingKey, decryptQortalGroupData, deleteHostedData, deleteListItems, deployAt, encryptData, encryptDataWithSharingKey, encryptQortalGroupData, getCrossChainServerInfo, getDaySummary, getForeignFee, getHostedData, getListItems, getServerConnectionHistory, getTxActivitySummary, getUserAccount, getUserWallet, getUserWalletInfo, getWalletBalance, inviteToGroupRequest, joinGroup, kickFromGroupRequest, leaveGroupRequest, publishMultipleQDNResources, publishQDNResource, registerNameRequest, removeForeignServer, saveFile, sendChatMessage, sendCoin, setCurrentForeignServer, signTransaction, updateForeignFee, updateNameRequest, voteOnPoll } from "./qortalRequests/get";
 
  const listOfAllQortalRequests = [
   'GET_USER_ACCOUNT', 'DECRYPT_DATA', 'SEND_COIN', 'GET_LIST_ITEMS',
@@ -672,7 +672,30 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
           });
         break;
       }
+      case "KICK_FROM_GROUP" : {
+        const data = request.payload;
       
+        kickFromGroupRequest(data, isFromExtension)
+          .then((res) => {
+            sendResponse(res);
+          })
+          .catch((error) => {
+            sendResponse({ error: error.message });
+          });
+        break;
+      }
+      case "BAN_FROM_GROUP" : {
+        const data = request.payload;
+      
+        banFromGroup(data, isFromExtension)
+          .then((res) => {
+            sendResponse(res);
+          })
+          .catch((error) => {
+            sendResponse({ error: error.message });
+          });
+        break;
+      }
 
     }
   }
