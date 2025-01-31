@@ -14,7 +14,10 @@ import {
   Switch,
   Tooltip,
   Typography,
-  ButtonBase
+  ButtonBase,
+  styled,
+  tooltipClasses,
+  TooltipProps
 } from "@mui/material";
 import Logo1 from "../assets/svgs/Logo1.svg";
 import Logo1Dark from "../assets/svgs/Logo1Dark.svg";
@@ -26,6 +29,18 @@ import HelpIcon from '@mui/icons-material/Help';
 import { GlobalContext } from "../App";
 
 const manifestData = chrome?.runtime?.getManifest();
+
+export const HtmlTooltip = styled(({ className, ...props }: TooltipProps) => (
+  <Tooltip {...props} classes={{ popper: className }} />
+))(({ theme }) => ({
+  [`& .${tooltipClasses.tooltip}`]: {
+    backgroundColor: '#232428',
+    color: 'white',
+    maxWidth: 320,
+    padding: '20px',
+    fontSize: theme.typography.pxToRem(12),
+  },
+}));
 
 export const NotAuthenticated = ({
   getRootProps,
@@ -58,7 +73,7 @@ export const NotAuthenticated = ({
     const importedApiKeyRef = useRef(null)
     const currentNodeRef = useRef(null)
   const hasLocalNodeRef = useRef(null)
-  const { showTutorial  } = useContext(GlobalContext);
+  const { showTutorial, hasSeenGettingStarted  } = useContext(GlobalContext);
 
   const isLocal = cleanUrl(currentNode?.url) === "127.0.0.1:12391";
   const handleFileChangeApiKey = (event) => {
@@ -73,6 +88,8 @@ export const NotAuthenticated = ({
       reader.readAsText(file); // Read the file as text
     }
   };
+
+ 
 
   const checkIfUserHasLocalNode = useCallback(async () => {
     try {
@@ -237,18 +254,22 @@ export const NotAuthenticated = ({
           height: "154px",
         }}
       >
-        <img src={Logo1} className="base-image" />
-        <img src={Logo1Dark} className="hover-image" />
+       <img src={Logo1Dark} className="base-image" />
       </div>
       <Spacer height="30px" />
       <TextP
         sx={{
           textAlign: "center",
-          lineHeight: "15px",
+          lineHeight: 1.2,
+          fontSize: '18px'
         }}
       >
-        WELCOME TO <TextItalic>YOUR</TextItalic> <br></br>
-        <TextSpan> QORTAL WALLET</TextSpan>
+        WELCOME TO <TextItalic sx={{
+          fontSize: '18px'
+        }}>YOUR</TextItalic> <br></br>
+        <TextSpan sx={{
+          fontSize: '18px'
+        }}> QORTAL WALLET</TextSpan>
       </TextP>
       <Spacer height="30px" />
       <Box
@@ -258,9 +279,21 @@ export const NotAuthenticated = ({
           alignItems: "center",
         }}
       >
+         <HtmlTooltip
+        disableHoverListener={hasSeenGettingStarted === true}
+       placement="left"
+        title={
+          <React.Fragment>
+            <Typography color="inherit" sx={{
+              fontSize: '16px'
+             }}>Your wallet is like your digital ID on Qortal, and is how you will login to the Qortal User Interface. It holds your public address and the Qortal name you will eventually choose. Every transaction you make is linked to your ID, and this is where you manage all your QORT and other tradeable cryptocurrencies on Qortal.</Typography>
+          </React.Fragment>
+        }
+      >
         <CustomButton onClick={()=> setExtstate('wallets')}>
           Wallets
         </CustomButton>
+        </HtmlTooltip>
       </Box>
 
       <Spacer height="6px" />
@@ -271,14 +304,38 @@ export const NotAuthenticated = ({
           alignItems: "center",
         }}
       >
+         <HtmlTooltip
+        disableHoverListener={hasSeenGettingStarted === true}
+        placement="right"
+        title={
+          <React.Fragment>
+             <Typography color="inherit" sx={{
+              fontWeight: 'bold',
+              fontSize: '18px'
+             }}>New users start here!</Typography>
+             <Spacer height='10px'/>
+            <Typography color="inherit" sx={{
+              fontSize: '16px'
+             }}>Creating an account means creating a new wallet and digital ID to start using Qortal. Once you have made your account, you can start doing things like obtaining some QORT, buying a name and avatar, publishing videos and blogs, and much more.</Typography>
+          </React.Fragment>
+        }
+      >
         <CustomButton
           onClick={() => {
             setExtstate("create-wallet");
           }}
+          sx={{
+            backgroundColor: hasSeenGettingStarted === false && 'var(--green)',
+            color: hasSeenGettingStarted === false && 'black',
+            "&:hover": {
+              backgroundColor: hasSeenGettingStarted === false && 'var(--green)',
+              color: hasSeenGettingStarted === false && 'black'
+            }
+          }}
         >
-          Create account
+          Create wallet
         </CustomButton>
-
+        </HtmlTooltip>
 
       </Box>
         <Spacer height="15px" />
@@ -299,9 +356,15 @@ export const NotAuthenticated = ({
             gap: "10px",
             alignItems: "center",
             flexDirection: "column",
+            outline: '0.5px solid rgba(255, 255, 255, 0.5)',
+            padding: '20px 30px',
+            borderRadius: '5px',
           }}
         >
           <>
+          <Typography sx={{
+            textDecoration: 'underline'
+          }}>For advanced users</Typography>
             <Box
               sx={{
                 display: "flex",
@@ -312,6 +375,12 @@ export const NotAuthenticated = ({
               }}
             >
               <FormControlLabel
+               sx={{
+                "& .MuiFormControlLabel-label": {
+                  fontSize: '14px'
+                }
+                
+              }}
                 control={
                   <Switch
                     sx={{

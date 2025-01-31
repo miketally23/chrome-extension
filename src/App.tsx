@@ -384,7 +384,7 @@ function App() {
     const seedPhrase = generatorRef.current.parsedString
     saveSeedPhraseToDisk(seedPhrase)
   }
-  const {showTutorial, openTutorialModal, shownTutorialsInitiated, setOpenTutorialModal} = useHandleTutorials()
+  const {showTutorial, openTutorialModal, shownTutorialsInitiated, setOpenTutorialModal, hasSeenGettingStarted} = useHandleTutorials()
   const {getIndividualUserInfo} = useHandleUserInfo()
 
   const passwordRef = useRef<HTMLInputElement>(null);
@@ -1761,7 +1761,8 @@ function App() {
             showTutorial,
             openTutorialModal,
             setOpenTutorialModal,
-            downloadResource
+            downloadResource,
+            hasSeenGettingStarted
       }}>
                     <Tutorials />
 
@@ -2318,8 +2319,7 @@ function App() {
               height: "154px",
             }}
           >
-            <img src={Logo1} className="base-image" />
-            <img src={Logo1Dark} className="hover-image" />
+          <img src={Logo1Dark} className="base-image" />
           </div>
           <Spacer height="38px" />
           <TextP
@@ -2381,8 +2381,7 @@ function App() {
               height: "154px",
             }}
           >
-            <img src={Logo1} className="base-image" />
-            <img src={Logo1Dark} className="hover-image" />
+            <img src={Logo1Dark} className="base-image" />
           </div>
           <Spacer height="38px" />
           <TextP
@@ -2478,8 +2477,7 @@ function App() {
               height: "154px",
             }}
           >
-            <img src={Logo1} className="base-image" />
-            <img src={Logo1Dark} className="hover-image" />
+           <img src={Logo1Dark} className="base-image" />
           </div>
           <Spacer height="35px" />
           <Box
@@ -2556,8 +2554,7 @@ function App() {
               height: "154px",
             }}
           >
-            <img src={Logo1} className="base-image" />
-            <img src={Logo1Dark} className="hover-image" />
+         <img src={Logo1Dark} className="base-image" />
           </div>
           <Spacer height="35px" />
           <Box
@@ -2649,8 +2646,7 @@ function App() {
                   height: "154px",
                 }}
               >
-                <img src={Logo1} className="base-image" />
-                <img src={Logo1Dark} className="hover-image" />
+              <img src={Logo1Dark} className="base-image" />
               </div>
               <Spacer height="38px" />
               <TextP
