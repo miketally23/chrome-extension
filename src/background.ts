@@ -2400,7 +2400,7 @@ async function cancelInvitationToGroup({ groupId, qortalAddress }) {
   return res;
 }
 
-async function cancelBan({ groupId, qortalAddress }) {
+export async function cancelBan({ groupId, qortalAddress }) {
   const lastReference = await getLastRef();
   const resKeyPair = await getKeyPair();
   const parsedData = JSON.parse(resKeyPair);
