@@ -2597,7 +2597,7 @@ export async function kickFromGroup({ groupId, qortalAddress, rBanReason = "" })
   return res;
 }
 
-async function createGroup({
+export async function createGroup({
   groupName,
   groupDescription,
   groupType,
