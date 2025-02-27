@@ -1,30 +1,8 @@
-# React + TypeScript + Vite
+# Qortal Extension - chromium-based browser extension for Qortal
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+The Qortal Extension is a chromium-based browser version of the Qortal Trifecta series of interfaces. Allowing installation to any chromium-based browser (Brave, Opera, Chrome, and many more...) allowing integration with web 2.0 applications, access to Q-Apps with authentication through gateway nodes, and much more. 
 
-Currently, two official plugins are available:
+The Qortal Extension opens the door for 'legacy web applications' to be able to interact with Qortal, and for users to be able to utilize Q-Apps via 'gateway nodes' such as those on https://qortal.link and https://qortal.name. 
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+Much more information will be coming soon, and existind details and assistance can be found on https://qortal.dev 
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
-
-- Configure the top-level `parserOptions` property like this:
-
-```js
-export default {
-  // other rules...
-  parserOptions: {
-    ecmaVersion: 'latest',
-    sourceType: 'module',
-    project: ['./tsconfig.json', './tsconfig.node.json'],
-    tsconfigRootDir: __dirname,
-  },
-}
-```
-
-- Replace `plugin:@typescript-eslint/recommended` to `plugin:@typescript-eslint/recommended-type-checked` or `plugin:@typescript-eslint/strict-type-checked`
-- Optionally add `plugin:@typescript-eslint/stylistic-type-checked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and add `plugin:react/recommended` & `plugin:react/jsx-runtime` to the `extends` list
