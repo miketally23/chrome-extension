@@ -15,22 +15,34 @@ export const AppViewer = React.forwardRef(({ app , hide, isDevMode}, iframeRef) 
   const { rootHeight } = useContext(MyContext);
   // const iframeRef = useRef(null);
   const { document, window: frameWindow } = useFrame();
-  const {path, history, changeCurrentIndex} = useQortalMessageListener(frameWindow, iframeRef, app?.tabId, app?.name, app?.service) 
+  const {path, history, changeCurrentIndex, resetHistory} = useQortalMessageListener(frameWindow, iframeRef, app?.tabId, isDevMode, app?.name, app?.service) 
   const [url, setUrl] = useState('')
 
+
   useEffect(()=> {
+    if(app?.isPreview) return
+    if(isDevMode){
+      setUrl(app?.url)
+      return
+    }
+   
     setUrl(`${getBaseApiReact()}/render/${app?.service}/${app?.name}${app?.path != null ? `/${app?.path}` : ''}?theme=dark&identifier=${(app?.identifier != null && app?.identifier != 'null') ? app?.identifier : ''}`)
-  }, [app?.service, app?.name, app?.identifier, app?.path])
+  }, [app?.service, app?.name, app?.identifier, app?.path, app?.isPreview])
+
+  useEffect(()=> {
+    if(app?.isPreview && app?.url){
+      resetHistory()
+      setUrl(app.url)
+    }
+  }, [app?.url, app?.isPreview])
   const defaultUrl = useMemo(()=> {
     return  url
-  }, [url])
-
+  }, [url, isDevMode])
 
 
   const refreshAppFunc = (e) => {
     const {tabId} = e.detail
     if(tabId === app?.tabId){
-
       if(isDevMode){
         
         resetHistory()
@@ -52,7 +64,7 @@ export const AppViewer = React.forwardRef(({ app , hide, isDevMode}, iframeRef) 
     return () => {
       unsubscribeFromEvent("refreshApp", refreshAppFunc);
     };
-  }, [app, path]);
+  }, [app, path, isDevMode]);
 
   const removeTrailingSlash = (str) => str.replace(/\/$/, '');
   const copyLinkFunc = (e) => {
@@ -89,10 +101,10 @@ export const AppViewer = React.forwardRef(({ app , hide, isDevMode}, iframeRef) 
     // Calculate the previous index and path
     const previousPageIndex = history.currentIndex - 1;
     const previousPath = history.customQDNHistoryPaths[previousPageIndex];
-
+    const targetOrigin = iframeRef.current ? new URL(iframeRef.current.src).origin : "*"; 
     // Signal non-manual navigation
     iframeRef.current.contentWindow.postMessage(
-      { action: 'PERFORMING_NON_MANUAL', currentIndex: previousPageIndex}, '*'
+      { action: 'PERFORMING_NON_MANUAL', currentIndex: previousPageIndex },targetOrigin
     );
     // Update the current index locally
     changeCurrentIndex(previousPageIndex);
@@ -113,10 +125,10 @@ export const AppViewer = React.forwardRef(({ app , hide, isDevMode}, iframeRef) 
         window.removeEventListener('message', handleNavigationSuccess);
         reject(new Error("Navigation timeout"));
       }, 200);
-
+      const targetOrigin = iframeRef.current ? new URL(iframeRef.current.src).origin : "*"; 
       // Send the navigation command after setting up the listener and timeout
       iframeRef.current.contentWindow.postMessage(
-        { action: 'NAVIGATE_TO_PATH', path: previousPath, requestedHandler: 'UI' }, '*'
+        { action: 'NAVIGATE_TO_PATH', path: previousPath, requestedHandler: 'UI' }, targetOrigin
       );
     });
 
@@ -124,8 +136,10 @@ export const AppViewer = React.forwardRef(({ app , hide, isDevMode}, iframeRef) 
     try {
       await navigationPromise;
     } catch (error) {
-
-   
+     if(isDevMode){
+        setUrl(`${url}${previousPath != null ? previousPath : ''}?theme=dark&time=${new Date().getMilliseconds()}&isManualNavigation=false`)
+      return
+     }
       setUrl(`${getBaseApiReact()}/render/${app?.service}/${app?.name}${previousPath != null ? previousPath : ''}?theme=dark&identifier=${(app?.identifier != null && app?.identifier != 'null') ? app?.identifier : ''}&time=${new Date().getMilliseconds()}&isManualNavigation=false`)
       // iframeRef.current.contentWindow.location.href = previousPath; // Fallback URL update
     }
@@ -154,9 +168,10 @@ export const AppViewer = React.forwardRef(({ app , hide, isDevMode}, iframeRef) 
 
  
   if (iframeRef.current && iframeRef.current.contentWindow) {
+    const targetOrigin = iframeRef.current ? new URL(iframeRef.current.src).origin : "*";
       iframeRef.current.contentWindow.postMessage(
           { action: 'NAVIGATE_FORWARD'},
-          '*' 
+          targetOrigin
       );
   } else {
       console.log('Iframe not accessible or does not have a content window.');
@@ -174,7 +189,8 @@ export const AppViewer = React.forwardRef(({ app , hide, isDevMode}, iframeRef) 
           height: !isMobile ? '100vh' : `calc(${rootHeight} - 60px - 45px )`,
           border: 'none',
           width: '100%'
-        }} id="browser-iframe" src={defaultUrl} sandbox="allow-scripts allow-same-origin allow-forms allow-downloads allow-modals" allow="fullscreen; clipboard-read; clipboard-write">
+        }} id="browser-iframe" src={defaultUrl}   sandbox="allow-scripts allow-same-origin allow-forms allow-downloads allow-modals" 
+        allow="fullscreen; clipboard-read; clipboard-write">
     						
     						</iframe>
     </Box>
