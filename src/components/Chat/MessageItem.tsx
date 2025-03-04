@@ -577,7 +577,8 @@ const WatchComponent = ({onSeen, isLast, children})=> {
   return <div ref={ref} style={{
     width: '100%',
     display: 'flex',
-    justifyContent: 'center'
+    alignItems: 'center',
+    flexDirection: 'column'
   }}>
     {children}
   </div>
