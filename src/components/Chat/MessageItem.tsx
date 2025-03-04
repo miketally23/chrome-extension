@@ -1,5 +1,5 @@
 import { Message } from "@chatscope/chat-ui-kit-react";
-import React, { useContext, useEffect, useState } from "react";
+import React, { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useInView } from "react-intersection-observer";
 import { MessageDisplay } from "./MessageDisplay";
 import { Avatar, Box, Button, ButtonBase, List, ListItem, ListItemText, Popover, Tooltip, Typography } from "@mui/material";
@@ -8,6 +8,7 @@ import { getBaseApi } from "../../background";
 import { MyContext, getBaseApiReact } from "../../App";
 import { generateHTML } from "@tiptap/react";
 import Highlight from "@tiptap/extension-highlight";
+import Mention from "@tiptap/extension-mention";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import { executeEvent } from "../../utils/events";
@@ -17,7 +18,6 @@ import { Spacer } from "../../common/Spacer";
 import { ReactionPicker } from "../ReactionPicker";
 import KeyOffIcon from '@mui/icons-material/KeyOff';
 import EditIcon from '@mui/icons-material/Edit';
-import Mention from "@tiptap/extension-mention";
 import TextStyle from '@tiptap/extension-text-style';
 import { addressInfoKeySelector } from "../../atoms/global";
 import { useRecoilValue } from "recoil";
@@ -50,8 +50,7 @@ const getBadgeImg = (level)=> {
     default: return level0Img
   }
 }
-
-export const MessageItem = ({
+export const MessageItem = React.memo(({
   message,
   onSeen,
   isLast,
@@ -67,40 +66,80 @@ export const MessageItem = ({
   isUpdating,
   lastSignature,
   onEdit,
-  isPrivate,
-  setMobileViewModeKeepOpen
+  isPrivate
 }) => {
-  const {getIndividualUserInfo} = useContext(MyContext)
-  const userInfo = useRecoilValue(addressInfoKeySelector(message?.sender));
 
+const {getIndividualUserInfo} = useContext(MyContext)
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedReaction, setSelectedReaction] = useState(null);
-  const { ref, inView } = useInView({
-    threshold: 0.7, // Fully visible
-    triggerOnce: false, // Only trigger once when it becomes visible
-  });
+  const [userInfo, setUserInfo] = useState(null)
 
-  useEffect(() => {
-    if (inView && isLast && onSeen) {
-      onSeen(message.id);
-    }
-  }, [inView, message.id, isLast]);
 
-  useEffect(()=> {
-    if(message?.sender){
-      getIndividualUserInfo(message?.sender)
+useEffect(()=> {
+  const getInfo = async ()=> {
+    if(!message?.sender) return
+    try {
+      const res =  await getIndividualUserInfo(message?.sender)
+    if(!res) return null
+    setUserInfo(res)
+    } catch (error) {
+      //
     }
-  }, [message?.sender])
+  }
+
+   getInfo()
+}, [message?.sender, getIndividualUserInfo])
+
+const htmlText = useMemo(()=> {
+  
+  if(message?.messageText){
+    return generateHTML(message?.messageText, [
+      StarterKit,
+      Underline,
+      Highlight,
+      Mention,
+      TextStyle
+    ])
+  }
+  
+}, [])
+
+
+
+const htmlReply = useMemo(()=> {
+  
+  if(reply?.messageText){
+    return generateHTML(reply?.messageText, [
+      StarterKit,
+      Underline,
+      Highlight,
+      Mention,
+      TextStyle
+    ])
+  }
+  
+}, [])
+
+const userAvatarUrl = useMemo(()=> {
+  return message?.senderName ? `${getBaseApiReact()}/arbitrary/THUMBNAIL/${
+    message?.senderName
+  }/qortal_avatar?async=true` : ''
+}, [])
+
+const onSeenFunc = useCallback(()=> {
+  onSeen(message.id);
+}, [message?.id])
+
 
   return (
-    <>
+    <MessageWragger lastMessage={lastSignature === message?.signature} isLast={isLast} onSeen={onSeenFunc}>
+
     {message?.divide && (
      <div className="unread-divider" id="unread-divider-id">
      Unread messages below
    </div>
     )}
     <div
-      ref={lastSignature === message?.signature ? ref : null}
       style={{
         padding: "10px",
         backgroundColor: "#232428",
@@ -135,25 +174,25 @@ export const MessageItem = ({
             sx={{
               backgroundColor: "#27282c",
               color: "white",
+              height: '40px',
+              width: '40px'
             }}
             alt={message?.senderName}
-            src={message?.senderName ? `${getBaseApiReact()}/arbitrary/THUMBNAIL/${
-              message?.senderName
-            }/qortal_avatar?async=true` : ''}
+            src={userAvatarUrl}
           >
             {message?.senderName?.charAt(0)}
           </Avatar>
           
           
         </WrapperUserAction>
-        <Tooltip disableFocusListener title={`level ${userInfo?.level}`}>
+        <Tooltip disableFocusListener title={`level ${userInfo}`}>
             
          
             <img style={{
-              visibility: userInfo?.level !== undefined ? 'visible' : 'hidden',
+              visibility: userInfo !== undefined ? 'visible' : 'hidden',
               width: '30px',
               height: 'auto'
-            }} src={getBadgeImg(userInfo?.level)} /> 
+            }} src={getBadgeImg(userInfo)} /> 
         </Tooltip>
         </Box>
       )}
@@ -195,7 +234,7 @@ export const MessageItem = ({
             gap: '10px',
             alignItems: 'center'
           }}>
-              {message?.sender === myAddress && (!message?.isNotEncrypted || isPrivate === false) && (
+           {message?.sender === myAddress && (!message?.isNotEncrypted || isPrivate === false) && (
             <ButtonBase
               onClick={() => {
                 onEdit(message);
@@ -260,41 +299,27 @@ export const MessageItem = ({
               }}>Replied to {reply?.senderName || reply?.senderAddress}</Typography>
               {reply?.messageText && (
                 <MessageDisplay
-                  htmlContent={generateHTML(reply?.messageText, [
-                    StarterKit,
-                    Underline,
-                    Highlight,
-                    Mention,
-                    TextStyle
-                  ])}
-                  setMobileViewModeKeepOpen={setMobileViewModeKeepOpen}
+                  htmlContent={htmlReply}
                 />
               )}
               {reply?.decryptedData?.type === "notification" ? (
                 <MessageDisplay htmlContent={reply.decryptedData?.data?.message} />
               ) : (
-                <MessageDisplay setMobileViewModeKeepOpen={setMobileViewModeKeepOpen} isReply htmlContent={reply.text} />
+                <MessageDisplay isReply htmlContent={reply.text} />
               )}
             </Box>
           </Box>
           </>
         )}
-        {message?.messageText && (
+      
           <MessageDisplay
-            htmlContent={generateHTML(message?.messageText, [
-              StarterKit,
-              Underline,
-              Highlight,
-              Mention,
-              TextStyle
-            ])}
-            setMobileViewModeKeepOpen={setMobileViewModeKeepOpen}
+            htmlContent={htmlText}
           />
-        )}
+      
         {message?.decryptedData?.type === "notification" ? (
           <MessageDisplay htmlContent={message.decryptedData?.data?.message} />
         ) : (
-          <MessageDisplay setMobileViewModeKeepOpen={setMobileViewModeKeepOpen} htmlContent={message.text} />
+          <MessageDisplay htmlContent={message.text} />
         )}
         <Box
           sx={{
@@ -319,11 +344,13 @@ export const MessageItem = ({
                   background: 'var(--bg-2)',
                   borderRadius: '7px'
                 }} onClick={(event) => {
-                  event.stopPropagation(); // Prevent event bubbling
-                  setAnchorEl(event.currentTarget);
-                  setSelectedReaction(reaction);
-              }}>
-               <div>{reaction}</div>  {numberOfReactions > 1 && (
+                    event.stopPropagation(); // Prevent event bubbling
+                    setAnchorEl(event.currentTarget);
+                    setSelectedReaction(reaction);
+                }}>
+               <div style={{
+                fontSize: '16px'
+               }}>{reaction}</div>  {numberOfReactions > 1 && (
                 <Typography sx={{
                   marginLeft: '4px'
                 }}>{' '} {numberOfReactions}</Typography>
@@ -361,7 +388,7 @@ export const MessageItem = ({
                 </Typography>
                 <List sx={{
                   overflow: 'auto',
-                  maxWidth: '80vw',
+                  maxWidth: '300px',
                   maxHeight: '300px'
                 }}>
                   {reactions[selectedReaction]?.map((reactionItem) => (
@@ -404,14 +431,14 @@ export const MessageItem = ({
             alignItems: 'center',
             gap: '15px'
           }}>
-           {message?.isNotEncrypted && isPrivate && (
+          {message?.isNotEncrypted && isPrivate && (
               <KeyOffIcon sx={{
                 color: 'white',
                 marginLeft: '10px'
               }} />
             )}
        
-       {isUpdating ? (
+          {isUpdating ? (
             <Typography
               sx={{
                 fontSize: "14px",
@@ -460,21 +487,11 @@ export const MessageItem = ({
         </Box>
       </Box>
 
-      {/* <Message
-      model={{
-        direction: 'incoming',
-        message: message.text,
-        position: 'single',
-        sender: message.senderName,
-        sentTime: message.timestamp
-      }}
-      
-    ></Message> */}
-      {/* {!message.unread && <span style={{ color: 'green' }}> Seen</span>} */}
+ 
     </div>
-    </>
+    </MessageWragger>
   );
-};
+});
 
 
 export const ReplyPreview = ({message, isEdit})=> {
@@ -501,7 +518,7 @@ export const ReplyPreview = ({message, isEdit})=> {
             <Box sx={{
               padding: '5px'
             }}>
-             {isEdit ? (
+              {isEdit ? (
                     <Typography sx={{
                       fontSize: '12px',
                       fontWeight: 600
@@ -531,5 +548,38 @@ export const ReplyPreview = ({message, isEdit})=> {
               )}
             </Box>
           </Box>
+          
   )
+}
+
+const MessageWragger = ({lastMessage, onSeen, isLast, children})=> {
+
+  if(lastMessage){
+    return (
+      <WatchComponent onSeen={onSeen} isLast={isLast}>{children}</WatchComponent>
+    ) 
+  }
+  return children
+}
+
+const WatchComponent = ({onSeen, isLast, children})=> {
+  const { ref, inView } = useInView({
+    threshold: 0.7, // Fully visible
+    triggerOnce: true, // Only trigger once when it becomes visible
+  });
+
+  useEffect(() => {
+    if (inView && isLast && onSeen) {
+      onSeen();
+    }
+  }, [inView, isLast, onSeen]);
+
+  return <div ref={ref} style={{
+    width: '100%',
+    display: 'flex',
+    justifyContent: 'center'
+  }}>
+    {children}
+  </div>
+
 }

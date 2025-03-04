@@ -657,7 +657,7 @@ export const decryptData = async (data) => {
 export const getListItems = async (data, isFromExtension) => {
   const  isGateway =  await isRunningGateway()
   if(isGateway){
-    throw new Error('This action cannot be done through a gateway')
+    throw new Error("This action cannot be done through a public node");
   }
   const requiredFields = ["list_name"];
   const missingFields: string[] = [];
@@ -711,7 +711,7 @@ export const getListItems = async (data, isFromExtension) => {
 export const addListItems = async (data, isFromExtension) => {
   const  isGateway =  await isRunningGateway()
   if(isGateway){
-    throw new Error('This action cannot be done through a gateway')
+    throw new Error("This action cannot be done through a public node");
   }
   const requiredFields = ["list_name", "items"];
   const missingFields: string[] = [];
@@ -766,7 +766,7 @@ export const addListItems = async (data, isFromExtension) => {
 export const deleteListItems = async (data, isFromExtension) => {
   const  isGateway =  await isRunningGateway()
   if(isGateway){
-    throw new Error('This action cannot be done through a gateway')
+    throw new Error("This action cannot be done through a public node");
   }
   const requiredFields = ["list_name"];
   const missingFields: string[] = [];
@@ -2280,7 +2280,7 @@ export const getTxActivitySummary = async (data) => {
   export const updateForeignFee = async (data) => {
     const isGateway = await isRunningGateway();
     if (isGateway) {
-      throw new Error("This action cannot be done through a gateway");
+      throw new Error("This action cannot be done through a public node");
     }
     const requiredFields = ['coin', 'type', 'value'];
     const missingFields: string[] = [];
@@ -2379,7 +2379,7 @@ export const getTxActivitySummary = async (data) => {
   export const setCurrentForeignServer = async (data) => {
     const isGateway = await isRunningGateway();
     if (isGateway) {
-      throw new Error("This action cannot be done through a gateway");
+      throw new Error("This action cannot be done through a public node");
     }
     const requiredFields = ['coin'];
     const missingFields: string[] = [];
@@ -2440,7 +2440,7 @@ export const getTxActivitySummary = async (data) => {
   export const addForeignServer = async (data) => {
     const isGateway = await isRunningGateway();
     if (isGateway) {
-      throw new Error("This action cannot be done through a gateway");
+      throw new Error("This action cannot be done through a public node");
     }
     const requiredFields = ['coin'];
     const missingFields: string[] = [];
@@ -2500,7 +2500,7 @@ export const getTxActivitySummary = async (data) => {
   export const removeForeignServer = async (data) => {
     const isGateway = await isRunningGateway();
     if (isGateway) {
-      throw new Error("This action cannot be done through a gateway");
+      throw new Error("This action cannot be done through a public node");
     }
     const requiredFields = ['coin'];
     const missingFields: string[] = [];
@@ -3053,7 +3053,7 @@ const crosschainAtInfo = await Promise.all(atPromises);
         }, 0)
       )}
       ${` ${crosschainAtInfo?.[0]?.foreignBlockchain}`}`,
-      highlightedText: `Is using gateway: ${isGateway}`,
+      highlightedText: `Is using public node: ${isGateway}`,
       fee: '',
       foreignFee: `${sellerForeignFee[foreignBlockchain].value} ${sellerForeignFee[foreignBlockchain].ticker}`
     }, isFromExtension);
@@ -3224,13 +3224,15 @@ export const createSellOrder = async (data, isFromExtension) => {
     throw new Error(errorMsg);
   }
 
+  const parsedForeignAmount = Number(data.foreignAmount)?.toFixed(8)
+
 const receivingAddress = await getUserWalletFunc(data.foreignBlockchain)
   try {
     const resPermission = await getUserPermission({
       text1: "Do you give this application permission to perform a sell order?",
       text2: `${data.qortAmount}${" "}
       ${`QORT`}`, 
-      text3: `FOR  ${data.foreignAmount} ${data.foreignBlockchain}`,
+      text3: `FOR  ${parsedForeignAmount} ${data.foreignBlockchain}`,
       fee: '0.02'
     }, isFromExtension);
     const { accepted } = resPermission;
@@ -3247,12 +3249,12 @@ const receivingAddress = await getUserWalletFunc(data.foreignBlockchain)
   };
       const response = await tradeBotCreateRequest({
         creatorPublicKey: userPublicKey,
-				qortAmount: parseFloat(data.qortAmount),
-				fundingQortAmount: parseFloat(data.qortAmount) + 0.001,
-				foreignBlockchain: data.foreignBlockchain,
-				foreignAmount: parseFloat(data.foreignAmount),
-				tradeTimeout: 120,
-				receivingAddress: receivingAddress.address
+          qortAmount: parseFloat(data.qortAmount),
+          fundingQortAmount: parseFloat(data.qortAmount) + 0.01,
+          foreignBlockchain: data.foreignBlockchain,
+          foreignAmount: parseFloat(parsedForeignAmount),
+          tradeTimeout: 120,
+          receivingAddress: receivingAddress.address
       }, keyPair)
 
       return response
@@ -3353,7 +3355,7 @@ export const adminAction = async (data, isFromExtension) => {
   }
   const isGateway = await isRunningGateway();
   if (isGateway) {
-    throw new Error("This action cannot be done through a gateway");
+    throw new Error("This action cannot be done through a public node");
   }
 
   let apiEndpoint = "";
@@ -3769,7 +3771,7 @@ url
 export const getHostedData = async (data, isFromExtension) => {
   const isGateway = await isRunningGateway();
   if (isGateway) {
-    throw new Error("This action cannot be done through a gateway");
+    throw new Error("This action cannot be done through a public node");
   }
   const resPermission = await getUserPermission(
     {
@@ -3805,7 +3807,7 @@ export const getHostedData = async (data, isFromExtension) => {
 export const deleteHostedData = async (data, isFromExtension) => {
   const isGateway = await isRunningGateway();
   if (isGateway) {
-    throw new Error("This action cannot be done through a gateway");
+    throw new Error("This action cannot be done through a public node");
   }
   const requiredFields = ["hostedData"];
   const missingFields: string[] = [];
@@ -4375,6 +4377,99 @@ export const createGroupRequest = async (data, isFromExtension) => {
       })
   return response
 
+  } else {
+    throw new Error("User declined request");
+  }
+};
+
+export const getUserWalletTransactions = async (data, isFromExtension, appInfo) => {
+  const requiredFields = ["coin"];
+  const missingFields: string[] = [];
+  requiredFields.forEach((field) => {
+    if (!data[field]) {
+      missingFields.push(field);
+    }
+  });
+  if (missingFields.length > 0) {
+    const missingFieldsString = missingFields.join(", ");
+    const errorMsg = `Missing fields: ${missingFieldsString}`;
+    throw new Error(errorMsg);
+  }
+
+  const value =
+  (await getPermission(
+    `getUserWalletTransactions-${appInfo?.name}-${data.coin}`
+  )) || false;
+let skip = false;
+if (value) {
+  skip = true;
+}
+  let resPermission;
+
+  if (!skip) {
+
+   resPermission = await getUserPermission(
+    {
+      text1:
+        "Do you give this application permission to retrieve your wallet transactions",
+        highlightedText: `coin: ${data.coin}`,
+        checkbox1: {
+          value: true,
+          label: "Always allow wallet txs to be retrieved automatically",
+        },
+    },
+    isFromExtension
+  );
+}
+const { accepted = false, checkbox1 = false } = resPermission || {};
+
+if (resPermission) {
+  setPermission(
+    `getUserWalletTransactions-${appInfo?.name}-${data.coin}`,
+    checkbox1
+  );
+}
+
+  if (accepted || skip) {
+    const coin = data.coin;
+    const walletKeys = await getUserWalletFunc(coin);
+    let publicKey
+    if(data?.coin === 'ARRR'){
+    const resKeyPair = await getKeyPair();
+    const parsedData = resKeyPair;
+    publicKey = parsedData.arrrSeed58;
+    } else {
+      publicKey = walletKeys["publickey"]
+    }
+   
+    const _url = await createEndpoint(
+      `/crosschain/` + data.coin.toLowerCase() + `/wallettransactions`
+    );
+    const _body = publicKey;
+    try {
+      const response = await fetch(_url, {
+        method: "POST",
+        headers: {
+          Accept: "*/*",
+          "Content-Type": "application/json",
+        },
+        body: _body,
+      });
+      if (!response?.ok) throw new Error("Unable to fetch wallet transactions");
+      let res;
+      try {
+        res = await response.clone().json();
+      } catch (e) {
+        res = await response.text();
+      }
+      if (res?.error && res?.message) {
+        throw new Error(res.message);
+      }
+
+      return res;
+    } catch (error) {
+      throw new Error(error?.message || "Fetch Wallet Transactions Failed");
+    }
   } else {
     throw new Error("User declined request");
   }

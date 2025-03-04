@@ -28,6 +28,8 @@ import {
   Typography,
 } from "@mui/material";
 import { decryptStoredWallet } from "./utils/decryptWallet";
+import PersonSearchIcon from '@mui/icons-material/PersonSearch';
+
 import { CountdownCircleTimer } from "react-countdown-circle-timer";
 import Logo1 from "./assets/svgs/Logo1.svg";
 import Logo1Dark from "./assets/svgs/Logo1Dark.svg";
@@ -48,7 +50,8 @@ import 'react-json-view-lite/dist/index.css';
 import HelpIcon from '@mui/icons-material/Help';
 import EngineeringIcon from '@mui/icons-material/Engineering';
 import WarningIcon from '@mui/icons-material/Warning';
-
+import { DrawerUserLookup } from "./components/Drawer/DrawerUserLookup";
+import { UserLookup } from "./components/UserLookup.tsx/UserLookup";
 
 import {
   createAccount,
@@ -111,7 +114,7 @@ import { MainAvatar } from "./components/MainAvatar";
 import { useRetrieveDataLocalStorage } from "./useRetrieveDataLocalStorage";
 import { useQortalGetSaveSettings } from "./useQortalGetSaveSettings";
 import { useRecoilState, useResetRecoilState, useSetRecoilState } from "recoil";
-import { canSaveSettingToQdnAtom, fullScreenAtom, hasSettingsChangedAtom, isDisabledEditorEnterAtom, isUsingImportExportSettingsAtom, mailsAtom, oldPinnedAppsAtom, qMailLastEnteredTimestampAtom, settingsLocalLastUpdatedAtom, settingsQDNLastUpdatedAtom, sortablePinnedAppsAtom } from "./atoms/global";
+import { canSaveSettingToQdnAtom, fullScreenAtom, groupsPropertiesAtom, hasSettingsChangedAtom, isDisabledEditorEnterAtom, isUsingImportExportSettingsAtom, mailsAtom, oldPinnedAppsAtom, qMailLastEnteredTimestampAtom, settingsLocalLastUpdatedAtom, settingsQDNLastUpdatedAtom, sortablePinnedAppsAtom } from "./atoms/global";
 import { useAppFullScreen } from "./useAppFullscreen";
 import { NotAuthenticated } from "./ExtStates/NotAuthenticated";
 import { useFetchResources } from "./common/useFetchResources";
@@ -127,6 +130,10 @@ import { Minting } from "./components/Minting/Minting";
 import { isRunningGateway } from "./qortalRequests";
 import { QMailStatus } from "./components/QMailStatus";
 import { GlobalActions } from "./components/GlobalActions/GlobalActions";
+import { RegisterName } from "./components/RegisterName";
+import { BuyQortInformation } from "./components/BuyQortInformation";
+import { WalletIcon } from "./assets/Icons/WalletIcon";
+import { useBlockedAddresses } from "./components/Chat/useBlockUsers";
 
 type extStates =
   | "not-authenticated"
@@ -310,6 +317,10 @@ function App() {
   const [walletToBeDownloaded, setWalletToBeDownloaded] = useState<any>(null);
   const [walletToBeDownloadedPassword, setWalletToBeDownloadedPassword] =
     useState<string>("");
+    const {isUserBlocked,
+      addToBlockList,
+      removeBlockFromList, getAllBlockedUsers} = useBlockedAddresses()
+    const [isOpenDrawerLookup, setIsOpenDrawerLookup] = useState(false)
   const [isMain, setIsMain] = useState<boolean>(
     window?.location?.href?.includes("?main=true")
   );
@@ -333,6 +344,11 @@ function App() {
   const isFocusedRef = useRef<boolean>(true);
   const { isShow, onCancel, onOk, show, message } = useModal();
   const { isShow: isShowUnsavedChanges, onCancel:  onCancelUnsavedChanges, onOk: onOkUnsavedChanges, show:  showUnsavedChanges, message: messageUnsavedChanges } = useModal();
+  const balanceSetIntervalRef = useRef(null)
+  const [currentNode, setCurrentNode] = useState({
+    url: "http://127.0.0.1:12391",
+  });
+    const [useLocalNode, setUseLocalNode] = useState(false);
   const {downloadResource} = useFetchResources()
   const [showSeed, setShowSeed] = useState(false)
   const [creationStep, setCreationStep] = useState(1)
@@ -362,10 +378,6 @@ function App() {
     message: messageQortalRequestExtension,
   } = useModal();
   
-  const [openRegisterName, setOpenRegisterName] = useState(false);
-  const registerNamePopoverRef = useRef(null);
-  const [isLoadingRegisterName, setIsLoadingRegisterName] = useState(false);
-  const [registerNameValue, setRegisterNameValue] = useState("");
   const [infoSnack, setInfoSnack] = useState(null);
   const [openSnack, setOpenSnack] = useState(false);
   const [hasLocalNode, setHasLocalNode] = useState(false);
@@ -418,6 +430,7 @@ function App() {
   const resetAtomOldPinnedAppsAtom = useResetRecoilState(oldPinnedAppsAtom);
   const resetAtomQMailLastEnteredTimestampAtom = useResetRecoilState(qMailLastEnteredTimestampAtom)
   const resetAtomMailsAtom = useResetRecoilState(mailsAtom)
+  const resetGroupPropertiesAtom = useResetRecoilState(groupsPropertiesAtom)
   const resetAllRecoil = () => {
     resetAtomSortablePinnedAppsAtom();
     resetAtomCanSaveSettingToQdnAtom();
@@ -427,6 +440,7 @@ function App() {
     resetAtomIsUsingImportExportSettingsAtom()
     resetAtomQMailLastEnteredTimestampAtom()
     resetAtomMailsAtom()
+    resetGroupPropertiesAtom()
   };
   useEffect(() => {
     if (!isMobile) return;
@@ -562,7 +576,7 @@ function App() {
       } catch (e) {
         console.log(e);
 
-        error = e;
+        
       }
     },
   });
@@ -609,6 +623,30 @@ function App() {
     );
   };
 
+  const balanceSetInterval = ()=> {
+    try {
+      if(balanceSetIntervalRef?.current){
+        clearInterval(balanceSetIntervalRef?.current);
+      }
+
+      let isCalling = false;
+      balanceSetIntervalRef.current =  setInterval(async () => {
+        if (isCalling) return;
+        isCalling = true;
+        chrome?.runtime?.sendMessage({ action: "balance" }, (response) => {
+          if (!response?.error && !isNaN(+response)) {
+            setBalance(response);
+          }
+     
+          isCalling = false
+        });
+     
+      }, 40000);
+    } catch (error) {
+      console.error(error)
+    }
+  }
+
   const getBalanceFunc = () => {
     setQortBalanceLoading(true);
     chrome?.runtime?.sendMessage({ action: "balance" }, (response) => {
@@ -616,6 +654,8 @@ function App() {
         setBalance(response);
       }
       setQortBalanceLoading(false);
+      balanceSetInterval()
+
     });
   };
   const getLtcBalanceFunc = () => {
@@ -1176,6 +1216,9 @@ function App() {
     resetAllRecoil()
     setShowSeed(false)
     setCreationStep(1)
+    if(balanceSetIntervalRef?.current){
+      clearInterval(balanceSetIntervalRef?.current);
+    }
   };
 
    function roundUpToDecimals(number, decimals = 8) {
@@ -1332,68 +1375,244 @@ function App() {
     };
   }, []);
 
-  const registerName = async () => {
-    try {
-      if (!userInfo?.address) throw new Error("Your address was not found");
-      if(!registerNameValue) throw new Error('Enter a name')
-      const fee = await getFee("REGISTER_NAME");
-      await show({
-        message: "Would you like to register this name?",
-        publishFee: fee.fee + " QORT",
-      });
-      setIsLoadingRegisterName(true);
-      new Promise((res, rej) => {
-        chrome?.runtime?.sendMessage(
-          {
-            action: "registerName",
-            payload: {
-              name: registerNameValue,
-            },
-          },
-          (response) => {
-            if (!response?.error) {
-              res(response);
-              setIsLoadingRegisterName(false);
-              setInfoSnack({
-                type: "success",
-                message:
-                  "Successfully registered. It may take a couple of minutes for the changes to propagate",
-              });
-              setOpenRegisterName(false);
-              setRegisterNameValue("");
-              setOpenSnack(true);
-              setTxList((prev) => [
-                {
-                  ...response,
-                  type: "register-name",
-                  label: `Registered name: awaiting confirmation. This may take a couple minutes.`,
-                  labelDone: `Registered name: success!`,
-                  done: false,
-                },
-                ...prev.filter((item) => !item.done),
-              ]);
-              return;
-            }
-            setInfoSnack({
-              type: "error",
-              message: response?.error,
-            });
-            setOpenSnack(true);
-            rej(response.error);
-          }
-        );
-      });
-    } catch (error) {
-      if (error?.message) {
-        setInfoSnack({
-          type: "error",
-          message: error?.message,
+ 
+
+  const renderProfileLeft = ()=> {
+
+    return <AuthenticatedContainerInnerLeft
+    sx={{
+      overflowY: isMobile && "auto",
+      padding: "0px 20px",
+      minWidth: "225px",
+    }}
+  >
+    <Spacer height="20px" />
+    <Box sx={{
+      width: '100%',
+      display: 'flex',
+      justifyContent: 'flex-start'
+    }}>
+        {authenticatedMode === "qort" && (
+              <Tooltip
+                title={<span style={{ color: "white", fontSize: "14px", fontWeight: 700 }}>LITECOIN WALLET</span>} 
+                placement="left"
+                arrow
+                sx={{ fontSize: "24" }}
+                slotProps={{
+                  tooltip: {
+                    sx: {
+                      color: "#ffffff",
+                      backgroundColor: "#444444",
+                    },
+                  },
+                  arrow: {
+                    sx: {
+                      color: "#444444",
+                    },
+                  },
+                }}
+              >
+                <img
+                  onClick={() => {
+                   
+                    setAuthenticatedMode("ltc");
+                  }}
+                  src={ltcLogo}
+                  style={{
+                    cursor: "pointer",
+                    width: "20px",
+                    height: "auto",
+                  }}
+                />
+              </Tooltip>
+            )}
+            {authenticatedMode === "ltc" && (
+              <Tooltip
+                title={<span style={{ color: "white", fontSize: "14px", fontWeight: 700 }}>QORTAL WALLET</span>} 
+                placement="left"
+                arrow
+                sx={{ fontSize: "24" }}
+                slotProps={{
+                  tooltip: {
+                    sx: {
+                      color: "#ffffff",
+                      backgroundColor: "#444444",
+                    },
+                  },
+                  arrow: {
+                    sx: {
+                      color: "#444444",
+                    },
+                  },
+                }}
+              >
+                <img
+                  onClick={() => {
+                    setAuthenticatedMode("qort");
+                  }}
+                  src={qortLogo}
+                  style={{
+                    cursor: "pointer",
+                    width: "20px",
+                    height: "auto",
+                  }}
+                />
+              </Tooltip>
+            )}
+            </Box>
+    <Spacer height="48px" />
+
+    {authenticatedMode === "ltc" ? (
+      <>
+        <img src={ltcLogo} />
+        <Spacer height="32px" />
+        <CopyToClipboard text={rawWallet?.ltcAddress}>
+          <AddressBox>
+            {rawWallet?.ltcAddress?.slice(0, 6)}...
+            {rawWallet?.ltcAddress?.slice(-4)} <img src={Copy} />
+          </AddressBox>
+        </CopyToClipboard>
+        <Spacer height="10px" />
+        {ltcBalanceLoading && (
+          <CircularProgress color="success" size={16} />
+        )}
+        {!isNaN(+ltcBalance) && !ltcBalanceLoading && (
+          <Box
+            sx={{
+              gap: "10px",
+              display: "flex",
+              alignItems: "center",
+            }}
+          >
+            <TextP
+              sx={{
+                textAlign: "center",
+                lineHeight: "24px",
+                fontSize: "20px",
+                fontWeight: 700,
+              }}
+            >
+              {ltcBalance} LTC
+            </TextP>
+            <RefreshIcon
+              onClick={getLtcBalanceFunc}
+              sx={{
+                fontSize: "16px",
+                color: "white",
+                cursor: "pointer",
+              }}
+            />
+          </Box>
+        )}
+        <AddressQRCode targetAddress={rawWallet?.ltcAddress} />
+      </>
+    ) : (
+      <>
+       <MainAvatar setOpenSnack={setOpenSnack}  setInfoSnack={setInfoSnack} myName={userInfo?.name} balance={balance} />
+        <Spacer height="32px" />
+        <TextP
+          sx={{
+            textAlign: "center",
+            lineHeight: "24px",
+            fontSize: "20px",
+          }}
+        >
+          {userInfo?.name}
+        </TextP>
+        <Spacer height="10px" />
+        <CopyToClipboard text={rawWallet?.address0}>
+          <AddressBox>
+            {rawWallet?.address0?.slice(0, 6)}...
+            {rawWallet?.address0?.slice(-4)} <img src={Copy} />
+          </AddressBox>
+        </CopyToClipboard>
+        <Spacer height="10px" />
+        {qortBalanceLoading && (
+          <CircularProgress color="success" size={16} />
+        )}
+        {!qortBalanceLoading && balance >= 0 && (
+          <Box
+            sx={{
+              gap: "10px",
+              display: "flex",
+              alignItems: "center",
+            }}
+          >
+            <TextP
+              sx={{
+                textAlign: "center",
+                lineHeight: "24px",
+                fontSize: "20px",
+                fontWeight: 700,
+              }}
+            >
+              {balance?.toFixed(2)} QORT
+            </TextP>
+            <RefreshIcon
+              onClick={getBalanceFunc}
+              sx={{
+                fontSize: "16px",
+                color: "white",
+                cursor: "pointer",
+              }}
+            />
+          </Box>
+        )}
+
+        <Spacer height="35px" />
+        {userInfo && !userInfo?.name && (
+          <TextP
+            sx={{
+              textAlign: "center",
+              lineHeight: 1.2,
+              fontSize: "16px",
+              fontWeight: 500,
+              cursor: "pointer",
+              marginTop: "10px",
+              color: "red",
+              textDecoration: "underline",
+            }}
+            onClick={() => {
+              executeEvent('openRegisterName', {})
+            }}
+          >
+            REGISTER NAME
+          </TextP>
+        )}
+        <Spacer height="20px" />
+        <CustomButton
+          onClick={() => {
+            setIsOpenSendQort(true);
+            // setExtstate("send-qort");
+            setIsOpenDrawerProfile(false);
+          }}
+        >
+          Transfer QORT
+        </CustomButton>
+        <AddressQRCode targetAddress={rawWallet?.address0} />
+      </>
+    )}
+    <TextP
+      sx={{
+        textAlign: "center",
+        lineHeight: "24px",
+        fontSize: "12px",
+        fontWeight: 500,
+        cursor: "pointer",
+        marginTop: "10px",
+        textDecoration: "underline",
+      }}
+      onClick={async () => {
+        executeEvent("addTab", {
+          data: { service: "APP", name: "q-trade" },
         });
-      }
-    } finally {
-      setIsLoadingRegisterName(false);
-    }
-  };
+        executeEvent("open-apps-mode", {});
+      }}
+    >
+      Get QORT at Q-Trade
+    </TextP>
+  </AuthenticatedContainerInnerLeft>
+  }
 
   const renderProfile = () => {
     return (
@@ -1402,7 +1621,7 @@ function App() {
           width: isMobile ? "100vw" : "auto",
           display: "flex",
           backgroundColor: "var(--bg-2)",
-          justifyContent: 'flex-end'
+          justifyContent: "flex-end",
         }}
       >
         {isMobile && (
@@ -1424,171 +1643,21 @@ function App() {
             />
           </Box>
         )}
-
-{desktopViewMode !== "apps" && desktopViewMode !== "dev" && desktopViewMode !== "chat" && (
-      <AuthenticatedContainerInnerLeft
-      sx={{
-        overflowY: isMobile && "auto",
-        padding: '0px 20px'
-      }}
-    >
-          <Spacer height="48px" />
-
-          {authenticatedMode === "ltc" ? (
+        {desktopViewMode !== "apps" &&
+          desktopViewMode !== "dev" &&
+          desktopViewMode !== "chat" && (
             <>
-              <img src={ltcLogo} />
-              <Spacer height="32px" />
-              <CopyToClipboard text={rawWallet?.ltcAddress}>
-                <AddressBox>
-                  {rawWallet?.ltcAddress?.slice(0, 6)}...
-                  {rawWallet?.ltcAddress?.slice(-4)} <img src={Copy} />
-                </AddressBox>
-              </CopyToClipboard>
-              <Spacer height="10px" />
-              {ltcBalanceLoading && (
-                <CircularProgress color="success" size={16} />
-              )}
-              {!isNaN(+ltcBalance) && !ltcBalanceLoading && (
-                <Box
-                  sx={{
-                    gap: "10px",
-                    display: "flex",
-                    alignItems: "center",
-                  }}
-                >
-                  <TextP
-                    sx={{
-                      textAlign: "center",
-                      lineHeight: "24px",
-                      fontSize: "20px",
-                      fontWeight: 700,
-                    }}
-                  >
-                    {ltcBalance} LTC
-                  </TextP>
-                  <RefreshIcon
-                    onClick={getLtcBalanceFunc}
-                    sx={{
-                      fontSize: "16px",
-                      color: "white",
-                      cursor: "pointer",
-                    }}
-                  />
-                </Box>
-              )}
-              <AddressQRCode targetAddress={rawWallet?.ltcAddress} />
-            </>
-          ) : (
-            <>
-              <MainAvatar myName={userInfo?.name} />
-              <Spacer height="32px" />
-              <TextP
-                sx={{
-                  textAlign: "center",
-                  lineHeight: "24px",
-                  fontSize: "20px",
-                }}
-              >
-                {userInfo?.name}
-              </TextP>
-              <Spacer height="10px" />
-              <CopyToClipboard text={rawWallet?.address0}>
-                <AddressBox>
-                  {rawWallet?.address0?.slice(0, 6)}...
-                  {rawWallet?.address0?.slice(-4)} <img src={Copy} />
-                </AddressBox>
-              </CopyToClipboard>
-              <Spacer height="10px" />
-              {qortBalanceLoading && (
-                <CircularProgress color="success" size={16} />
-              )}
-              {!qortBalanceLoading && balance >= 0 && (
-                <Box
-                  sx={{
-                    gap: "10px",
-                    display: "flex",
-                    alignItems: "center",
-                  }}
-                >
-                  <TextP
-                    sx={{
-                      textAlign: "center",
-                      lineHeight: "24px",
-                      fontSize: "20px",
-                      fontWeight: 700,
-                    }}
-                  >
-                    {balance?.toFixed(2)} QORT
-                  </TextP>
-                  <RefreshIcon
-                    onClick={getBalanceFunc}
-                    sx={{
-                      fontSize: "16px",
-                      color: "white",
-                      cursor: "pointer",
-                    }}
-                  />
-                </Box>
-              )}
-
-              <Spacer height="35px" />
-              {userInfo && !userInfo?.name && (
-                <TextP
-                  ref={registerNamePopoverRef}
-                  sx={{
-                    textAlign: "center",
-                    lineHeight: 1.2,
-                    fontSize: "16px",
-                    fontWeight: 500,
-                    cursor: "pointer",
-                    marginTop: "10px",
-                    color: "red",
-                    textDecoration: "underline",
-                  }}
-                  onClick={() => {
-                    setOpenRegisterName(true);
-                  }}
-                >
-                  REGISTER NAME
-                </TextP>
-              )}
-              <Spacer height="20px" />
-              <CustomButton
-                onClick={() => {
-                  setIsOpenSendQort(true);
-                  // setExtstate("send-qort");
-                  setIsOpenDrawerProfile(false);
-                }}
-              >
-                Transfer QORT
-              </CustomButton>
-              <AddressQRCode targetAddress={rawWallet?.address0} />
+            {renderProfileLeft()}
             </>
           )}
-          <TextP
-            sx={{
-              textAlign: "center",
-              lineHeight: "24px",
-              fontSize: "12px",
-              fontWeight: 500,
-              cursor: "pointer",
-              marginTop: "10px",
-              textDecoration: "underline",
-            }}
-            onClick={() => {
-              executeEvent("addTab", { data: { service: 'APP', name: 'q-trade' } });
-            executeEvent("open-apps-mode", { });
-            }}
-          >
-            Get QORT at Q-Trade
-          </TextP>
-        </AuthenticatedContainerInnerLeft>
-          )}
-        <AuthenticatedContainerInnerRight  sx={{
+
+        <AuthenticatedContainerInnerRight
+          sx={{
             height: "100%",
             justifyContent: "space-between",
-          }}>
-        <Box
+          }}
+        >
+          <Box
             sx={{
               width: "100%",
               display: "flex",
@@ -1597,68 +1666,218 @@ function App() {
             }}
           >
             <Spacer height="20px" />
-         
-          {!isMobile && (
-            <>
-              <Spacer height="20px" />
-              <img
-                src={Logout}
-                onClick={() => {
-                  logoutFunc();
-                  setIsOpenDrawerProfile(false);
-                }}
-                style={{
-                  cursor: "pointer",
-                }}
-              />
-            </>
-          )}
-          <Spacer height="20px" />
+            
+            {!isMobile && (
+              <>
+                <Spacer height="20px" />
+                <Tooltip
+                  title={<span style={{ color: "white", fontSize: "14px", fontWeight: 700 }}>LOG OUT</span>} 
+                  placement="left"
+                  arrow
+                  sx={{ fontSize: "24" }}
+                  slotProps={{
+                    tooltip: {
+                      sx: {
+                        color: "#ffffff",
+                        backgroundColor: "#444444",
+                      },
+                    },
+                    arrow: {
+                      sx: {
+                        color: "#444444",
+                      },
+                    },
+                  }}
+                >
+                  <img
+                    src={Logout}
+                    onClick={() => {
+                      logoutFunc();
+                      setIsOpenDrawerProfile(false);
+                    }}
+                    style={{
+                      cursor: "pointer",
+                      width: '20px',
+                      height: 'auto'
+                    }}
+                  />
+                </Tooltip>
+              </>
+            )}
+            <Spacer height="20px" />
 
-          <ButtonBase
-            onClick={() => {
-              setIsSettingsOpen(true);
-            }}
-          >
-            <SettingsIcon
-              sx={{
-                color: "rgba(255, 255, 255, 0.5)",
-              }}
-            />
-          </ButtonBase>
-          <Spacer height="20px" />
-          {authenticatedMode === "qort" && (
-            <img
+            <ButtonBase
               onClick={() => {
-                setAuthenticatedMode("ltc");
+                setIsSettingsOpen(true);
               }}
-              src={ltcLogo}
-              style={{
-                cursor: "pointer",
-                width: "20px",
-                height: "auto",
-              }}
-            />
-          )}
-          {authenticatedMode === "ltc" && (
-            <img
+            >
+              <Tooltip
+                title={<span style={{ color: "white", fontSize: "14px", fontWeight: 700 }}>SETTINGS</span>} 
+                placement="left"
+                arrow
+                sx={{ fontSize: "24" }}
+                slotProps={{
+                  tooltip: {
+                    sx: {
+                      color: "#ffffff",
+                      backgroundColor: "#444444",
+                    },
+                  },
+                  arrow: {
+                    sx: {
+                      color: "#444444",
+                    },
+                  },
+                }}
+              >
+                <SettingsIcon
+                  sx={{
+                    color: "rgba(255, 255, 255, 0.5)",
+                  }}
+                />
+              </Tooltip>
+            </ButtonBase>
+            <Spacer height="20px" />
+            <ButtonBase
               onClick={() => {
-                setAuthenticatedMode("qort");
+                setIsOpenDrawerLookup(true);
               }}
-              src={qortLogo}
-              style={{
-                cursor: "pointer",
-                width: "20px",
-                height: "auto",
-              }}
-            />
-          )}
+            >
+              <Tooltip
+                title={<span style={{ color: "white", fontSize: "14px", fontWeight: 700 }}>USER LOOKUP</span>} 
+                placement="left"
+                arrow
+                sx={{ fontSize: "24" }}
+                slotProps={{
+                  tooltip: {
+                    sx: {
+                      color: "#ffffff",
+                      backgroundColor: "#444444",
+                    },
+                  },
+                  arrow: {
+                    sx: {
+                      color: "#444444",
+                    },
+                  },
+                }}
+              >
+                <PersonSearchIcon
+                  sx={{
+                    color: "rgba(255, 255, 255, 0.5)",
+                  }}
+                />
+              </Tooltip>
+            </ButtonBase>
+            {desktopViewMode !== 'home' && (
+              <>
+                <Spacer height="20px" />
+             
+               <Tooltip
+               title={<span style={{ color: "white", fontSize: "14px", fontWeight: 700 }}>WALLET</span>} 
+               placement="left"
+               arrow
+               sx={{ fontSize: "24" }}
+               slotProps={{
+                 tooltip: {
+                   sx: {
+                     color: "#ffffff",
+                     backgroundColor: "#444444",
+                   },
+                 },
+                 arrow: {
+                   sx: {
+                     color: "#444444",
+                   },
+                 },
+               }}
+             >
+                <ButtonBase onClick={() => {
+                  setIsOpenDrawerProfile(true);
+                }}>
+
+              <WalletIcon width={25} color="rgba(250, 250, 250, 0.5)" />
+
+              </ButtonBase>
+              </Tooltip>
+              </>
+            )}
+          
+            {/* {authenticatedMode === "qort" && (
+              <Tooltip
+                title={<span style={{ color: "white", fontSize: "14px", fontWeight: 700 }}>LITECOIN WALLET</span>} 
+                placement="left"
+                arrow
+                sx={{ fontSize: "24" }}
+                slotProps={{
+                  tooltip: {
+                    sx: {
+                      color: "#ffffff",
+                      backgroundColor: "#444444",
+                    },
+                  },
+                  arrow: {
+                    sx: {
+                      color: "#444444",
+                    },
+                  },
+                }}
+              >
+                <img
+                  onClick={() => {
+                    if(desktopViewMode !== 'home'){
+                      setIsOpenDrawerProfile((prev)=> !prev)
+                    }
+                    setAuthenticatedMode("ltc");
+                  }}
+                  src={ltcLogo}
+                  style={{
+                    cursor: "pointer",
+                    width: "20px",
+                    height: "auto",
+                  }}
+                />
+              </Tooltip>
+            )}
+            {authenticatedMode === "ltc" && (
+              <Tooltip
+                title={<span style={{ color: "white", fontSize: "14px", fontWeight: 700 }}>QORTAL WALLET</span>} 
+                placement="left"
+                arrow
+                sx={{ fontSize: "24" }}
+                slotProps={{
+                  tooltip: {
+                    sx: {
+                      color: "#ffffff",
+                      backgroundColor: "#444444",
+                    },
+                  },
+                  arrow: {
+                    sx: {
+                      color: "#444444",
+                    },
+                  },
+                }}
+              >
+                <img
+                  onClick={() => {
+                    setAuthenticatedMode("qort");
+                  }}
+                  src={qortLogo}
+                  style={{
+                    cursor: "pointer",
+                    width: "20px",
+                    height: "auto",
+                  }}
+                />
+              </Tooltip>
+            )} */}
             <Spacer height="20px" />
             <CoreSyncStatus />
             <Spacer height="20px" />
             <QMailStatus />
-        </Box>
-        <Box
+          </Box>
+          <Box
             sx={{
               width: "100%",
               display: "flex",
@@ -1666,7 +1885,7 @@ function App() {
               alignItems: 'center'
             }}
           >
-             {extState === "authenticated" && isMainWindow && (
+            {extState === "authenticated" && isMainWindow && (
                <MyContext.Provider
                value={{
                  txList,
@@ -1686,11 +1905,16 @@ function App() {
                  infoSnackCustom: infoSnack,
                  setInfoSnackCustom: setInfoSnack,
                  downloadResource,
-                 getIndividualUserInfo
+                 getIndividualUserInfo,
+                 isUserBlocked,
+                 addToBlockList,
+                 removeBlockFromList,
+                 getAllBlockedUsers
                }}
              >
                  <TaskManger getUserInfo={getUserInfo} />
                  <GlobalActions memberGroups={memberGroups} />
+
                  </MyContext.Provider>
             )}
                           <Spacer height="20px" />
@@ -1708,42 +1932,96 @@ function App() {
                 })
               }
             }}>
-              <EngineeringIcon sx={{
-                color: 'var(--unread)'
-                 }} />
+              <Tooltip
+                title={<span style={{ color: "white", fontSize: "14px", fontWeight: 700 }}>MINTING STATUS</span>} 
+                placement="left"
+                arrow
+                sx={{ fontSize: "24" }}
+                slotProps={{
+                  tooltip: {
+                    sx: {
+                      color: "#ffffff",
+                      backgroundColor: "#444444",
+                    },
+                  },
+                  arrow: {
+                    sx: {
+                      color: "#444444",
+                    },
+                  },
+                }}
+              >
+                <EngineeringIcon sx={{ color: 'var(--unread)' }} />
+              </Tooltip>
             </ButtonBase>
           
-           
             <Spacer height="20px" />
-             {(desktopViewMode === "apps" || desktopViewMode === "home") && (
+            {(desktopViewMode === "apps" || desktopViewMode === "home") && (
                <ButtonBase onClick={()=> {
                 if(desktopViewMode === "apps"){
                   showTutorial('qapps', true)
-  
                 } else {
                   showTutorial('getting-started', true)
-  
                 }
                 }} >
-                  <HelpIcon sx={{
-                color: 'var(--unread)'
-                 }} />
+                  <Tooltip
+                    title={<span style={{ color: "white", fontSize: "14px", fontWeight: 700 }}>TUTORIAL</span>} 
+                    placement="left"
+                    arrow
+                    sx={{ fontSize: "24" }}
+                    slotProps={{
+                      tooltip: {
+                        sx: {
+                          color: "#ffffff",
+                          backgroundColor: "#444444",
+                        },
+                      },
+                      arrow: {
+                        sx: {
+                          color: "#444444",
+                        },
+                      },
+                    }}
+                  >
+                    <HelpIcon sx={{ color: 'var(--unread)' }} />
+                  </Tooltip>
                 </ButtonBase>
               )}
             
         <Spacer height="20px" />
+        <Tooltip
+          title={<span style={{ color: "white", fontSize: "14px", fontWeight: 700 }}>BACKUP WALLET</span>} 
+          placement="left"
+          arrow
+          sx={{ fontSize: "24" }}
+          slotProps={{
+            tooltip: {
+              sx: {
+                color: "#ffffff",
+                backgroundColor: "#444444",
+              },
+            },
+            arrow: {
+              sx: {
+                color: "#444444",
+              },
+            },
+          }}
+        >
           <img
-            onClick={() => {
-              setExtstate("download-wallet");
-              setIsOpenDrawerProfile(false);
-            }}
-            src={Download}
-            style={{
-              cursor: "pointer",
-            }}
-          />
-          <Spacer height="40px" />
-          </Box>
+              onClick={() => {
+                setExtstate("download-wallet");
+                setIsOpenDrawerProfile(false);
+              }}
+              src={Download}
+              style={{
+                cursor: "pointer",
+                width: '20px'
+              }}
+            />
+        </Tooltip>
+            <Spacer height="40px" />
+            </Box>
         </AuthenticatedContainerInnerRight>
       </AuthenticatedContainer>
     );
@@ -1769,7 +2047,10 @@ function App() {
                     <Tutorials />
 
       {extState === "not-authenticated" && (
-       <NotAuthenticated getRootProps={getRootProps} getInputProps={getInputProps} setExtstate={setExtstate}     apiKey={apiKey}  globalApiKey={globalApiKey} setApiKey={setApiKey}  handleSetGlobalApikey={handleSetGlobalApikey}/>
+       <NotAuthenticated getRootProps={getRootProps} getInputProps={getInputProps} setExtstate={setExtstate}     apiKey={apiKey}  globalApiKey={globalApiKey} setApiKey={setApiKey}  handleSetGlobalApikey={handleSetGlobalApikey} currentNode={currentNode}
+       setCurrentNode={setCurrentNode}
+       setUseLocalNode={setUseLocalNode}
+       useLocalNode={useLocalNode}/>
       )}
       {/* {extState !== "not-authenticated" && (
         <button onClick={logoutFunc}>logout</button>
@@ -1793,7 +2074,11 @@ function App() {
             setOpenSnackGlobal: setOpenSnack,
             infoSnackCustom: infoSnack,
             setInfoSnackCustom: setInfoSnack,
-            getIndividualUserInfo
+            getIndividualUserInfo,
+            isUserBlocked,
+            addToBlockList,
+            removeBlockFromList,
+            getAllBlockedUsers
           }}
         >
           <Box
@@ -1833,7 +2118,7 @@ function App() {
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            zIndex: 6,
+            zIndex: 10000,
           }}
         >
           <Spacer height="22px" />
@@ -2520,6 +2805,29 @@ function App() {
               }}
               ref={passwordRef}
             />
+               {useLocalNode ? (
+              <>
+           <Spacer height="20px" />
+             <Typography
+                    sx={{
+                      fontSize: "12px",
+                    }}
+                  >
+                    {"Using node: "} {currentNode?.url}
+                  </Typography>
+              </>
+            ) : (
+              <>
+              <Spacer height="20px" />
+                <Typography
+                       sx={{
+                         fontSize: "12px",
+                       }}
+                     >
+                       {"Using public node"} 
+                     </Typography>
+                 </>
+            )}
             <Spacer height="20px" />
             <CustomButton onClick={authenticateWallet}>
               Authenticate
@@ -2855,7 +3163,7 @@ function App() {
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            zIndex: 6,
+            zIndex: 10000,
           }}
         >
           <Spacer height="48px" />
@@ -2955,6 +3263,9 @@ function App() {
           open={isShow}
           aria-labelledby="alert-dialog-title"
           aria-describedby="alert-dialog-description"
+          sx={{
+            zIndex: 10001
+          }}
         >
           <DialogTitle id="alert-dialog-title">{message.paymentFee ? "Payment"  : "Publish"}</DialogTitle>
           <DialogContent>
@@ -3027,7 +3338,7 @@ function App() {
           aria-labelledby="alert-dialog-title"
           aria-describedby="alert-dialog-description"
         >
-          <DialogTitle id="alert-dialog-title">{"Warning"}</DialogTitle>
+          <DialogTitle id="alert-dialog-title">{"LOGOUT"}</DialogTitle>
           <DialogContent>
             <DialogContentText id="alert-dialog-description">
               {messageUnsavedChanges.message}
@@ -3068,7 +3379,6 @@ function App() {
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'flex-start',
-            minHeight: '400px',
             maxHeight: '90vh',
             overflow: 'auto'
            }}>
@@ -3310,52 +3620,7 @@ function App() {
         </Box>
         </Dialog>
       )}
-      <Popover
-        open={openRegisterName}
-        anchorEl={registerNamePopoverRef.current}
-        onClose={() => {
-          setOpenRegisterName(false);
-          setRegisterNameValue("");
-        }}
-        anchorOrigin={{
-          vertical: "bottom",
-          horizontal: "center",
-        }}
-        transformOrigin={{
-          vertical: "top",
-          horizontal: "center",
-        }}
-        style={{ marginTop: "8px" }}
-      >
-        <Box
-          sx={{
-            width: "325px",
-            height: "250px",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: "10px",
-            padding: "10px",
-          }}
-        >
-          <Label>Choose a name</Label>
-          <Input
-            onChange={(e) => setRegisterNameValue(e.target.value)}
-            value={registerNameValue}
-            placeholder="Choose a name"
-          />
-          <Spacer height="25px" />
-          <LoadingButton
-            loading={isLoadingRegisterName}
-            loadingPosition="start"
-            variant="contained"
-            disabled={!registerNameValue}
-            onClick={registerName}
-          >
-            Register Name
-          </LoadingButton>
-        </Box>
-      </Popover>
+
       {isSettingsOpen && (
         <Settings open={isSettingsOpen} setOpen={setIsSettingsOpen} />
       )}
@@ -3369,8 +3634,11 @@ function App() {
         open={isOpenDrawerProfile}
         setOpen={setIsOpenDrawerProfile}
       >
-        {renderProfile()}
+        {renderProfileLeft()}
       </DrawerComponent>
+      <UserLookup isOpenDrawerLookup={isOpenDrawerLookup} setIsOpenDrawerLookup={setIsOpenDrawerLookup} />
+      <RegisterName balance={balance}  show={show} setTxList={setTxList} userInfo={userInfo} setOpenSnack={setOpenSnack}  setInfoSnack={setInfoSnack}/>
+      <BuyQortInformation balance={balance} />
       </GlobalContext.Provider>
       {extState === "create-wallet" && walletToBeDownloaded && (
          <ButtonBase onClick={()=> {

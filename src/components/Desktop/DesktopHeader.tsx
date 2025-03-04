@@ -18,9 +18,9 @@ import { NotificationIcon2 } from "../../assets/Icons/NotificationIcon2";
 import { ChatIcon } from "../../assets/Icons/ChatIcon";
 import { ThreadsIcon } from "../../assets/Icons/ThreadsIcon";
 import { MembersIcon } from "../../assets/Icons/MembersIcon";
+import { AdminsIcon } from "../../assets/Icons/AdminsIcon";
 import LockIcon from '@mui/icons-material/Lock';
 import NoEncryptionGmailerrorredIcon from '@mui/icons-material/NoEncryptionGmailerrorred';
-import { AdminsIcon } from "../../assets/Icons/AdminsIcon";
 
 const IconWrapper = ({ children, label, color, selected, selectColor, customHeight }) => {
   return (
@@ -98,7 +98,7 @@ export const DesktopHeader = ({
         padding: "10px",
       }}
     >
-     <Box sx={{
+      <Box sx={{
         display: 'flex',
         gap: '10px'
       }}>
@@ -118,7 +118,7 @@ export const DesktopHeader = ({
             fontWeight: 600,
           }}
         >
-          {selectedGroup?.groupName}
+          {selectedGroup?.groupId === '0' ? 'General' :selectedGroup?.groupName}
         </Typography>
       </Box>
       <Box
@@ -126,9 +126,10 @@ export const DesktopHeader = ({
           display: "flex",
           gap: "20px",
           alignItems: "center",
+          visibility: selectedGroup?.groupId === '0' ? 'hidden' : 'visibile'
         }}
       >
-       
+      
         <ButtonBase
           onClick={() => {
             goToAnnouncements()
@@ -139,6 +140,7 @@ export const DesktopHeader = ({
             label="ANN"
             selected={isAnnouncement}
             selectColor="#09b6e8"
+            customHeight="55px"
           >
             <NotificationIcon2
               height={25}

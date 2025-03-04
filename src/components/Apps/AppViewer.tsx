@@ -11,7 +11,7 @@ import { useQortalMessageListener } from "./useQortalMessageListener";
 
 
 
-export const AppViewer = React.forwardRef(({ app , hide}, iframeRef) => {
+export const AppViewer = React.forwardRef(({ app , hide, isDevMode}, iframeRef) => {
   const { rootHeight } = useContext(MyContext);
   // const iframeRef = useRef(null);
   const { document, window: frameWindow } = useFrame();
@@ -30,6 +30,17 @@ export const AppViewer = React.forwardRef(({ app , hide}, iframeRef) => {
   const refreshAppFunc = (e) => {
     const {tabId} = e.detail
     if(tabId === app?.tabId){
+
+      if(isDevMode){
+        
+        resetHistory()
+        if(!app?.isPreview || app?.isPrivate){
+          setUrl(app?.url + `?time=${Date.now()}`)
+        }
+        return
+
+      }
+
       const constructUrl = `${getBaseApiReact()}/render/${app?.service}/${app?.name}${path != null ? path : ''}?theme=dark&identifier=${app?.identifier != null ? app?.identifier : ''}&time=${new Date().getMilliseconds()}`
       setUrl(constructUrl)
     }

@@ -5,6 +5,7 @@ import {
   InputBase,
   MenuItem,
   Select,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import React, { useEffect, useMemo, useRef, useState } from "react";
@@ -584,49 +585,89 @@ export const ChatOptions = ({
           minHeight: "200px",
         }}
       >
-        <ButtonBase
-          onClick={() => {
-            setMode("search");
-          }}
-        >
-          <SearchIcon />
-        </ButtonBase>
-        <ButtonBase
-          onClick={() => {
-            setMode("default");
-            setSearchValue("");
-            setSelectedMember(0);
-            openQManager();
-          }}
-        >
-          <InsertLinkIcon
-            sx={{
-              color: "white",
-            }}
-          />
-        </ButtonBase>
-        <ContextMenuMentions
-          getTimestampMention={getTimestampMention}
-          groupId={selectedGroup}
-        >
-          <ButtonBase
-            onClick={() => {
-              setMode("mentions");
-              setSearchValue("");
-              setSelectedMember(0);
+       <ButtonBase onClick={() => {
+            setMode("search")
+        }}>
+          <Tooltip
+            title={<span style={{ color: "white", fontSize: "14px", fontWeight: 700 }}>SEARCH</span>} 
+            placement="left"
+            arrow
+            sx={{ fontSize: "24" }}
+            slotProps={{
+              tooltip: {
+                sx: {
+                  color: "#ffffff",
+                  backgroundColor: "#444444",
+                },
+              },
+              arrow: {
+                sx: {
+                  color: "#444444",
+                },
+              },
             }}
           >
-            <AlternateEmailIcon
-              sx={{
-                color:
-                  mentionList?.length > 0 &&
-                  (!lastMentionTimestamp ||
-                    lastMentionTimestamp < mentionList[0]?.timestamp)
-                    ? "var(--unread)"
-                    : "white",
-              }}
-            />
-          </ButtonBase>
+            <SearchIcon />
+          </Tooltip>
+        </ButtonBase>
+        <ButtonBase onClick={() => {
+            setMode("default")
+            setSearchValue('')
+            setSelectedMember(0)
+            openQManager()
+        }}>
+          <Tooltip
+            title={<span style={{ color: "white", fontSize: "14px", fontWeight: 700 }}>Q-MANAGER</span>} 
+            placement="left"
+            arrow
+            sx={{ fontSize: "24" }}
+            slotProps={{
+              tooltip: {
+                sx: {
+                  color: "#ffffff",
+                  backgroundColor: "#444444",
+                },
+              },
+              arrow: {
+                sx: {
+                  color: "#444444",
+                },
+              },
+            }}
+          >
+            <InsertLinkIcon sx={{ color: 'white' }} />
+          </Tooltip>
+        </ButtonBase>
+        <ContextMenuMentions getTimestampMention={getTimestampMention} groupId={selectedGroup}>
+        <ButtonBase onClick={() => {
+            setMode("mentions")
+            setSearchValue('')
+            setSelectedMember(0)
+        }}>
+          <Tooltip
+            title={<span style={{ color: "white", fontSize: "14px", fontWeight: 700 }}>MENTIONED</span>} 
+            placement="left"
+            arrow
+            sx={{ fontSize: "24" }}
+            slotProps={{
+              tooltip: {
+                sx: {
+                  color: "#ffffff",
+                  backgroundColor: "#444444",
+                },
+              },
+              arrow: {
+                sx: {
+                  color: "#444444",
+                },
+              },
+            }}
+          >
+            <AlternateEmailIcon sx={{
+              color: mentionList?.length > 0 && (!lastMentionTimestamp || lastMentionTimestamp < mentionList[0]?.timestamp) ? 'var(--unread)' : 'white'
+            }} />
+          </Tooltip>
+        </ButtonBase>
         </ContextMenuMentions>
       </Box>
     </Box>

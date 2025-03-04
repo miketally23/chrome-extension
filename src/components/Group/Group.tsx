@@ -94,13 +94,16 @@ import { AppsDesktop } from "../Apps/AppsDesktop";
 import { formatEmailDate } from "./QMailMessages";
 import LockIcon from '@mui/icons-material/Lock';
 import NoEncryptionGmailerrorredIcon from '@mui/icons-material/NoEncryptionGmailerrorred';
-import { useSetRecoilState } from "recoil";
-import { addressInfoControllerAtom, selectedGroupIdAtom } from "../../atoms/global";
+import { useRecoilState, useSetRecoilState } from "recoil";
+import { addressInfoControllerAtom, groupsPropertiesAtom, selectedGroupIdAtom } from "../../atoms/global";
 import { sortArrayByTimestampAndGroupName } from "../../utils/time";
 import { AdminSpace } from "../Chat/AdminSpace";
 import { HubsIcon } from "../../assets/Icons/HubsIcon";
 import { MessagingIcon } from "../../assets/Icons/MessagingIcon";
 import { DesktopSideBar } from "../DesktopSideBar";
+import BlockIcon from '@mui/icons-material/Block';
+import { BlockedUsersModal } from "./BlockedUsersModal";
+
 
 // let touchStartY = 0;
 // let disablePullToRefresh = false;
@@ -480,6 +483,7 @@ export const Group = ({
   const [mobileViewMode, setMobileViewMode] = useState("home");
   const [mobileViewModeKeepOpen, setMobileViewModeKeepOpen] = useState("");
   const isFocusedRef = useRef(true);
+  const [isOpenBlockedUserModal, setIsOpenBlockedUserModal] = React.useState(false);
   const timestampEnterDataRef = useRef({});
   const selectedGroupRef = useRef(null);
   const selectedDirectRef = useRef(null);
@@ -497,9 +501,11 @@ export const Group = ({
   const [isForceShowCreationKeyPopup, setIsForceShowCreationKeyPopup] = useState(false)
   const setSelectedGroupId = useSetRecoilState(selectedGroupIdAtom)
 
-  const [groupsProperties, setGroupsProperties] = useState({})
+  const [groupsProperties, setGroupsProperties] = useRecoilState(groupsPropertiesAtom)
   const setUserInfoForLevels = useSetRecoilState(addressInfoControllerAtom);
+
   const isPrivate = useMemo(()=> {
+    if(selectedGroup?.groupId === '0') return false
     if(!selectedGroup?.groupId || !groupsProperties[selectedGroup?.groupId]) return null
     if(groupsProperties[selectedGroup?.groupId]?.isOpen === true) return false
     if(groupsProperties[selectedGroup?.groupId]?.isOpen === false) return true
@@ -899,7 +905,10 @@ export const Group = ({
     }
     if(isPrivate === false){
       setTriedToFetchSecretKey(true);
-      getAdminsForPublic(selectedGroup)
+      if(selectedGroup?.groupId !== '0'){
+         getAdminsForPublic(selectedGroup)
+      }
+     
 
     }
   }, [selectedGroup, isPrivate]);
@@ -988,7 +997,7 @@ export const Group = ({
         // Update the component state with the received 'sendqort' state
         setGroups(sortArrayByTimestampAndGroupName(message.payload));
         getLatestRegularChat(message.payload)
-        setMemberGroups(message.payload);
+        setMemberGroups(message.payload?.filter((item)=> item?.groupId !== '0'));
 
         if (selectedGroupRef.current && groupSectionRef.current === "chat") {
           chrome?.runtime?.sendMessage({
@@ -1081,7 +1090,7 @@ export const Group = ({
       !initiatedGetMembers.current &&
       selectedGroup?.groupId &&
       secretKey &&
-      admins.includes(myAddress)
+      admins.includes(myAddress) && selectedGroup?.groupId !== '0'
     ) {
       // getAdmins(selectedGroup?.groupId);
       getMembers(selectedGroup?.groupId);
@@ -1432,11 +1441,11 @@ export const Group = ({
     if (isLoadingOpenSectionFromNotification.current) return;
 
     const groupId = e.detail?.from;
-
     const findGroup = groups?.find((group) => +group?.groupId === +groupId);
     if (findGroup?.groupId === selectedGroup?.groupId) {
       isLoadingOpenSectionFromNotification.current = false;
-
+      setChatMode("groups");
+      setDesktopViewMode('chat')
       return;
     }
     if (findGroup) {
@@ -2159,7 +2168,7 @@ export const Group = ({
                       
                     </ListItemAvatar>
                     <ListItemText
-                      primary={group.groupName}
+                       primary={group.groupId === '0' ? 'General' : group.groupName}
                       secondary={!group?.timestamp ? 'no messages' :`last message: ${formatEmailDate(group?.timestamp)}`}
                       primaryTypographyProps={{
                         style: {
@@ -2218,9 +2227,11 @@ export const Group = ({
             width: "100%",
             justifyContent: "center",
             padding: "10px",
+             gap: '10px'
           }}
         >
-          {chatMode === "groups" && (
+             {chatMode === "groups" && (
+            <>
             <CustomButton
               onClick={() => {
                 setOpenAddGroup(true);
@@ -2231,8 +2242,24 @@ export const Group = ({
                   color: "white",
                 }}
               />
-             Group Mgmt
+              Group Mgmt
             </CustomButton>
+            <CustomButton
+              onClick={() => {
+                setIsOpenBlockedUserModal(true);
+              }}
+              sx={{
+                minWidth: 'unset',
+                padding: '10px'
+              }}
+            >
+              <BlockIcon
+                sx={{
+                  color: "white",
+                }}
+              />
+            </CustomButton>
+            </>
           )}
           {chatMode === "directs" && (
             <CustomButton
@@ -2742,7 +2769,11 @@ export const Group = ({
               )}
              </div>
           )}
-
+           {isOpenBlockedUserModal && (
+        <BlockedUsersModal close={()=> {
+          setIsOpenBlockedUserModal(false)
+        }} />
+       )}
           {selectedDirect && !newChat && (
             <>
               <Box
@@ -2815,6 +2846,7 @@ export const Group = ({
       {!isMobile && (
        
         <HomeDesktop
+        name={userInfo?.name}
   refreshHomeDataFunc={refreshHomeDataFunc}
   myAddress={myAddress}
   isLoadingGroups={isLoadingGroups}

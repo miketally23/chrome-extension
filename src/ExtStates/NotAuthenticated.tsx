@@ -4,6 +4,7 @@ import { CustomButton, TextItalic, TextP, TextSpan } from "../App-styles";
 import {
   Box,
   Button,
+  ButtonBase,
   Checkbox,
   Dialog,
   DialogActions,
@@ -11,24 +12,24 @@ import {
   DialogTitle,
   FormControlLabel,
   Input,
-  Switch,
-  Tooltip,
-  Typography,
-  ButtonBase,
   styled,
-  tooltipClasses,
-  TooltipProps
+  Switch,
+  Typography,
 } from "@mui/material";
 import Logo1 from "../assets/svgs/Logo1.svg";
 import Logo1Dark from "../assets/svgs/Logo1Dark.svg";
 import Info from "../assets/svgs/Info.svg";
+import HelpIcon from '@mui/icons-material/Help';
 import { CustomizedSnackbars } from "../components/Snackbar/Snackbar";
 import { set } from "lodash";
-import { cleanUrl, isUsingLocal } from "../background";
-import HelpIcon from '@mui/icons-material/Help';
+import { cleanUrl, gateways, isUsingLocal } from "../background";
 import { GlobalContext } from "../App";
+import Tooltip, { TooltipProps, tooltipClasses } from '@mui/material/Tooltip';
 
-const manifestData = chrome?.runtime?.getManifest();
+const manifestData = {
+  version: "0.5.2",
+};
+
 
 export const HtmlTooltip = styled(({ className, ...props }: TooltipProps) => (
   <Tooltip {...props} classes={{ popper: className }} />
@@ -41,40 +42,47 @@ export const HtmlTooltip = styled(({ className, ...props }: TooltipProps) => (
     fontSize: theme.typography.pxToRem(12),
   },
 }));
+function removeTrailingSlash(url) {
+  return url.replace(/\/+$/, '');
+}
+
 
 export const NotAuthenticated = ({
   getRootProps,
   getInputProps,
   setExtstate,
 
-
   apiKey,
   setApiKey,
   globalApiKey,
   handleSetGlobalApikey,
+  currentNode,
+  setCurrentNode,
+  useLocalNode, 
+  setUseLocalNode
 }) => {
   const [isValidApiKey, setIsValidApiKey] = useState<boolean | null>(null);
   const [hasLocalNode, setHasLocalNode] = useState<boolean | null>(null);
-  const [useLocalNode, setUseLocalNode] = useState(false);
+  // const [useLocalNode, setUseLocalNode] = useState(false);
   const [openSnack, setOpenSnack] = React.useState(false);
   const [infoSnack, setInfoSnack] = React.useState(null);
   const [show, setShow] = React.useState(false);
   const [mode, setMode] = React.useState("list");
   const [customNodes, setCustomNodes] = React.useState(null);
-  const [currentNode, setCurrentNode] = React.useState({
-    url: "http://127.0.0.1:12391",
-  });
+  // const [currentNode, setCurrentNode] = React.useState({
+  //   url: "http://127.0.0.1:12391",
+  // });
   const [importedApiKey, setImportedApiKey] = React.useState(null);
   //add and edit states
-  const [url, setUrl] = React.useState("http://");
+  const [url, setUrl] = React.useState("https://");
   const [customApikey, setCustomApiKey] = React.useState("");
   const [customNodeToSaveIndex, setCustomNodeToSaveIndex] =
     React.useState(null);
-    const importedApiKeyRef = useRef(null)
-    const currentNodeRef = useRef(null)
-  const hasLocalNodeRef = useRef(null)
-  const { showTutorial, hasSeenGettingStarted  } = useContext(GlobalContext);
+    const { showTutorial, hasSeenGettingStarted  } = useContext(GlobalContext);
 
+  const importedApiKeyRef = useRef(null);
+  const currentNodeRef = useRef(null);
+  const hasLocalNodeRef = useRef(null);
   const isLocal = cleanUrl(currentNode?.url) === "127.0.0.1:12391";
   const handleFileChangeApiKey = (event) => {
     const file = event.target.files[0]; // Get the selected file
@@ -84,12 +92,33 @@ export const NotAuthenticated = ({
         const text = e.target.result; // Get the file content
 
         setImportedApiKey(text); // Store the file content in the state
+        if(customNodes){
+          setCustomNodes((prev)=> {
+            const copyPrev = [...prev]
+            const findLocalIndex = copyPrev?.findIndex((item)=> item?.url === 'http://127.0.0.1:12391')
+            if(findLocalIndex === -1){
+              copyPrev.unshift({
+                url: "http://127.0.0.1:12391",
+                apikey: text
+              })
+            } else {
+              copyPrev[findLocalIndex] = {
+                url: "http://127.0.0.1:12391",
+                apikey: text
+              }
+            }
+            chrome?.runtime?.sendMessage(
+              { action: "setCustomNodes", copyPrev }
+            );
+            return copyPrev
+          })
+       
+        }
+        
       };
       reader.readAsText(file); // Read the file as text
     }
   };
-
- 
 
   const checkIfUserHasLocalNode = useCallback(async () => {
     try {
@@ -103,13 +132,21 @@ export const NotAuthenticated = ({
       const data = await response.json();
       if (data?.height) {
         setHasLocalNode(true);
+        return true
       }
-    } catch (error) {}
+      return false
+      
+    } catch (error) {
+      return false
+      
+    } 
   }, []);
 
   useEffect(() => {
     checkIfUserHasLocalNode();
   }, []);
+
+ 
 
   useEffect(() => {
     chrome?.runtime?.sendMessage(
@@ -117,36 +154,83 @@ export const NotAuthenticated = ({
       (response) => {
         if (response) {
           setCustomNodes(response || []);
+          if(Array.isArray(response)){
+            const findLocal = response?.find((item)=> item?.url === 'http://127.0.0.1:12391')
+            if(findLocal && findLocal?.apikey){
+              setImportedApiKey(findLocal?.apikey)
+            }
+          }
         }
       }
     );
   }, []);
 
-  useEffect(()=> {
-    importedApiKeyRef.current = importedApiKey
-  }, [importedApiKey])
-  useEffect(()=> {
-    currentNodeRef.current = currentNode
-  }, [currentNode])
+  useEffect(() => {
+    importedApiKeyRef.current = importedApiKey;
+  }, [importedApiKey]);
+  useEffect(() => {
+    currentNodeRef.current = currentNode;
+  }, [currentNode]);
 
-  useEffect(()=> {
-    hasLocalNodeRef.current = hasLocalNode
-  }, [hasLocalNode])
+  useEffect(() => {
+    hasLocalNodeRef.current = hasLocalNode;
+  }, [hasLocalNode]);
+
+
 
   const validateApiKey = useCallback(async (key, fromStartUp) => {
     try {
-        if(!currentNodeRef.current) return
-        const isLocalKey = cleanUrl(key?.url) === "127.0.0.1:12391";
-        if(isLocalKey && !hasLocalNodeRef.current && !fromStartUp){
-          throw new Error('Please turn on your local node')
-          
+      if(key === "isGateway") return
+      const isLocalKey = cleanUrl(key?.url) === "127.0.0.1:12391";
+      if (fromStartUp && key?.url && key?.apikey && !isLocalKey && !gateways.some(gateway => key?.url?.includes(gateway))) {
+        setCurrentNode({
+          url: key?.url,
+          apikey: key?.apikey,
+        });
+
+        let isValid = false
+
+        
+        const url = `${key?.url}/admin/settings/localAuthBypassEnabled`;
+        const response = await fetch(url);
+
+        // Assuming the response is in plain text and will be 'true' or 'false'
+        const data = await response.text();
+        if(data && data === 'true'){
+          isValid = true
+        } else {
+          const url2 = `${key?.url}/admin/apikey/test?apiKey=${key?.apikey}`;
+          const response2 = await fetch(url2);
+    
+          // Assuming the response is in plain text and will be 'true' or 'false'
+          const data2 = await response2.text();
+          if (data2 === "true") {
+            isValid = true
+          }
         }
-        const isCurrentNodeLocal = cleanUrl(currentNodeRef.current?.url) === "127.0.0.1:12391";
-        if(isLocalKey && !isCurrentNodeLocal) {
-            setIsValidApiKey(false);
-            setUseLocalNode(false);
-            return
+       
+        if (isValid) {
+          setIsValidApiKey(true);
+          setUseLocalNode(true);
+          return
         }
+
+      }
+      if (!currentNodeRef.current) return;
+      const stillHasLocal = await checkIfUserHasLocalNode()
+
+      if (isLocalKey && !stillHasLocal && !fromStartUp) {
+        throw new Error("Please turn on your local node");
+      }
+      //check custom nodes
+      // !gateways.some(gateway => apiKey?.url?.includes(gateway))
+      const isCurrentNodeLocal =
+        cleanUrl(currentNodeRef.current?.url) === "127.0.0.1:12391";
+      if (isLocalKey && !isCurrentNodeLocal) {
+        setIsValidApiKey(false);
+        setUseLocalNode(false);
+        return;
+      }
       let payload = {};
 
       if (currentNodeRef.current?.url === "http://127.0.0.1:12391") {
@@ -154,21 +238,32 @@ export const NotAuthenticated = ({
           apikey: importedApiKeyRef.current || key?.apikey,
           url: currentNodeRef.current?.url,
         };
-      } else if(currentNodeRef.current) {
+      } else if (currentNodeRef.current) {
         payload = currentNodeRef.current;
       }
-      const url = `${payload?.url}/admin/apikey/test`;
-      const response = await fetch(url, {
-        method: "GET",
-        headers: {
-          accept: "text/plain",
-          "X-API-KEY": payload?.apikey, // Include the API key here
-        },
-      });
+      let isValid = false
+
+        
+      const url = `${payload?.url}/admin/settings/localAuthBypassEnabled`;
+      const response = await fetch(url);
 
       // Assuming the response is in plain text and will be 'true' or 'false'
       const data = await response.text();
-      if (data === "true") {
+      if(data && data === 'true'){
+        isValid = true
+      } else {
+        const url2 = `${payload?.url}/admin/apikey/test?apiKey=${payload?.apikey}`;
+        const response2 = await fetch(url2);
+  
+        // Assuming the response is in plain text and will be 'true' or 'false'
+        const data2 = await response2.text();
+        if (data2 === "true") {
+          isValid = true
+        }
+      }
+     
+
+      if (isValid) {
         chrome?.runtime?.sendMessage(
           { action: "setApiKey", payload },
           (response) => {
@@ -176,29 +271,49 @@ export const NotAuthenticated = ({
               handleSetGlobalApikey(payload);
               setIsValidApiKey(true);
               setUseLocalNode(true);
-              if(!fromStartUp){
-                setApiKey(payload)
+              if (!fromStartUp) {
+                setApiKey(payload);
               }
             }
           }
-        );
+        )
       } else {
         setIsValidApiKey(false);
         setUseLocalNode(false);
-        setInfoSnack({
-          type: "error",
-          message: "Select a valid apikey",
-        });
-        setOpenSnack(true);
+        if(!fromStartUp){
+          setInfoSnack({
+            type: "error",
+            message: "Select a valid apikey",
+          });
+          setOpenSnack(true);
+        }
+        
       }
     } catch (error) {
       setIsValidApiKey(false);
       setUseLocalNode(false);
+      if (fromStartUp) {
+        setCurrentNode({
+          url: "http://127.0.0.1:12391",
+        });
+        chrome?.runtime?.sendMessage(
+          { action: "setApiKey", payload: "isGateway" },
+          (response) => {
+            if (response) {
+              setApiKey(null);
+              handleSetGlobalApikey(null);
+            }
+          }
+        )
+        return
+      }
+      if(!fromStartUp){
       setInfoSnack({
         type: "error",
         message: error?.message || "Select a valid apikey",
       });
       setOpenSnack(true);
+    }
       console.error("Error validating API key:", error);
     }
   }, []);
@@ -212,22 +327,22 @@ export const NotAuthenticated = ({
   const addCustomNode = () => {
     setMode("add-node");
   };
-
-  const saveCustomNodes = (myNodes) => {
+  const saveCustomNodes = (myNodes, isFullListOfNodes) => {
     let nodes = [...(myNodes || [])];
-    if (customNodeToSaveIndex !== null) {
+    if (!isFullListOfNodes && customNodeToSaveIndex !== null) {
       nodes.splice(customNodeToSaveIndex, 1, {
-        url,
+        url: removeTrailingSlash(url),
         apikey: customApikey,
       });
-    } else if (url && customApikey) {
+    } else if (!isFullListOfNodes && url) {
       nodes.push({
-        url,
+        url: removeTrailingSlash(url),
         apikey: customApikey,
       });
     }
 
     setCustomNodes(nodes);
+  
     setCustomNodeToSaveIndex(null);
     if (!nodes) return;
     chrome?.runtime?.sendMessage(
@@ -235,14 +350,14 @@ export const NotAuthenticated = ({
       (response) => {
         if (response) {
           setMode("list");
-          setUrl("http://");
+          setUrl("https://");
           setCustomApiKey("");
           // add alert
         }
       }
     );
-  };
 
+  };
 
   return (
     <>
@@ -254,7 +369,7 @@ export const NotAuthenticated = ({
           height: "154px",
         }}
       >
-       <img src={Logo1Dark} className="base-image" />
+        <img src={Logo1Dark} className="base-image" />
       </div>
       <Spacer height="30px" />
       <TextP
@@ -264,13 +379,12 @@ export const NotAuthenticated = ({
           fontSize: '18px'
         }}
       >
-        WELCOME TO <TextItalic sx={{
-          fontSize: '18px'
-        }}>YOUR</TextItalic> <br></br>
+        WELCOME TO 
         <TextSpan sx={{
           fontSize: '18px'
-        }}> QORTAL WALLET</TextSpan>
+        }}> QORTAL</TextSpan>
       </TextP>
+      
       <Spacer height="30px" />
       <Box
         sx={{
@@ -291,9 +405,13 @@ export const NotAuthenticated = ({
         }
       >
         <CustomButton onClick={()=> setExtstate('wallets')}>
-          Wallets
+          {/* <input {...getInputProps()} /> */}
+          Accounts
         </CustomButton>
         </HtmlTooltip>
+        {/* <Tooltip title="Authenticate by importing your Qortal JSON file" arrow>
+          <img src={Info} />
+        </Tooltip> */}
       </Box>
 
       <Spacer height="6px" />
@@ -302,9 +420,10 @@ export const NotAuthenticated = ({
           display: "flex",
           gap: "10px",
           alignItems: "center",
+         
         }}
       >
-         <HtmlTooltip
+        <HtmlTooltip
         disableHoverListener={hasSeenGettingStarted === true}
         placement="right"
         title={
@@ -333,21 +452,21 @@ export const NotAuthenticated = ({
             }
           }}
         >
-          Create wallet
+          Create account
         </CustomButton>
         </HtmlTooltip>
-
+      
       </Box>
-        <Spacer height="15px" />
-        
-        <Typography
-                      sx={{
-                        fontSize: "12px",
-                        visibility: !useLocalNode && 'hidden'
-                      }}
-                    >
-                      {"Using node: "} {currentNode?.url}
-                    </Typography>
+      <Spacer height="15px" />
+
+      <Typography
+        sx={{
+          fontSize: "12px",
+          visibility: !useLocalNode && "hidden",
+        }}
+      >
+        {"Using node: "} {currentNode?.url}
+      </Typography>
       <>
         <Spacer height="15px" />
         <Box
@@ -375,7 +494,7 @@ export const NotAuthenticated = ({
               }}
             >
               <FormControlLabel
-               sx={{
+              sx={{
                 "& .MuiFormControlLabel-label": {
                   fontSize: '14px'
                 }
@@ -398,27 +517,25 @@ export const NotAuthenticated = ({
                         validateApiKey(currentNode);
                       } else {
                         setCurrentNode({
-                            url: "http://127.0.0.1:12391",
-                          })
-                          setUseLocalNode(false)
-                          chrome?.runtime?.sendMessage(
-                            { action: "setApiKey", payload:null },
-                            (response) => {
-                              if (response) {
-                                setApiKey(null);
-                                handleSetGlobalApikey(null);
-                               
-                              }
+                          url: "http://127.0.0.1:12391",
+                        });
+                        setUseLocalNode(false);
+                        chrome?.runtime?.sendMessage(
+                          { action: "setApiKey", payload: null },
+                          (response) => {
+                            if (response) {
+                              setApiKey(null);
+                              handleSetGlobalApikey(null);
                             }
-                          );
+                          }
+                        )
                       }
-                       
                     }}
                     disabled={false}
                     defaultChecked
                   />
                 }
-                label={`Use ${isLocal ? 'Local' : 'Custom'} Node`}
+                label={`Use ${isLocal ? "Local" : "Custom"} Node`}
               />
             </Box>
             {currentNode?.url === "http://127.0.0.1:12391" && (
@@ -432,31 +549,33 @@ export const NotAuthenticated = ({
                     onChange={handleFileChangeApiKey} // File input handler
                   />
                 </Button>
-                <Typography sx={{
-                  fontSize: '12px',
-                  visibility: importedApiKey ? 'visible' : 'hidden'
-                }}>{`api key : ${importedApiKey}`}</Typography>
-           
-
-             
-               
+                <Typography
+                  sx={{
+                    fontSize: "12px",
+                    visibility: importedApiKey ? "visible" : "hidden",
+                  }}
+                >{`api key : ${importedApiKey}`}</Typography>
               </>
             )}
-             <Button
-             size="small"
-                  onClick={() => {
-                    setShow(true);
-                  }}
-                  variant="contained"
-                  component="label"
-                >
-                  Choose custom node
-                </Button>
+            <Button
+              size="small"
+              onClick={() => {
+                setShow(true);
+              }}
+              variant="contained"
+              component="label"
+            >
+              Choose custom node
+            </Button>
           </>
-          <Typography sx={{
-                  color: "white",
-              fontSize: '12px'
-            }}>Build version: {manifestData?.version}</Typography>
+          <Typography
+            sx={{
+              color: "white",
+              fontSize: "12px",
+            }}
+          >
+            Build version: {manifestData?.version}
+          </Typography>
         </Box>
       </>
       <CustomizedSnackbars
@@ -483,7 +602,6 @@ export const NotAuthenticated = ({
                 flexDirection: "column",
               }}
             >
-               
               {mode === "list" && (
                 <Box
                   sx={{
@@ -525,16 +643,15 @@ export const NotAuthenticated = ({
                           setMode("list");
                           setShow(false);
                           setUseLocalNode(false);
-                             chrome?.runtime?.sendMessage(
-                              { action: "setApiKey", payload:null },
-                              (response) => {
-                                if (response) {
-                                  setApiKey(null);
-                                  handleSetGlobalApikey(null);
-                                 
-                                }
+                          chrome?.runtime?.sendMessage(
+                            { action: "setApiKey", payload: null },
+                            (response) => {
+                              if (response) {
+                                setApiKey(null);
+                                handleSetGlobalApikey(null);
                               }
-                            );
+                            }
+                          )
                         }}
                         variant="contained"
                       >
@@ -579,17 +696,16 @@ export const NotAuthenticated = ({
                               setMode("list");
                               setShow(false);
                               setIsValidApiKey(false);
-                             setUseLocalNode(false);
-                             chrome?.runtime?.sendMessage(
-                              { action: "setApiKey", payload:null },
-                              (response) => {
-                                if (response) {
-                                  setApiKey(null);
-                                  handleSetGlobalApikey(null);
-                                 
+                              setUseLocalNode(false);
+                              chrome?.runtime?.sendMessage(
+                                { action: "setApiKey", payload: null },
+                                (response) => {
+                                  if (response) {
+                                    setApiKey(null);
+                                    handleSetGlobalApikey(null);
+                                  }
                                 }
-                              }
-                            );
+                              )
                             }}
                             variant="contained"
                           >
@@ -613,9 +729,8 @@ export const NotAuthenticated = ({
                               const nodesToSave = [
                                 ...(customNodes || []),
                               ].filter((item) => item?.url !== node?.url);
-                         
 
-                              saveCustomNodes(nodesToSave);
+                              saveCustomNodes(nodesToSave, true);
                             }}
                             variant="contained"
                           >
@@ -652,9 +767,7 @@ export const NotAuthenticated = ({
                   />
                 </Box>
               )}
-              
             </Box>
-         
           </DialogContent>
           <DialogActions>
             {mode === "list" && (
@@ -690,7 +803,7 @@ export const NotAuthenticated = ({
 
                 <Button
                   variant="contained"
-                  disabled={!customApikey || !url}
+                  disabled={!url}
                   onClick={() => saveCustomNodes(customNodes)}
                   autoFocus
                 >
@@ -701,7 +814,7 @@ export const NotAuthenticated = ({
           </DialogActions>
         </Dialog>
       )}
-       <ButtonBase onClick={()=> {
+      <ButtonBase onClick={()=> {
          showTutorial('create-account', true)
       }} sx={{
         position: 'fixed',

@@ -1,11 +1,11 @@
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
 import ListItemButton from "@mui/material/ListItemButton";
 import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
 import moment from 'moment'
-import { Box, Typography } from "@mui/material";
+import { Box, ButtonBase, Collapse, Typography } from "@mui/material";
 import { Spacer } from "../../common/Spacer";
 import { getBaseApiReact, isMobile } from "../../App";
 import { MessagingIcon } from '../../assets/Icons/MessagingIcon';
@@ -15,6 +15,9 @@ import { executeEvent } from '../../utils/events';
 import { CustomLoader } from '../../common/CustomLoader';
 import { useRecoilState } from 'recoil';
 import { mailsAtom, qMailLastEnteredTimestampAtom } from '../../atoms/global';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import MarkEmailUnreadIcon from '@mui/icons-material/MarkEmailUnread';
 export const isLessThanOneWeekOld = (timestamp) => {
   // Current time in milliseconds
   const now = Date.now();
@@ -41,8 +44,9 @@ export function formatEmailDate(timestamp: number) {
     }
 }
 export const QMailMessages = ({userName, userAddress}) => {
-  const [mails, setMails] = useRecoilState(mailsAtom)
-  const [lastEnteredTimestamp, setLastEnteredTimestamp] = useRecoilState(qMailLastEnteredTimestampAtom)
+  const [isExpanded, setIsExpanded] = useState(false)
+    const [mails, setMails] = useRecoilState(mailsAtom)
+    const [lastEnteredTimestamp, setLastEnteredTimestamp] = useRecoilState(qMailLastEnteredTimestampAtom)
     const [loading, setLoading] = useState(true)
 
     const getMails = useCallback(async () => {
@@ -99,7 +103,16 @@ export const QMailMessages = ({userName, userAddress}) => {
          
       }, [getMails, userName, userAddress]);
 
-    
+    const anyUnread = useMemo(()=> {
+      let unread = false
+
+      mails.forEach((mail)=> {
+        if(lastEnteredTimestamp && isLessThanOneWeekOld(mail?.created)){
+          unread = true
+        }
+      })
+      return unread
+    }, [mails, lastEnteredTimestamp])
 
   return (
     <Box
@@ -111,26 +124,39 @@ export const QMailMessages = ({userName, userAddress}) => {
     }}
   >
       
-    <Box
+    <ButtonBase
       sx={{
         width: "322px",
         display: "flex",
-        flexDirection: "column",
+        flexDirection: "row",
+        gap: '10px',
         padding: "0px 20px",
+        justifyContent: 'flex-start'
       }}
+      onClick={()=> setIsExpanded((prev)=> !prev)}
     >
       <Typography
         sx={{
-          fontSize: "13px",
-          fontWeight: 600,
+          fontSize: "1rem",
         }}
       >
         Latest Q-Mails
       </Typography>
-      <Spacer height="10px" />
-    </Box>
-
+      <MarkEmailUnreadIcon sx={{
+        color: anyUnread ? '--unread' : 'white'
+      }}/>
+     {isExpanded ? <ExpandLessIcon sx={{
+      marginLeft: 'auto'
+     }} /> : (
+      <ExpandMoreIcon sx={{
+        color: anyUnread ? '--unread' : 'white',
+         marginLeft: 'auto'
+       }}  />
+     )}
+    </ButtonBase>
+    <Collapse in={isExpanded} timeout="auto" unmountOnExit>
     <Box
+    className="scrollable-container"
       sx={{
         width: "322px",
         height: isMobile ? "165px" : "250px",
@@ -247,6 +273,7 @@ export const QMailMessages = ({userName, userAddress}) => {
     
      
     </Box>
+    </Collapse>
   </Box>
   )
 }

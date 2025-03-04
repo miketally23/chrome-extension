@@ -157,3 +157,8 @@ export const mailsAtom = atom({
   key: 'mailsAtom', 
   default: [], 
 });
+
+export const groupsPropertiesAtom = atom({
+  key: 'groupsPropertiesAtom', 
+  default: {}, 
+});

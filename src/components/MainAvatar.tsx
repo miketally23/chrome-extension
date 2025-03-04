@@ -7,8 +7,9 @@ import ImageUploader from "../common/ImageUploader";
 import { getFee } from "../background";
 import { fileToBase64 } from "../utils/fileReading";
 import { LoadingButton } from "@mui/lab";
+import ErrorIcon from '@mui/icons-material/Error';
 
-export const MainAvatar = ({ myName }) => {
+export const MainAvatar = ({ myName, balance, setOpenSnack, setInfoSnack }) => {
   const [hasAvatar, setHasAvatar] = useState(false);
   const [avatarFile, setAvatarFile] = useState(null);
   const [tempAvatar, setTempAvatar] = useState(null)
@@ -52,10 +53,11 @@ const [isLoading, setIsLoading] = useState(false)
     checkIfAvatarExists();
   }, [myName]);
 
+
   const publishAvatar = async ()=> {
     try {
         const fee = await getFee('ARBITRARY')
-
+            if(+balance < +fee.fee) throw new Error(`Publishing an Avatar requires ${fee.fee}`)
             await show({
               message: "Would you like to publish an avatar?" ,
               publishFee: fee.fee + ' QORT'
@@ -63,30 +65,36 @@ const [isLoading, setIsLoading] = useState(false)
             setIsLoading(true);
             const avatarBase64 = await fileToBase64(avatarFile)
             await new Promise((res, rej) => {
-                chrome?.runtime?.sendMessage(
-                  {
-                    action: "publishOnQDN",
-                    payload: {
-                      data: avatarBase64,
-                      identifier: "qortal_avatar",
-                      service: 'THUMBNAIL'
-                    },
+              chrome?.runtime?.sendMessage(
+                {
+                  action: "publishOnQDN",
+                  payload: {
+                    data: avatarBase64,
+                    identifier: "qortal_avatar",
+                    service: 'THUMBNAIL'
                   },
-                  (response) => {
-                 
-                    if (!response?.error) {
-                      res(response);
-                      return
-                    }
-                    rej(response.error);
+                },
+                (response) => {
+               
+                  if (!response?.error) {
+                    res(response);
+                    return
                   }
-                );
-              });
+                  rej(response.error);
+                }
+              );
+            });
         setAvatarFile(null);
         setTempAvatar(`data:image/webp;base64,${avatarBase64}`)
         handleClose()
     } catch (error) {
-        
+      if (error?.message) {
+        setOpenSnack(true)
+      setInfoSnack({
+        type: "error",
+        message: error?.message,
+      });
+    }
     } finally {
         setIsLoading(false);
     }
@@ -115,7 +123,7 @@ const [isLoading, setIsLoading] = useState(false)
               change avatar
             </Typography>
           </ButtonBase>
-          <PopoverComp avatarFile={avatarFile} setAvatarFile={setAvatarFile} id={id} open={open} anchorEl={anchorEl} handleClose={handleClose} publishAvatar={publishAvatar} isLoading={isLoading} />
+          <PopoverComp myName={myName} avatarFile={avatarFile} setAvatarFile={setAvatarFile} id={id} open={open} anchorEl={anchorEl} handleClose={handleClose} publishAvatar={publishAvatar} isLoading={isLoading} />
         </>
       );
   }
@@ -143,7 +151,7 @@ const [isLoading, setIsLoading] = useState(false)
             change avatar
           </Typography>
         </ButtonBase>
-        <PopoverComp avatarFile={avatarFile} setAvatarFile={setAvatarFile} id={id} open={open} anchorEl={anchorEl} handleClose={handleClose} publishAvatar={publishAvatar} isLoading={isLoading} />
+        <PopoverComp myName={myName} avatarFile={avatarFile} setAvatarFile={setAvatarFile} id={id} open={open} anchorEl={anchorEl} handleClose={handleClose} publishAvatar={publishAvatar} isLoading={isLoading} />
       </>
     );
   }
@@ -161,13 +169,13 @@ const [isLoading, setIsLoading] = useState(false)
           set avatar
         </Typography>
       </ButtonBase>
-      <PopoverComp avatarFile={avatarFile} setAvatarFile={setAvatarFile} id={id} open={open} anchorEl={anchorEl} handleClose={handleClose} publishAvatar={publishAvatar} isLoading={isLoading} />
+      <PopoverComp myName={myName} avatarFile={avatarFile} setAvatarFile={setAvatarFile} id={id} open={open} anchorEl={anchorEl} handleClose={handleClose} publishAvatar={publishAvatar} isLoading={isLoading} />
     </>
   );
 };
 
 
-const PopoverComp = ({avatarFile, setAvatarFile, id, open, anchorEl, handleClose, publishAvatar, isLoading}) => {
+const PopoverComp = ({avatarFile, setAvatarFile, id, open, anchorEl, handleClose, publishAvatar, isLoading, myName}) => {
     return (
         <Popover
       id={id}
@@ -196,8 +204,21 @@ const PopoverComp = ({avatarFile, setAvatarFile, id, open, anchorEl, handleClose
         </ImageUploader>
         {avatarFile?.name}
         <Spacer height="25px" />
-
-        <LoadingButton loading={isLoading} disabled={!avatarFile} onClick={publishAvatar} variant="contained">
+        {!myName && (
+             <Box sx={{
+              display: 'flex',
+              gap: '5px',
+              alignItems: 'center'
+          }}>
+                <ErrorIcon sx={{
+                  color: 'white'
+              }} />
+          <Typography>A registered name is required to set an avatar</Typography>
+          </Box>
+        )}
+     
+          <Spacer height="25px" />
+        <LoadingButton loading={isLoading} disabled={!avatarFile || !myName} onClick={publishAvatar} variant="contained">
           Publish avatar
         </LoadingButton>
       </Box>

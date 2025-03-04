@@ -32,7 +32,7 @@ import { Sha256 } from "asmcrypto.js";
 import { TradeBotRespondMultipleRequest } from "./transactions/TradeBotRespondMultipleRequest";
 import { RESOURCE_TYPE_NUMBER_GROUP_CHAT_REACTIONS } from "./constants/resourceTypes";
 import TradeBotRespondRequest from './transactions/TradeBotRespondRequest';
-import { createRewardShareCase, getRewardSharePrivateKeyCase, removeRewardShareCase } from './background-cases';
+import { createRewardShareCase, getRewardSharePrivateKeyCase, listActionsCase, removeRewardShareCase } from './background-cases';
 
 
 
@@ -551,7 +551,8 @@ const handleNotification = async (groups) => {
 
   let mutedGroups = await getUserSettings({key: 'mutedGroups'}) || []
   if(!isArray(mutedGroups)) mutedGroups = []
-
+  mutedGroups.push('0')
+  
   let isFocused;
   const data = groups.filter((group) => group?.sender !== address && !mutedGroups.includes(group.groupId) && !isUpdateMsg(group?.data));
   const dataWithUpdates = groups.filter((group) => group?.sender !== address && !mutedGroups.includes(group.groupId));
@@ -832,6 +833,7 @@ const checkNewMessages = async () => {
   try {
     let mutedGroups = await getUserSettings({key: 'mutedGroups'}) || []
     if(!isArray(mutedGroups)) mutedGroups = []
+    mutedGroups.push('0')
     let myName = "";
     const userData = await getUserInfo();
     if (userData?.name) {
@@ -997,7 +999,7 @@ export async function getNameInfoForOthers(address) {
     return "";
   }
 }
-async function getAddressInfo(address) {
+export async function getAddressInfo(address) {
   const validApi = await getBaseApi();
   const response = await fetch(validApi + "/addresses/" + address);
   const data = await response.json();
@@ -1117,7 +1119,7 @@ export async function getBalanceInfo() {
   const validApi = await getBaseApi();
   const response = await fetch(validApi + "/addresses/balance/" + address);
 
-  if (!response?.ok) throw new Error("Cannot fetch balance");
+  if (!response?.ok) throw new Error("0 QORT in your balance");
   const data = await response.json();
   return data;
 }
@@ -1250,7 +1252,7 @@ export const getLastRef = async () => {
   const response = await fetch(
     validApi + "/addresses/lastreference/" + address
   );
-  if (!response?.ok) throw new Error("Cannot fetch balance");
+  if (!response?.ok) throw new Error("0 QORT in your balance");
   const data = await response.text();
   return data;
 };
@@ -3669,6 +3671,21 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
         }
 
         break;
+
+        case "listActions":
+          {
+            const data = request.payload;
+            listActionsCase(data)
+              .then((res) => {
+                sendResponse(res);
+              })
+              .catch((error) => {
+                sendResponse({ error: error.message });
+                console.error(error.message);
+              });
+          }
+  
+          break;
 
       case "oauth": {
         const { nodeBaseUrl, senderAddress, senderPublicKey, timestamp } =
