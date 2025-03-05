@@ -2915,7 +2915,7 @@ function App() {
                 fontWeight: 600,
               }}
             >
-              Download Wallet
+              Download Account
             </TextP>
           </Box>
           <Spacer height="35px" />
@@ -2943,7 +2943,7 @@ function App() {
           {walletToBeDownloaded && (
             <>
               <CustomButton onClick={saveFileToDiskFunc}>
-                Download wallet
+                Download account
               </CustomButton>
             </>
           )}
@@ -3176,7 +3176,7 @@ function App() {
                   await saveFileToDiskFunc();
                   returnToMain();
                   await showInfo({
-                    message: `Keep your wallet file secure.`,
+                    message: `Keep your account file secure.`,
                   });
                 }}
               >
