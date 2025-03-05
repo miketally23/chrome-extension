@@ -185,7 +185,7 @@ const onSeenFunc = useCallback(()=> {
           
           
         </WrapperUserAction>
-        <Tooltip disableFocusListener title={`level ${userInfo}`}>
+        <Tooltip disableFocusListener title={`level ${userInfo ?? 0}`}>
             
          
             <img style={{

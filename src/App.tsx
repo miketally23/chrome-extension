@@ -396,6 +396,8 @@ function App() {
   const resetAtomIsUsingImportExportSettingsAtom = useResetRecoilState(isUsingImportExportSettingsAtom)
   const { toggleFullScreen } = useAppFullScreen(setFullScreen);
   const generatorRef = useRef(null)
+  const [isRunningPublicNode, setIsRunningPublicNode] = useState(false)
+
   const exportSeedphrase = ()=> {
     const seedPhrase = generatorRef.current.parsedString
     saveSeedPhraseToDisk(seedPhrase)
@@ -487,7 +489,13 @@ function App() {
     }
   }, [extState]);
 
-  
+  useEffect(()=> {
+    isRunningGateway().then((res)=> {
+      setIsRunningPublicNode(res)
+    }).catch((error)=> {
+      console.error(error)
+    })
+  }, [extState])
 
   useEffect(() => {
     isFocusedRef.current = isFocused;
@@ -1932,7 +1940,8 @@ function App() {
                  isUserBlocked,
                  addToBlockList,
                  removeBlockFromList,
-                 getAllBlockedUsers
+                 getAllBlockedUsers,
+                 isRunningPublicNode
                }}
              >
                  <TaskManger getUserInfo={getUserInfo} />
@@ -2101,7 +2110,8 @@ function App() {
             isUserBlocked,
             addToBlockList,
             removeBlockFromList,
-            getAllBlockedUsers
+            getAllBlockedUsers,
+            isRunningPublicNode
           }}
         >
           <Box
