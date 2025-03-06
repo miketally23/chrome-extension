@@ -1,43 +1,87 @@
 import { banFromGroup, gateways, getApiKeyFromStorage } from "./background";
-import { addForeignServer, addGroupAdminRequest, addListItems, adminAction, banFromGroupRequest, cancelGroupBanRequest, cancelGroupInviteRequest, cancelSellOrder, createBuyOrder, createGroupRequest, createPoll, createSellOrder, decryptAESGCMRequest, decryptData, decryptDataWithSharingKey, decryptQortalGroupData, deleteHostedData, deleteListItems, deployAt, encryptData, encryptDataWithSharingKey, encryptQortalGroupData, getCrossChainServerInfo, getDaySummary, getForeignFee, getHostedData, getListItems, getServerConnectionHistory, getTxActivitySummary, getUserAccount, getUserWallet, getUserWalletInfo, getUserWalletTransactions, getWalletBalance, inviteToGroupRequest, joinGroup, kickFromGroupRequest, leaveGroupRequest, publishMultipleQDNResources, publishQDNResource, registerNameRequest, removeForeignServer, removeGroupAdminRequest, saveFile, sendChatMessage, sendCoin, setCurrentForeignServer, signTransaction, updateForeignFee, updateNameRequest, voteOnPoll } from "./qortalRequests/get";
+import { addForeignServer, addGroupAdminRequest, addListItems, adminAction, banFromGroupRequest, cancelGroupBanRequest, cancelGroupInviteRequest, cancelSellOrder, createBuyOrder, createGroupRequest, createPoll, createSellOrder, decryptAESGCMRequest, decryptData, decryptDataWithSharingKey, decryptQortalGroupData, deleteHostedData, deleteListItems, deployAt, encryptData, encryptDataWithSharingKey, encryptQortalGroupData, getCrossChainServerInfo, getDaySummary, getForeignFee, getHostedData, getListItems, getNodeInfo, getNodeStatus, getServerConnectionHistory, getTxActivitySummary, getUserAccount, getUserWallet, getUserWalletInfo, getUserWalletTransactions, getWalletBalance, inviteToGroupRequest, joinGroup, kickFromGroupRequest, leaveGroupRequest, publishMultipleQDNResources, publishQDNResource, registerNameRequest, removeForeignServer, removeGroupAdminRequest, saveFile, sendChatMessage, sendCoin, setCurrentForeignServer, signTransaction, updateForeignFee, updateNameRequest, voteOnPoll } from "./qortalRequests/get";
 
- const listOfAllQortalRequests = [
-  'GET_USER_ACCOUNT', 'DECRYPT_DATA', 'SEND_COIN', 'GET_LIST_ITEMS',
-  'ADD_LIST_ITEMS', 'DELETE_LIST_ITEM', 'VOTE_ON_POLL', 'CREATE_POLL',
-  'SEND_CHAT_MESSAGE', 'JOIN_GROUP', 'DEPLOY_AT', 'GET_USER_WALLET',
-  'GET_WALLET_BALANCE', 'GET_USER_WALLET_INFO', 'GET_CROSSCHAIN_SERVER_INFO',
-  'GET_TX_ACTIVITY_SUMMARY', 'GET_FOREIGN_FEE', 'UPDATE_FOREIGN_FEE',
-  'GET_SERVER_CONNECTION_HISTORY', 'SET_CURRENT_FOREIGN_SERVER',
-  'ADD_FOREIGN_SERVER', 'REMOVE_FOREIGN_SERVER', 'GET_DAY_SUMMARY', 'CREATE_TRADE_BUY_ORDER', 'CREATE_TRADE_SELL_ORDER', 'CANCEL_TRADE_SELL_ORDER', 'IS_USING_PUBLIC_NODE', 'ADMIN_ACTION', 'SIGN_TRANSACTION', 'OPEN_NEW_TAB', 'CREATE_AND_COPY_EMBED_LINK',  'DECRYPT_QORTAL_GROUP_DATA', 'DECRYPT_DATA_WITH_SHARING_KEY', 'DELETE_HOSTED_DATA', 'GET_HOSTED_DATA',  'PUBLISH_MULTIPLE_QDN_RESOURCES',
-  'PUBLISH_QDN_RESOURCE',
-  'ENCRYPT_DATA',
-  'ENCRYPT_DATA_WITH_SHARING_KEY',
-  'ENCRYPT_QORTAL_GROUP_DATA',
-  'SAVE_FILE',
-  'GET_ACCOUNT_DATA',
-    'GET_ACCOUNT_NAMES',
-    'SEARCH_NAMES',
-    'GET_NAME_DATA',
-    'GET_QDN_RESOURCE_URL',
-    'LINK_TO_QDN_RESOURCE',
-    'LIST_QDN_RESOURCES',
-    'SEARCH_QDN_RESOURCES',
-    'FETCH_QDN_RESOURCE',
-    'GET_QDN_RESOURCE_STATUS',
-    'GET_QDN_RESOURCE_PROPERTIES',
-    'GET_QDN_RESOURCE_METADATA',
-    'SEARCH_CHAT_MESSAGES',
-    'LIST_GROUPS',
-    'GET_BALANCE',
-    'GET_AT',
-    'GET_AT_DATA',
-    'LIST_ATS',
-    'FETCH_BLOCK',
-    'FETCH_BLOCK_RANGE',
-    'SEARCH_TRANSACTIONS',
-    'GET_PRICE',
-    'SHOW_ACTIONS'
-]
+ export const listOfAllQortalRequests = [
+   'GET_USER_ACCOUNT',
+   'DECRYPT_DATA',
+   'SEND_COIN',
+   'GET_LIST_ITEMS',
+   'ADD_LIST_ITEMS',
+   'DELETE_LIST_ITEM',
+   'VOTE_ON_POLL',
+   'CREATE_POLL',
+   'SEND_CHAT_MESSAGE',
+   'JOIN_GROUP',
+   'DEPLOY_AT',
+   'GET_USER_WALLET',
+   'GET_WALLET_BALANCE',
+   'GET_USER_WALLET_INFO',
+   'GET_CROSSCHAIN_SERVER_INFO',
+   'GET_TX_ACTIVITY_SUMMARY',
+   'GET_FOREIGN_FEE',
+   'UPDATE_FOREIGN_FEE',
+   'GET_SERVER_CONNECTION_HISTORY',
+   'SET_CURRENT_FOREIGN_SERVER',
+   'ADD_FOREIGN_SERVER',
+   'REMOVE_FOREIGN_SERVER',
+   'GET_DAY_SUMMARY',
+   'CREATE_TRADE_BUY_ORDER',
+   'CREATE_TRADE_SELL_ORDER',
+   'CANCEL_TRADE_SELL_ORDER',
+   'IS_USING_PUBLIC_NODE',
+   'ADMIN_ACTION',
+   'SIGN_TRANSACTION',
+   'OPEN_NEW_TAB',
+   'CREATE_AND_COPY_EMBED_LINK',
+   'DECRYPT_QORTAL_GROUP_DATA',
+   'DECRYPT_DATA_WITH_SHARING_KEY',
+   'DELETE_HOSTED_DATA',
+   'GET_HOSTED_DATA', 
+   'PUBLISH_MULTIPLE_QDN_RESOURCES',
+   'PUBLISH_QDN_RESOURCE',
+   'ENCRYPT_DATA',
+   'ENCRYPT_DATA_WITH_SHARING_KEY',
+   'ENCRYPT_QORTAL_GROUP_DATA',
+   'SAVE_FILE',
+   'GET_ACCOUNT_DATA',
+   'GET_ACCOUNT_NAMES',
+   'SEARCH_NAMES',
+   'GET_NAME_DATA',
+   'GET_QDN_RESOURCE_URL',
+   'LINK_TO_QDN_RESOURCE',
+   'LIST_QDN_RESOURCES',
+   'SEARCH_QDN_RESOURCES',
+   'FETCH_QDN_RESOURCE',
+   'GET_QDN_RESOURCE_STATUS',
+   'GET_QDN_RESOURCE_PROPERTIES',
+   'GET_QDN_RESOURCE_METADATA',
+   'SEARCH_CHAT_MESSAGES',
+   'LIST_GROUPS',
+   'GET_BALANCE',
+   'GET_AT',
+   'GET_AT_DATA',
+   'LIST_ATS',
+   'FETCH_BLOCK',
+   'FETCH_BLOCK_RANGE',
+   'SEARCH_TRANSACTIONS',
+   'GET_PRICE',
+   'SHOW_ACTIONS',
+   'REGISTER_NAME',
+   'UPDATE_NAME',
+   'LEAVE_GROUP',
+   'INVITE_TO_GROUP',
+   'KICK_FROM_GROUP',
+   'BAN_FROM_GROUP',
+   'CANCEL_GROUP_BAN',
+   'ADD_GROUP_ADMIN',
+   'REMOVE_GROUP_ADMIN',
+   'DECRYPT_AESGCM',
+   'CANCEL_GROUP_INVITE',
+   'CREATE_GROUP',
+   'GET_USER_WALLET_TRANSACTIONS',
+   'GET_NODE_INFO',
+   'GET_NODE_STATUS'
+ ]
 
 // Promisify chrome.storage.local.get
 function getLocalStorage(key) {
@@ -761,6 +805,29 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
         const data = request.payload;
       
         getUserWalletTransactions(data, isFromExtension, appInfo)
+          .then((res) => {
+            sendResponse(res);
+          })
+          .catch((error) => {
+            sendResponse({ error: error.message });
+          });
+        break;
+      }
+
+      case "GET_NODE_INFO" : {
+      
+        getNodeInfo()
+          .then((res) => {
+            sendResponse(res);
+          })
+          .catch((error) => {
+            sendResponse({ error: error.message });
+          });
+        break;
+      }
+      case "GET_NODE_STATUS" : {
+      
+        getNodeStatus()
           .then((res) => {
             sendResponse(res);
           })

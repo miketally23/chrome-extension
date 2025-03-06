@@ -136,6 +136,7 @@ import { RegisterName } from "./components/RegisterName";
 import { BuyQortInformation } from "./components/BuyQortInformation";
 import { WalletIcon } from "./assets/Icons/WalletIcon";
 import { useBlockedAddresses } from "./components/Chat/useBlockUsers";
+import { QortPayment } from "./components/QortPayment";
 
 type extStates =
   | "not-authenticated"
@@ -677,55 +678,7 @@ function App() {
       setLtcBalanceLoading(false);
     });
   };
-  const sendCoinFunc = async () => {
-    try {
-      setSendPaymentError("");
-      setSendPaymentSuccess("");
-      if (!paymentTo) {
-        setSendPaymentError("Please enter a recipient");
-        return;
-      }
-      if (!paymentAmount) {
-        setSendPaymentError("Please enter an amount greater than 0");
-        return;
-      }
-      if (!paymentPassword) {
-        setSendPaymentError("Please enter your wallet password");
-        return;
-      }
-      const fee = await getFee('PAYMENT')
-  
-      await show({
-        message: `Would you like to transfer ${Number(paymentAmount)} QORT?` ,
-        paymentFee: fee.fee + ' QORT'
-      })
-      setIsLoading(true);
-      chrome?.runtime?.sendMessage(
-        {
-          action: "sendCoin",
-          payload: {
-            amount: Number(paymentAmount),
-            receiver: paymentTo.trim(),
-            password: paymentPassword,
-          },
-        },
-        (response) => {
-          if (response?.error) {
-            setSendPaymentError(response.error);
-          } else {
-            setIsOpenSendQort(false);
-            setIsOpenSendQortSuccess(true);
-            // setExtstate("transfer-success-regular");
-            // setSendPaymentSuccess("Payment successfully sent");
-          }
-          setIsLoading(false);
-        }
-      );
-    } catch (error) {
-      //error
-    }
-  
-  };
+
 
   const clearAllStates = () => {
     setRequestConnection(null);
@@ -2173,95 +2126,14 @@ function App() {
             />
           </Box>
           <Spacer height="35px" />
-          <Box
-            sx={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "flex-start",
-            }}
-          >
-            <TextP
-              sx={{
-                textAlign: "start",
-                lineHeight: "24px",
-                fontSize: "20px",
-                fontWeight: 600,
-              }}
-            >
-              Transfer QORT
-            </TextP>
-            <Spacer height="35px" />
-            <TextP
-              sx={{
-                textAlign: "start",
-                lineHeight: "16px",
-                fontSize: "20px",
-                fontWeight: 600,
-                color: "rgba(255, 255, 255, 0.5)",
-              }}
-            >
-              Balance:
-            </TextP>
-            <TextP
-              sx={{
-                textAlign: "start",
-                lineHeight: "24px",
-                fontSize: "20px",
-                fontWeight: 700,
-              }}
-            >
-              {balance?.toFixed(2)} QORT
-            </TextP>
-          </Box>
-          <Spacer height="35px" />
+         
 
-          <Box>
-            <CustomLabel htmlFor="standard-adornment-name">To</CustomLabel>
-            <Spacer height="5px" />
-            <CustomInput
-              id="standard-adornment-name"
-              value={paymentTo}
-              onChange={(e) => setPaymentTo(e.target.value)}
-              autoComplete="off"
+          <QortPayment balance={balance} show={show} onSuccess={()=> {
+               setIsOpenSendQort(false);
+               setIsOpenSendQortSuccess(true);
+            }} 
+             defaultPaymentTo={paymentTo}
             />
-            <Spacer height="6px" />
-            <CustomLabel htmlFor="standard-adornment-amount">
-              Amount
-            </CustomLabel>
-            <Spacer height="5px" />
-            <BoundedNumericTextField
-              value={paymentAmount}
-              minValue={0}
-               maxValue={+balance}
-                allowDecimals={true}
-                initialValue={'0'}
-                allowNegatives={false}
-                afterChange={(e: string) => setPaymentAmount(+e)}
-            />
-            <Spacer height="6px" />
-            <CustomLabel htmlFor="standard-adornment-password">
-              Confirm Wallet Password
-            </CustomLabel>
-            <Spacer height="5px" />
-            <PasswordField
-              id="standard-adornment-password"
-              value={paymentPassword}
-              onChange={(e) => setPaymentPassword(e.target.value)}
-              autoComplete="off"
-              
-            />
-          </Box>
-          <Spacer height="10px" />
-          <ErrorText>{sendPaymentError}</ErrorText>
-          {/* <Typography>{sendPaymentSuccess}</Typography> */}
-          <Spacer height="25px" />
-          <CustomButton
-            onClick={() => {
-              sendCoinFunc();
-            }}
-          >
-            Send
-          </CustomButton>
         </Box>
       )}
 
