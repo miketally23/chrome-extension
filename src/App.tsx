@@ -391,7 +391,7 @@ function App() {
   const [rootHeight, setRootHeight] = useState("100%");
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const qortalRequestCheckbox1Ref = useRef(null);
-  useRetrieveDataLocalStorage()
+  useRetrieveDataLocalStorage(userInfo?.address)
   useQortalGetSaveSettings(userInfo?.name, extState === "authenticated")
   const [fullScreen, setFullScreen] = useRecoilState(fullScreenAtom);
   const resetAtomIsUsingImportExportSettingsAtom = useResetRecoilState(isUsingImportExportSettingsAtom)
