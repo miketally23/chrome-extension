@@ -3,6 +3,7 @@ import { getBaseApiReact } from '../App';
 import { addTimestampLatestPayment, checkDifference, getNameInfoForOthers, getTimestampLatestPayment } from '../background';
 import { useRecoilState } from 'recoil';
 import { lastPaymentSeenTimestampAtom } from '../atoms/global';
+import { subscribeToEvent, unsubscribeFromEvent } from '../utils/events';
 
 export const useHandlePaymentNotification = (address) => {
     const [latestTx, setLatestTx] = useState(null);
@@ -54,16 +55,12 @@ export const useHandlePaymentNotification = (address) => {
       return false;
     }, [lastEnteredTimestampPayment, latestTx]);
 
-    console.log('hasNewPayment', hasNewPayment)
   
     const getLastSeenData = useCallback(async () => {
       try {
         if (!address) return;
-        console.log('address', address)
-        const key = `last-seen-payment-${address}`;
   
         const res = await getTimestampLatestPayment<any>().catch(() => null);
-        console.log('res', res)
         if (res) {
           setLastEnteredTimestampPayment(res);
         }
@@ -73,7 +70,6 @@ export const useHandlePaymentNotification = (address) => {
         );
   
         const responseData = await response.json();
-        console.log('responseData', responseData)
         const latestTx = responseData.filter(
           (tx) => tx?.creatorAddress !== address && tx?.recipient === address
         )[0];
@@ -92,12 +88,26 @@ export const useHandlePaymentNotification = (address) => {
       getLastSeenData();      
 
       chrome?.runtime?.onMessage.addListener((message, sender, sendResponse) => {
-        console.log('message', message)
         if (message?.action === "SET_PAYMENT_ANNOUNCEMENT" && message?.payload) {
           setLatestTx(message.payload);
         }
       });
       }, [getLastSeenData]);
+
+      const setLastEnteredTimestampPaymentEventFunc = useCallback(
+        (e) => {
+            setLastEnteredTimestampPayment(Date.now)
+        },
+        [setLastEnteredTimestampPayment]
+      );
+    
+      useEffect(() => {
+        subscribeToEvent("setLastEnteredTimestampPaymentEvent", setLastEnteredTimestampPaymentEventFunc);
+    
+        return () => {
+          unsubscribeFromEvent("setLastEnteredTimestampPaymentEvent", setLastEnteredTimestampPaymentEventFunc);
+        };
+      }, [setLastEnteredTimestampPaymentEventFunc]);
   return {
     latestTx,
     getNameOrAddressOfSenderMiddle,

@@ -424,7 +424,7 @@ const UIQortalRequests = [
     return obj; // Updated object with references to stored files
   }
 
-export const useQortalMessageListener = (frameWindow, iframeRef, tabId, appName, appService) => {
+export const useQortalMessageListener = (frameWindow, iframeRef, tabId, isDevMode, appName, appService, skipAuth) => {
   const [path, setPath] = useState('')
   const [history, setHistory] = useState({
     customQDNHistoryPaths: [],
@@ -530,7 +530,7 @@ isDOMContentLoaded: false
         sendMessageToRuntime(
           { action: event.data.action, type: 'qortalRequest', payload: event.data, isExtension: true, appInfo: {
             name: appName, service: appService
-          } },
+          }, skipAuth },
           event.ports[0]
         );
       } else if (
@@ -578,7 +578,9 @@ isDOMContentLoaded: false
              // response
             }
           );
-        }
+        } else if(appName?.toLowerCase() === 'q-wallets'){
+          executeEvent('setLastEnteredTimestampPaymentEvent', {})
+         }
       } else if(event?.data?.action === 'NAVIGATION_HISTORY'){
         if(event?.data?.payload?.isDOMContentLoaded){
           setHistory((prev)=> {

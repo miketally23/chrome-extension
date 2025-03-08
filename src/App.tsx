@@ -52,7 +52,7 @@ import EngineeringIcon from '@mui/icons-material/Engineering';
 import WarningIcon from '@mui/icons-material/Warning';
 import { DrawerUserLookup } from "./components/Drawer/DrawerUserLookup";
 import { UserLookup } from "./components/UserLookup.tsx/UserLookup";
-
+import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import {
   createAccount,
   generateRandomSentence,
@@ -1756,12 +1756,45 @@ function App() {
                 />
               </Tooltip>
             </ButtonBase>
+            <Spacer height="20px" />
+            <ButtonBase
+              onClick={() => {
+                executeEvent('openWalletsApp', {})
+              }}
+            >
+              <Tooltip
+                title={<span style={{ color: "white", fontSize: "14px", fontWeight: 700 }}>WALLETS</span>} 
+                placement="left"
+                arrow
+                sx={{ fontSize: "24" }}
+                slotProps={{
+                  tooltip: {
+                    sx: {
+                      color: "#ffffff",
+                      backgroundColor: "#444444",
+                    },
+                  },
+                  arrow: {
+                    sx: {
+                      color: "#444444",
+                    },
+                  },
+                }}
+              >
+                <AccountBalanceWalletIcon
+                  sx={{
+                    color: "rgba(255, 255, 255, 0.5)",
+                  }}
+                />
+              </Tooltip>
+            </ButtonBase>
+            
             {desktopViewMode !== 'home' && (
               <>
                 <Spacer height="20px" />
              
                <Tooltip
-               title={<span style={{ color: "white", fontSize: "14px", fontWeight: 700 }}>WALLET</span>} 
+               title={<span style={{ color: "white", fontSize: "14px", fontWeight: 700 }}>YOUR ACCOUNT</span>} 
                placement="left"
                arrow
                sx={{ fontSize: "24" }}

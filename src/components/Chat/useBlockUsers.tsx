@@ -160,7 +160,6 @@ export const useBlockedAddresses = () => {
           },
         },
         (response) => {
-          console.log('response', response)
           if (response.error) {
             rej(response?.message);
             return;

@@ -103,6 +103,7 @@ import { MessagingIcon } from "../../assets/Icons/MessagingIcon";
 import { DesktopSideBar } from "../DesktopSideBar";
 import BlockIcon from '@mui/icons-material/Block';
 import { BlockedUsersModal } from "./BlockedUsersModal";
+import { WalletsAppWrapper } from "./WalletsAppWrapper";
 
 
 // let touchStartY = 0;
@@ -2845,7 +2846,8 @@ export const Group = ({
               groupsAnnHasUnread} setDesktopViewMode={setDesktopViewMode} isApps={desktopViewMode === 'apps'} desktopViewMode={desktopViewMode} />
           )}
       
-     
+      <WalletsAppWrapper />
+
       {!isMobile && (
        
         <HomeDesktop

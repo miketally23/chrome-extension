@@ -155,9 +155,10 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
   if (request) {
     const isFromExtension = request?.isExtension
     const appInfo = request?.appInfo;
+    const skipAuth = request?.skipAuth
     switch (request.action) {
       case "GET_USER_ACCOUNT": {
-        getUserAccount({isFromExtension, appInfo})
+        getUserAccount({isFromExtension, appInfo, skipAuth})
           .then((res) => {
             sendResponse(res);
           })
