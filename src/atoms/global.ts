@@ -155,3 +155,8 @@ export const groupsPropertiesAtom = atom({
   key: 'groupsPropertiesAtom', 
   default: {}, 
 });
+
+export const lastPaymentSeenTimestampAtom = atom<null | number>({
+  key: 'lastPaymentSeenTimestampAtom', 
+  default: null, 
+});

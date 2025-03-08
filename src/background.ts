@@ -128,9 +128,9 @@ export const getForeignKey = async (foreignBlockchain)=> {
 
 const pauseAllQueues = () => controlAllQueues("pause");
 const resumeAllQueues = () => controlAllQueues("resume");
-const checkDifference = (createdTimestamp) => {
+export const checkDifference = (createdTimestamp, diff = timeDifferenceForNotificationChatsBackground) => {
   return (
-    Date.now() - createdTimestamp < timeDifferenceForNotificationChatsBackground
+    Date.now() - createdTimestamp < diff
   );
 };
 export const getApiKeyFromStorage = async () => {
@@ -1746,6 +1746,40 @@ async function sendChat({ qortAddress, recipientPublicKey, message }) {
   }
   return _response;
 }
+
+export async function getTimestampLatestPayment() {
+  const wallet = await getSaveWallet();
+  const address = wallet.address0;
+  const key = `latest-payment-${address}`;
+ 
+  return new Promise((resolve, reject) => {
+    chrome.storage.local.get([key], (result) => {
+      if (chrome.runtime.lastError) {
+        reject(new Error(chrome.runtime.lastError.message || "Error retrieving data"));
+      } else {
+        const timestamp = result[key];
+        resolve(timestamp || 0);
+      }
+    });
+  });
+}
+
+export async function addTimestampLatestPayment(timestamp) {
+  const wallet = await getSaveWallet();
+  const address = wallet.address0;
+  
+
+  return new Promise((resolve, reject) => {
+    chrome.storage.local.set({ [`latest-payment-${address}`]: timestamp }, () => {
+      if (chrome.runtime.lastError) {
+        reject(new Error(chrome.runtime.lastError.message || "Error saving data"));
+      } else {
+        resolve(true);
+      }
+    });
+  });
+}
+
 
 export async function addEnteredQmailTimestampFunc() {
   const wallet = await getSaveWallet();
@@ -5114,6 +5148,95 @@ chrome.notifications?.onClicked?.addListener((notificationId) => {
   );
 });
 
+export const checkPaymentsForNotifications = async (address) => {
+  try {
+    const isDisableNotifications =
+    (await getUserSettings({ key: "disable-push-notifications" })) || false;
+    if(isDisableNotifications) return
+      let latestPayment = null
+          const savedtimestamp = await getTimestampLatestPayment();
+
+          const url = await createEndpoint(
+            `/transactions/search?txType=PAYMENT&address=${address}&confirmationStatus=CONFIRMED&limit=5&reverse=true`
+          );
+         
+         const response =   await fetch(url, {
+              method: "GET",
+              headers: {
+                "Content-Type": "application/json",
+              },
+            });
+        
+          const responseData = await response.json();
+
+          const latestTx = responseData.filter(
+            (tx) => tx?.creatorAddress !== address && tx?.recipient === address
+          )[0];
+          if (!latestTx) {
+            return; // continue to the next group
+          }
+          if (
+            checkDifference(latestTx.timestamp, 86400000) &&
+            (!savedtimestamp ||
+              latestTx.timestamp >
+                savedtimestamp)
+          ) {
+            if(latestTx.timestamp){
+              latestPayment = latestTx
+              await addTimestampLatestPayment(latestTx.timestamp);
+            }
+           
+            // save new timestamp
+          }
+       
+ console.log('latestPayment', latestPayment)
+
+    if (
+      latestPayment
+    ) {
+      // Create a unique notification ID with type and group announcement details
+      const notificationId =
+      encodeURIComponent("payment_notification_" +
+        Date.now() +
+        "_type=payment-announcement");
+
+      const title = "New payment!";
+      const body = `You have received a new payment of ${latestPayment?.amount} QORT`;
+
+
+      chrome.notifications.create(notificationId, {
+        type: "basic",
+        iconUrl: "qort.png", // Add an appropriate icon for chat notifications
+        title,
+        message: body,
+        priority: 2, // Use the maximum priority to ensure it's noticeable
+        // buttons: [
+        //   { title: 'Go to group' }
+        // ]
+      });
+      if (!isMobile) {
+        setTimeout(() => {
+          chrome.notifications.clear(notificationId);
+        }, 7000);
+      }
+
+      // Automatically close the notification after 5 seconds if it’s not clicked
+      setTimeout(() => {
+        notification.close();
+      }, 10000); // Close after 5 seconds
+
+      chrome.runtime.sendMessage({
+        action: "SET_PAYMENT_ANNOUNCEMENT",
+        payload: latestPayment,
+      });
+      
+    }
+   
+  } catch (error) {
+    console.error(error)
+  } 
+};
+
 // Reconnect when service worker wakes up
 chrome.runtime?.onStartup.addListener(() => {
   console.log("Service worker started up, reconnecting WebSocket...");
@@ -5151,6 +5274,13 @@ chrome.alarms?.get("checkForNotifications", (existingAlarm) => {
   }
 });
 
+chrome.alarms?.get("checkForPayments", (existingAlarm) => {
+  if (!existingAlarm) {
+    // If the alarm does not exist, create it
+    chrome.alarms.create("checkForPayments", { periodInMinutes: 3 });
+  }
+});
+
 chrome.alarms?.onAlarm.addListener(async (alarm) => {
   try {
     if (alarm.name === "checkForNotifications") {
@@ -5161,6 +5291,13 @@ chrome.alarms?.onAlarm.addListener(async (alarm) => {
       checkActiveChatsForNotifications();
       checkNewMessages();
       checkThreads();
+    } else if (alarm.name === "checkForPayments") {
+     
+      const wallet = await getSaveWallet();
+      const address = wallet.address0;
+      if (!address) return;
+      
+      checkPaymentsForNotifications(address);
     }
   } catch (error) {}
 });

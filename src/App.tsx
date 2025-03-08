@@ -116,7 +116,7 @@ import { MainAvatar } from "./components/MainAvatar";
 import { useRetrieveDataLocalStorage } from "./useRetrieveDataLocalStorage";
 import { useQortalGetSaveSettings } from "./useQortalGetSaveSettings";
 import { useRecoilState, useResetRecoilState, useSetRecoilState } from "recoil";
-import { canSaveSettingToQdnAtom, fullScreenAtom, groupsPropertiesAtom, hasSettingsChangedAtom, isDisabledEditorEnterAtom, isUsingImportExportSettingsAtom, mailsAtom, oldPinnedAppsAtom, qMailLastEnteredTimestampAtom, settingsLocalLastUpdatedAtom, settingsQDNLastUpdatedAtom, sortablePinnedAppsAtom } from "./atoms/global";
+import { canSaveSettingToQdnAtom, fullScreenAtom, groupsPropertiesAtom, hasSettingsChangedAtom, isDisabledEditorEnterAtom, isUsingImportExportSettingsAtom, lastPaymentSeenTimestampAtom, mailsAtom, oldPinnedAppsAtom, qMailLastEnteredTimestampAtom, settingsLocalLastUpdatedAtom, settingsQDNLastUpdatedAtom, sortablePinnedAppsAtom } from "./atoms/global";
 import { useAppFullScreen } from "./useAppFullscreen";
 import { NotAuthenticated } from "./ExtStates/NotAuthenticated";
 import { useFetchResources } from "./common/useFetchResources";
@@ -137,6 +137,7 @@ import { BuyQortInformation } from "./components/BuyQortInformation";
 import { WalletIcon } from "./assets/Icons/WalletIcon";
 import { useBlockedAddresses } from "./components/Chat/useBlockUsers";
 import { QortPayment } from "./components/QortPayment";
+import { GeneralNotifications } from "./components/GeneralNotifications";
 
 type extStates =
   | "not-authenticated"
@@ -436,6 +437,7 @@ function App() {
   const resetAtomQMailLastEnteredTimestampAtom = useResetRecoilState(qMailLastEnteredTimestampAtom)
   const resetAtomMailsAtom = useResetRecoilState(mailsAtom)
   const resetGroupPropertiesAtom = useResetRecoilState(groupsPropertiesAtom)
+  const resetLastPaymentSeenTimestampAtom = useResetRecoilState(lastPaymentSeenTimestampAtom)
   const resetAllRecoil = () => {
     resetAtomSortablePinnedAppsAtom();
     resetAtomCanSaveSettingToQdnAtom();
@@ -446,6 +448,7 @@ function App() {
     resetAtomQMailLastEnteredTimestampAtom()
     resetAtomMailsAtom()
     resetGroupPropertiesAtom()
+    resetLastPaymentSeenTimestampAtom()
   };
   useEffect(() => {
     if (!isMobile) return;
@@ -1860,6 +1863,10 @@ function App() {
             <CoreSyncStatus />
             <Spacer height="20px" />
             <QMailStatus />
+            <Spacer height="20px"/>
+            {extState === 'authenticated' && (
+              <GeneralNotifications address={userInfo?.address} />
+            )}
           </Box>
           <Box
             sx={{
