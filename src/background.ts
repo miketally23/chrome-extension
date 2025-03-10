@@ -5189,7 +5189,6 @@ export const checkPaymentsForNotifications = async (address) => {
             // save new timestamp
           }
        
- console.log('latestPayment', latestPayment)
 
     if (
       latestPayment
