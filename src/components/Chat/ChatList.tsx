@@ -270,10 +270,12 @@ export const ChatList = ({
                       if (chatReferences[message.signature]?.edit?.message && message?.text) {
                         message.text = chatReferences[message.signature]?.edit?.message;
                         message.isEdit = true
+                        message.editTimestamp = chatReferences[message.signature]?.edit?.timestamp
                       }
                       if (chatReferences[message.signature]?.edit?.messageText && message?.messageText) {
                         message.messageText = chatReferences[message.signature]?.edit?.messageText;
                         message.isEdit = true
+                        message.editTimestamp = chatReferences[message.signature]?.edit?.timestamp
                       }
                     
                     }
