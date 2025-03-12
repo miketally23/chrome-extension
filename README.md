@@ -4,5 +4,5 @@ The Qortal Extension is a chromium-based browser version of the Qortal Trifecta 
 
 The Qortal Extension opens the door for 'legacy web applications' to be able to interact with Qortal, and for users to be able to utilize Q-Apps via 'gateway nodes' such as those on https://qortal.link and https://qortal.name. 
 
-Much more information will be coming soon, and existind details and assistance can be found on https://qortal.dev 
+Much more information will be coming soon, and existing details and assistance can be found on https://qortal.dev 
 
