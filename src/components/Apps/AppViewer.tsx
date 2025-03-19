@@ -25,8 +25,13 @@ export const AppViewer = React.forwardRef(({ app , hide, isDevMode, skipAuth}, i
       setUrl(app?.url)
       return
     }
+
+    let hasQueryParam = false
+    if(app?.path && app.path.includes('?')){
+      hasQueryParam = true
+    }
    
-    setUrl(`${getBaseApiReact()}/render/${app?.service}/${app?.name}${app?.path != null ? `/${app?.path}` : ''}?theme=dark&identifier=${(app?.identifier != null && app?.identifier != 'null') ? app?.identifier : ''}`)
+    setUrl(`${getBaseApiReact()}/render/${app?.service}/${app?.name}${app?.path != null ? `/${app?.path}` : ''}${hasQueryParam ? "&": "?" }theme=dark&identifier=${(app?.identifier != null && app?.identifier != 'null') ? app?.identifier : ''}`)
   }, [app?.service, app?.name, app?.identifier, app?.path, app?.isPreview])
 
   useEffect(()=> {
