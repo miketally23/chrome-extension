@@ -321,7 +321,7 @@ export const AppsDesktop = ({ mode, setMode, show , myName, goToHome, setDesktop
         height: '100vh',
         alignItems: 'center',
         display: 'flex',
-        gap: '30px'
+        gap: '25px'
        }}>
         <ButtonBase
           sx={{
@@ -376,7 +376,7 @@ export const AppsDesktop = ({ mode, setMode, show , myName, goToHome, setDesktop
             />
     </IconWrapper>
         </ButtonBase>
-        <Save isDesktop myName={myName} />
+        <Save isDesktop disableWidth myName={myName} />
         {mode !== 'home' && (
                  <AppsNavBarDesktop disableBack={isNewTabWindow && mode === 'viewer'}  />
 
