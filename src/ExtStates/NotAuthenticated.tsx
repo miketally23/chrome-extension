@@ -27,9 +27,8 @@ import { cleanUrl, gateways, isUsingLocal } from "../background";
 import { GlobalContext } from "../App";
 import Tooltip, { TooltipProps, tooltipClasses } from '@mui/material/Tooltip';
 
-const manifestData = {
-  version: "0.5.2",
-};
+const manifestData = chrome?.runtime?.getManifest();
+
 
 
 export const HtmlTooltip = styled(({ className, ...props }: TooltipProps) => (
