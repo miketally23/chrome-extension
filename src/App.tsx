@@ -138,6 +138,7 @@ import { WalletIcon } from "./assets/Icons/WalletIcon";
 import { useBlockedAddresses } from "./components/Chat/useBlockUsers";
 import { QortPayment } from "./components/QortPayment";
 import { GeneralNotifications } from "./components/GeneralNotifications";
+import { PdfViewer } from "./common/PdfViewer";
 
 type extStates =
   | "not-authenticated"
@@ -2062,6 +2063,7 @@ function App() {
         // backgroundRepeat: desktopViewMode === 'apps' &&  'no-repeat',
       }}
     >
+       <PdfViewer />
     <GlobalContext.Provider value={{
             showTutorial,
             openTutorialModal,

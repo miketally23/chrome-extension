@@ -81,7 +81,8 @@ import { addForeignServer, addGroupAdminRequest, addListItems, adminAction, banF
    'GET_USER_WALLET_TRANSACTIONS',
    'GET_NODE_INFO',
    'GET_NODE_STATUS',
-   'GET_ARRR_SYNC_STATUS'
+   'GET_ARRR_SYNC_STATUS',
+    'SHOW_PDF_READER'
  ]
 
 // Promisify chrome.storage.local.get
