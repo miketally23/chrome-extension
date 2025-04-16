@@ -1,6 +1,5 @@
 import React, { useCallback,  useEffect,  useRef } from "react";
-import { getBaseApiReact } from "../../App";
-import { truncate } from "lodash";
+
 
 
 
@@ -19,7 +18,7 @@ export const useBlockedAddresses = () => {
   const isUserBlocked = useCallback((address, name)=> {
     try {
       if(!address) return false
-      if(userBlockedRef.current[address] || userNamesBlockedRef.current[name]) return true
+      if(userBlockedRef.current[address]) return true
       return false
 
      
@@ -88,47 +87,47 @@ export const useBlockedAddresses = () => {
     }
     fetchBlockedList()
   }, [])
-
   const removeBlockFromList = useCallback(async (address, name)=> {
-    await new Promise((res, rej) => {
-      chrome?.runtime?.sendMessage(
-        {
-          action: "listActions",
-          payload: {
-            type: 'remove',
-          items: name ? [name] : [address],
-          listName: name ? 'blockedNames' : 'blockedAddresses'
+    if(name){
+      await new Promise((res, rej) => {
+  
+        chrome?.runtime?.sendMessage(
+          {
+            action: "listActions",
+            payload: {
+              type: 'remove',
+              items:  [name] ,
+              listName: 'blockedNames' 
+            },
           },
-        },
-        (response) => {
-          if (response.error) {
-            rej(response?.message);
-            return;
-          } else {
-            if(!name){
-              const copyObject = {...userBlockedRef.current}
-              delete copyObject[address]
-              userBlockedRef.current = copyObject
+          (response) => {
+            if (response.error) {
+              rej(response?.message);
+              return;
             } else {
               const copyObject = {...userNamesBlockedRef.current}
               delete copyObject[name]
               userNamesBlockedRef.current = copyObject
-            }
+            
+          
             res(response);
+            }
           }
-        }
-      );
+        );
       })
 
-    if(name && userBlockedRef.current[address]){
+      
+    }
+
+    if(address){
       await new Promise((res, rej) => {
         chrome?.runtime?.sendMessage(
           {
             action: "listActions",
             payload: {
               type: 'remove',
-              items: !name ? [name] : [address],
-              listName: !name ? 'blockedNames' : 'blockedAddresses'
+               items: [address],
+            listName: 'blockedAddresses'
             },
           },
           (response) => {
@@ -139,47 +138,77 @@ export const useBlockedAddresses = () => {
               const copyObject = {...userBlockedRef.current}
               delete copyObject[address]
               userBlockedRef.current = copyObject
-              res(response);
+            
+          
+            res(response);
             }
           }
         );
-        })
+      })
     }
+ 
     
   }, [])
 
   const addToBlockList = useCallback(async (address, name)=> {
-    await new Promise((res, rej) => {
-      chrome?.runtime?.sendMessage(
-        {
-          action: "listActions",
-          payload: {
-            type: 'add',
-          items: name ? [name] : [address],
-          listName: name ? 'blockedNames' : 'blockedAddresses'
+    if(name){
+      await new Promise((res, rej) => {
+
+
+        chrome?.runtime?.sendMessage(
+          {
+            action: "listActions",
+            payload: {
+              type: 'add',
+              items: [name],
+              listName: 'blockedNames'
+            },
           },
-        },
-        (response) => {
-          if (response.error) {
-            rej(response?.message);
-            return;
-          } else {
-            if(name){
-            
+          (response) => {
+            if (response.error) {
+              rej(response?.message);
+              return;
+            } else {
               const copyObject = {...userNamesBlockedRef.current}
               copyObject[name] = true
                userNamesBlockedRef.current = copyObject
-            }else { 
+            
+          
+            res(response);
+            }
+          }
+        );
+      })
+    }
+    if(address){
+      await new Promise((res, rej) => {
+        chrome?.runtime?.sendMessage(
+          {
+            action: "listActions",
+            payload: {
+              type: 'add',
+              items: [address],
+              listName: 'blockedAddresses'
+            },
+          },
+          (response) => {
+            if (response.error) {
+              rej(response?.message);
+              return;
+            } else {
               const copyObject = {...userBlockedRef.current}
               copyObject[address] = true
                userBlockedRef.current = copyObject
-              
-            }
+          
             res(response);
+            }
           }
-        }
-      )
-    })
+        );
+      })
+
+  
+    }
+   
   }, [])
 
   return {

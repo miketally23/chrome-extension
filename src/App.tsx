@@ -21,6 +21,7 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
+  FormControlLabel,
   Input,
   InputLabel,
   Popover,
@@ -139,6 +140,8 @@ import { useBlockedAddresses } from "./components/Chat/useBlockUsers";
 import { QortPayment } from "./components/QortPayment";
 import { GeneralNotifications } from "./components/GeneralNotifications";
 import { PdfViewer } from "./common/PdfViewer";
+import PriorityHighIcon from '@mui/icons-material/PriorityHigh';
+
 
 type extStates =
   | "not-authenticated"
@@ -354,6 +357,8 @@ function App() {
     url: "http://127.0.0.1:12391",
   });
     const [useLocalNode, setUseLocalNode] = useState(false);
+    const [confirmRequestRead, setConfirmRequestRead] = useState(false);
+
   const {downloadResource} = useFetchResources()
   const [showSeed, setShowSeed] = useState(false)
   const [creationStep, setCreationStep] = useState(1)
@@ -716,6 +721,8 @@ function App() {
         if(message?.payload?.checkbox1){
           qortalRequestCheckbox1Ref.current = message?.payload?.checkbox1?.value || false
         }
+        setConfirmRequestRead(false)
+
         await showQortalRequestExtension(message?.payload);
        
         if (qortalRequestCheckbox1Ref.current) {
@@ -2157,11 +2164,13 @@ function App() {
               justifyContent: "flex-start",
               paddingLeft: "22px",
               boxSizing: "border-box",
+              maxWidth: '700px'
             }}
           >
             <img
               style={{
                 cursor: "pointer",
+                height: '24px'
               }}
               onClick={returnToMain}
               src={Return}
@@ -2661,11 +2670,13 @@ function App() {
               justifyContent: "flex-start",
               paddingLeft: "22px",
               boxSizing: "border-box",
+                maxWidth: '700px'
             }}
           >
             <img
               style={{
                 cursor: "pointer",
+                height: '24px'
               }}
               onClick={() => {
                 setRawWallet(null);
@@ -2689,11 +2700,13 @@ function App() {
               justifyContent: "flex-start",
               paddingLeft: "22px",
               boxSizing: "border-box",
+                maxWidth: '700px'
             }}
           >
             <img
               style={{
                 cursor: "pointer",
+                height: '24px'
               }}
               onClick={() => {
                 setRawWallet(null);
@@ -2793,11 +2806,13 @@ function App() {
               justifyContent: "flex-start",
               paddingLeft: "22px",
               boxSizing: "border-box",
+              maxWidth: '700px'
             }}
           >
             <img
               style={{
                 cursor: "pointer",
+                height: '24px'
               }}
               onClick={returnToMain}
               src={Return}
@@ -2875,11 +2890,13 @@ function App() {
                   justifyContent: "flex-start",
                   paddingLeft: "22px",
                   boxSizing: "border-box",
+                    maxWidth: '700px'
                 }}
               >
                 <img
                   style={{
                     cursor: "pointer",
+                    height: '24px'
                   }}
                   onClick={() => {
                     if(creationStep === 2){
@@ -3533,6 +3550,35 @@ function App() {
               </Typography>
             </Box>
           )}
+           {messageQortalRequestExtension?.confirmCheckbox && (
+              <FormControlLabel
+              control={
+                <Checkbox
+                  onChange={(e) => setConfirmRequestRead(e.target.checked)}
+                  checked={confirmRequestRead}
+                  edge="start"
+                  tabIndex={-1}
+                  disableRipple
+                  sx={{
+                    "&.Mui-checked": {
+                      color: "white",
+                    },
+                    "& .MuiSvgIcon-root": {
+                      color: "white",
+                    },
+                  }}
+                />
+              }
+              label={
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Typography sx={{ fontSize: "14px" }}>
+                    I have read this request
+                  </Typography>
+                  <PriorityHighIcon color="warning" />
+                </Box>
+              }
+            />
+            )}
 
           <Spacer height="29px" />
           <Box
@@ -3547,8 +3593,16 @@ function App() {
               bgColor="var(--green)"
                 sx={{
                   minWidth: "102px",
+                  opacity: messageQortalRequestExtension?.confirmCheckbox && !confirmRequestRead ? 0.1 : 0.7,
+                  cursor: messageQortalRequestExtension?.confirmCheckbox && !confirmRequestRead ? 'default' : 'pointer',
+                  "&:hover": {
+      opacity: messageQortalRequestExtension?.confirmCheckbox && !confirmRequestRead ? 0.1 : 1,
+    }
                 }}
-                onClick={() => onOkQortalRequestExtension("accepted")}
+                onClick={() => {
+                  if(messageQortalRequestExtension?.confirmCheckbox && !confirmRequestRead) return
+                  onOkQortalRequestExtension("accepted")
+                }}
               >
                 accept
               </CustomButtonAccept>

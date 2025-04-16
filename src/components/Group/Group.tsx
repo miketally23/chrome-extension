@@ -95,13 +95,15 @@ import { formatEmailDate } from "./QMailMessages";
 import LockIcon from '@mui/icons-material/Lock';
 import NoEncryptionGmailerrorredIcon from '@mui/icons-material/NoEncryptionGmailerrorred';
 import { useRecoilState, useSetRecoilState } from "recoil";
-import { addressInfoControllerAtom, groupsPropertiesAtom, selectedGroupIdAtom } from "../../atoms/global";
+import { addressInfoControllerAtom, groupsPropertiesAtom, isOpenBlockedModalAtom, selectedGroupIdAtom } from "../../atoms/global";
 import { sortArrayByTimestampAndGroupName } from "../../utils/time";
 import { AdminSpace } from "../Chat/AdminSpace";
 import { HubsIcon } from "../../assets/Icons/HubsIcon";
 import { MessagingIcon } from "../../assets/Icons/MessagingIcon";
 import { DesktopSideBar } from "../DesktopSideBar";
-import BlockIcon from '@mui/icons-material/Block';
+
+import PersonOffIcon from '@mui/icons-material/PersonOff';
+
 import { BlockedUsersModal } from "./BlockedUsersModal";
 import { WalletsAppWrapper } from "./WalletsAppWrapper";
 
@@ -477,6 +479,8 @@ export const Group = ({
   const [groupAnnouncements, setGroupAnnouncements] = React.useState({});
   const [defaultThread, setDefaultThread] = React.useState(null);
   const [isOpenDrawer, setIsOpenDrawer] = React.useState(false);
+  const setIsOpenBlockedUserModal = useSetRecoilState(isOpenBlockedModalAtom)
+
   const [hideCommonKeyPopup, setHideCommonKeyPopup] = React.useState(false);
   const [isLoadingGroupMessage, setIsLoadingGroupMessage] = React.useState("");
   const [drawerMode, setDrawerMode] = React.useState("groups");
@@ -484,7 +488,6 @@ export const Group = ({
   const [mobileViewMode, setMobileViewMode] = useState("home");
   const [mobileViewModeKeepOpen, setMobileViewModeKeepOpen] = useState("");
   const isFocusedRef = useRef(true);
-  const [isOpenBlockedUserModal, setIsOpenBlockedUserModal] = React.useState(false);
   const timestampEnterDataRef = useRef({});
   const selectedGroupRef = useRef(null);
   const selectedDirectRef = useRef(null);
@@ -2255,7 +2258,7 @@ export const Group = ({
                 padding: '10px'
               }}
             >
-              <BlockIcon
+              <PersonOffIcon
                 sx={{
                   color: "white",
                 }}
@@ -2773,11 +2776,9 @@ export const Group = ({
               )}
              </div>
           )}
-           {isOpenBlockedUserModal && (
-        <BlockedUsersModal close={()=> {
-          setIsOpenBlockedUserModal(false)
-        }} />
-       )}
+        
+        <BlockedUsersModal  />
+      
           {selectedDirect && !newChat && (
             <>
               <Box

@@ -1,5 +1,5 @@
 import { banFromGroup, gateways, getApiKeyFromStorage } from "./background";
-import { addForeignServer, addGroupAdminRequest, addListItems, adminAction, banFromGroupRequest, cancelGroupBanRequest, cancelGroupInviteRequest, cancelSellOrder, createBuyOrder, createGroupRequest, createPoll, createSellOrder, decryptAESGCMRequest, decryptData, decryptDataWithSharingKey, decryptQortalGroupData, deleteHostedData, deleteListItems, deployAt, encryptData, encryptDataWithSharingKey, encryptQortalGroupData, getArrrSyncStatus, getCrossChainServerInfo, getDaySummary, getForeignFee, getHostedData, getListItems, getNodeInfo, getNodeStatus, getServerConnectionHistory, getTxActivitySummary, getUserAccount, getUserWallet, getUserWalletInfo, getUserWalletTransactions, getWalletBalance, inviteToGroupRequest, joinGroup, kickFromGroupRequest, leaveGroupRequest, publishMultipleQDNResources, publishQDNResource, registerNameRequest, removeForeignServer, removeGroupAdminRequest, saveFile, sendChatMessage, sendCoin, setCurrentForeignServer, signTransaction, updateForeignFee, updateNameRequest, voteOnPoll } from "./qortalRequests/get";
+import { addForeignServer, addGroupAdminRequest, addListItems, adminAction, banFromGroupRequest, buyNameRequest, cancelGroupBanRequest, cancelGroupInviteRequest, cancelSellNameRequest, cancelSellOrder, createBuyOrder, createGroupRequest, createPoll, createSellOrder, decryptAESGCMRequest, decryptData, decryptDataWithSharingKey, decryptQortalGroupData, deleteHostedData, deleteListItems, deployAt, encryptData, encryptDataWithSharingKey, encryptQortalGroupData, getArrrSyncStatus, getCrossChainServerInfo, getDaySummary, getForeignFee, getHostedData, getListItems, getNodeInfo, getNodeStatus, getServerConnectionHistory, getTxActivitySummary, getUserAccount, getUserWallet, getUserWalletInfo, getUserWalletTransactions, getWalletBalance, inviteToGroupRequest, joinGroup, kickFromGroupRequest, leaveGroupRequest, publishMultipleQDNResources, publishQDNResource, registerNameRequest, removeForeignServer, removeGroupAdminRequest, saveFile, sellNameRequest, sendChatMessage, sendCoin, setCurrentForeignServer, showPdfReader, signTransaction, updateForeignFee, updateGroupRequest, updateNameRequest, voteOnPoll } from "./qortalRequests/get";
 
  export const listOfAllQortalRequests = [
    'GET_USER_ACCOUNT',
@@ -82,7 +82,11 @@ import { addForeignServer, addGroupAdminRequest, addListItems, adminAction, banF
    'GET_NODE_INFO',
    'GET_NODE_STATUS',
    'GET_ARRR_SYNC_STATUS',
-    'SHOW_PDF_READER'
+    'SHOW_PDF_READER',
+    'UPDATE_GROUP',
+    'SELL_NAME',
+ 'CANCEL_SELL_NAME',
+ 'BUY_NAME'
  ]
 
 // Promisify chrome.storage.local.get
@@ -842,6 +846,55 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
       case "GET_ARRR_SYNC_STATUS" : {
       
         getArrrSyncStatus()
+          .then((res) => {
+            sendResponse(res);
+          })
+          .catch((error) => {
+            sendResponse({ error: error.message });
+          });
+        break;
+      }
+
+      case "UPDATE_GROUP" : {
+        const data = request.payload;
+      
+        updateGroupRequest(data, isFromExtension)
+          .then((res) => {
+            sendResponse(res);
+          })
+          .catch((error) => {
+            sendResponse({ error: error.message });
+          });
+        break;
+      }
+      case "BUY_NAME" : {
+        const data = request.payload;
+      
+        buyNameRequest(data, isFromExtension)
+          .then((res) => {
+            sendResponse(res);
+          })
+          .catch((error) => {
+            sendResponse({ error: error.message });
+          });
+        break;
+      }
+      case "SELL_NAME" : {
+        const data = request.payload;
+      
+        sellNameRequest(data, isFromExtension)
+          .then((res) => {
+            sendResponse(res);
+          })
+          .catch((error) => {
+            sendResponse({ error: error.message });
+          });
+        break;
+      }
+      case "CANCEL_SELL_NAME" : {
+        const data = request.payload;
+      
+        cancelSellNameRequest(data, isFromExtension)
           .then((res) => {
             sendResponse(res);
           })

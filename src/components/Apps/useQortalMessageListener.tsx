@@ -247,7 +247,10 @@ const UIQortalRequests = [
   'GET_SERVER_CONNECTION_HISTORY', 'SET_CURRENT_FOREIGN_SERVER',
   'ADD_FOREIGN_SERVER', 'REMOVE_FOREIGN_SERVER', 'GET_DAY_SUMMARY', 'CREATE_TRADE_BUY_ORDER',
   'CREATE_TRADE_SELL_ORDER', 'CANCEL_TRADE_SELL_ORDER', 'IS_USING_PUBLIC_NODE', 'ADMIN_ACTION', 'SIGN_TRANSACTION',  'DECRYPT_QORTAL_GROUP_DATA', 'DELETE_HOSTED_DATA', 'GET_HOSTED_DATA', 'DECRYPT_DATA_WITH_SHARING_KEY', 'SHOW_ACTIONS', 'REGISTER_NAME', 'UPDATE_NAME', 'LEAVE_GROUP', 'INVITE_TO_GROUP', 'KICK_FROM_GROUP', 'BAN_FROM_GROUP',  'CANCEL_GROUP_BAN', 'ADD_GROUP_ADMIN','REMOVE_GROUP_ADMIN','DECRYPT_AESGCM', 'CANCEL_GROUP_INVITE', 'CREATE_GROUP', 'GET_USER_WALLET_TRANSACTIONS', 'GET_NODE_INFO',
-  'GET_NODE_STATUS', 'GET_ARRR_SYNC_STATUS', 'SHOW_PDF_READER'
+  'GET_NODE_STATUS', 'GET_ARRR_SYNC_STATUS',   'UPDATE_GROUP',
+  'SELL_NAME',
+'CANCEL_SELL_NAME',
+'BUY_NAME'
 ];
 
 
@@ -614,7 +617,7 @@ isDOMContentLoaded: false
         );
       } else if(event?.data?.action === 'OPEN_NEW_TAB'){
        try {
-        await openNewTab(event?.data?.payload)
+        await openNewTab(event?.data)
         event.ports[0].postMessage({
           result: true,
           error: null,
@@ -631,6 +634,27 @@ isDOMContentLoaded: false
          const link = await createAndCopyEmbedLink(event?.data)
           event.ports[0].postMessage({
             result: link,
+            error: null,
+          });
+         } catch (error) {
+          event.ports[0].postMessage({
+            result: null,
+            error: error?.message,
+          });
+         }
+      } else if(event?.data?.action === 'SHOW_PDF_READER'){
+        try {
+          if(!event?.data?.blob){
+            throw new Error('Missing blob')
+          }
+          if(event?.data?.blob?.type !== "application/pdf") throw new Error('blob type must be application/pdf')
+      
+      
+            executeEvent("openPdf", { blob: event?.data?.blob});
+      
+           
+          event.ports[0].postMessage({
+            result: true,
             error: null,
           });
          } catch (error) {
