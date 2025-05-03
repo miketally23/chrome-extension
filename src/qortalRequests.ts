@@ -1,5 +1,5 @@
 import { banFromGroup, gateways, getApiKeyFromStorage } from "./background";
-import { addForeignServer, addGroupAdminRequest, addListItems, adminAction, banFromGroupRequest, buyNameRequest, cancelGroupBanRequest, cancelGroupInviteRequest, cancelSellNameRequest, cancelSellOrder, createBuyOrder, createGroupRequest, createPoll, createSellOrder, decryptAESGCMRequest, decryptData, decryptDataWithSharingKey, decryptQortalGroupData, deleteHostedData, deleteListItems, deployAt, encryptData, encryptDataWithSharingKey, encryptQortalGroupData, getArrrSyncStatus, getCrossChainServerInfo, getDaySummary, getForeignFee, getHostedData, getListItems, getNodeInfo, getNodeStatus, getServerConnectionHistory, getTxActivitySummary, getUserAccount, getUserWallet, getUserWalletInfo, getUserWalletTransactions, getWalletBalance, inviteToGroupRequest, joinGroup, kickFromGroupRequest, leaveGroupRequest, publishMultipleQDNResources, publishQDNResource, registerNameRequest, removeForeignServer, removeGroupAdminRequest, saveFile, sellNameRequest, sendChatMessage, sendCoin, setCurrentForeignServer, showPdfReader, signTransaction, updateForeignFee, updateGroupRequest, updateNameRequest, voteOnPoll } from "./qortalRequests/get";
+import { addForeignServer, addGroupAdminRequest, addListItems, adminAction, banFromGroupRequest, buyNameRequest, cancelGroupBanRequest, cancelGroupInviteRequest, cancelSellNameRequest, cancelSellOrder, createBuyOrder, createGroupRequest, createPoll, createSellOrder, decryptAESGCMRequest, decryptData, decryptDataWithSharingKey, decryptQortalGroupData, deleteHostedData, deleteListItems, deployAt, encryptData, encryptDataWithSharingKey, encryptQortalGroupData, getArrrSyncStatus, getCrossChainServerInfo, getDaySummary, getForeignFee, getHostedData, getListItems, getNodeInfo, getNodeStatus, getServerConnectionHistory, getTxActivitySummary, getUserAccount, getUserWallet, getUserWalletInfo, getUserWalletTransactions, getWalletBalance, inviteToGroupRequest, joinGroup, kickFromGroupRequest, leaveGroupRequest, multiPaymentWithPrivateData, publishMultipleQDNResources, publishQDNResource, registerNameRequest, removeForeignServer, removeGroupAdminRequest, saveFile, sellNameRequest, sendChatMessage, sendCoin, setCurrentForeignServer, showPdfReader, signForeignFees, signTransaction, transferAssetRequest, updateForeignFee, updateGroupRequest, updateNameRequest, voteOnPoll } from "./qortalRequests/get";
 
  export const listOfAllQortalRequests = [
    'GET_USER_ACCOUNT',
@@ -86,7 +86,9 @@ import { addForeignServer, addGroupAdminRequest, addListItems, adminAction, banF
     'UPDATE_GROUP',
     'SELL_NAME',
  'CANCEL_SELL_NAME',
- 'BUY_NAME'
+ 'BUY_NAME',  'MULTI_ASSET_PAYMENT_WITH_PRIVATE_DATA',
+ 'TRANSFER_ASSET',
+ 'SIGN_FOREIGN_FEES',
  ]
 
 // Promisify chrome.storage.local.get
@@ -426,7 +428,7 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
     case "UPDATE_FOREIGN_FEE": {
         const data = request.payload;
     
-        updateForeignFee(data)
+        updateForeignFee(data, isFromExtension)
             .then((res) => {
                 sendResponse(res);
             })
@@ -454,7 +456,7 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
     case "SET_CURRENT_FOREIGN_SERVER": {
         const data = request.payload;
     
-        setCurrentForeignServer(data)
+        setCurrentForeignServer(data, isFromExtension)
             .then((res) => {
                 sendResponse(res);
             })
@@ -468,7 +470,7 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
     case "ADD_FOREIGN_SERVER": {
         const data = request.payload;
     
-        addForeignServer(data)
+        addForeignServer(data, isFromExtension)
             .then((res) => {
                 sendResponse(res);
             })
@@ -482,7 +484,7 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
     case "REMOVE_FOREIGN_SERVER": {
         const data = request.payload;
     
-        removeForeignServer(data)
+        removeForeignServer(data, isFromExtension)
             .then((res) => {
                 sendResponse(res);
             })
@@ -895,6 +897,44 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
         const data = request.payload;
       
         cancelSellNameRequest(data, isFromExtension)
+          .then((res) => {
+            sendResponse(res);
+          })
+          .catch((error) => {
+            sendResponse({ error: error.message });
+          });
+        break;
+      }
+      case "MULTI_ASSET_PAYMENT_WITH_PRIVATE_DATA": {
+        const data = request.payload;
+      
+        multiPaymentWithPrivateData(data, isFromExtension)
+          .then((res) => {
+            sendResponse(res);
+          })
+          .catch((error) => {
+            sendResponse({ error: error.message });
+          });
+        break;
+      }
+      
+      case "TRANSFER_ASSET": {
+        const data = request.payload;
+      
+        transferAssetRequest(data, isFromExtension)
+          .then((res) => {
+            sendResponse(res);
+          })
+          .catch((error) => {
+            sendResponse({ error: error.message });
+          });
+        break;
+      }
+      
+      case "SIGN_FOREIGN_FEES": {
+        const data = request.payload;
+      
+        signForeignFees(data, isFromExtension)
           .then((res) => {
             sendResponse(res);
           })
