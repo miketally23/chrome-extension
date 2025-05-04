@@ -3316,12 +3316,14 @@ function App() {
                 >
                   {messageQortalRequestExtension?.text3}
                 </TextP>
-                <Spacer height="15px" />
+               
               </Box>
+              <Spacer height="15px" />
             </>
           )}
 
           {messageQortalRequestExtension?.text4 && (
+            <>
             <Box
               sx={{
                 display: "flex",
@@ -3339,6 +3341,8 @@ function App() {
                 {messageQortalRequestExtension?.text4}
               </TextP>
             </Box>
+            <Spacer height="15px" />
+            </>
           )}
 
           {messageQortalRequestExtension?.html && (
