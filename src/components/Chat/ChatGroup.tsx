@@ -15,15 +15,22 @@ import { CustomizedSnackbars } from '../Snackbar/Snackbar'
 import { PUBLIC_NOTIFICATION_CODE_FIRST_SECRET_KEY } from '../../constants/codes'
 import { useMessageQueue } from '../../MessageQueueContext'
 import { executeEvent, subscribeToEvent, unsubscribeFromEvent } from '../../utils/events'
-import { Box, ButtonBase, Divider, Typography } from '@mui/material'
+import { Box, ButtonBase, Divider, Typography,   IconButton,
+  Tooltip } from '@mui/material'
 import ShortUniqueId from "short-unique-id";
 import { ReplyPreview } from './MessageItem'
 import { ExitIcon } from '../../assets/Icons/ExitIcon'
 import { RESOURCE_TYPE_NUMBER_GROUP_CHAT_REACTIONS } from '../../constants/resourceTypes'
-import { isExtMsg } from '../../background'
+import { isExtMsg, getFee } from '../../background'
 import { throttle } from 'lodash'
 import AppViewerContainer from '../Apps/AppViewerContainer'
 import CloseIcon from "@mui/icons-material/Close";
+import ImageIcon from '@mui/icons-material/Image';
+import { messageHasImage } from '../../utils/chat';
+
+
+
+const uidImages = new ShortUniqueId({ length: 12 });
 
 const uid = new ShortUniqueId({ length: 5 });
 
@@ -47,7 +54,9 @@ export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey,
   const [isOpenQManager, setIsOpenQManager] = useState(null)
   const [onEditMessage, setOnEditMessage] = useState(null)
   const [messageSize, setMessageSize] = useState(0)
-  const {isUserBlocked} = useContext(MyContext)
+  const {isUserBlocked, show} = useContext(MyContext)
+  const [chatImagesToSave, setChatImagesToSave] = useState([]);
+  const [isDeleteImage, setIsDeleteImage] = useState(false);
 
   const { queueChats, addToQueue, processWithNewMessages } = useMessageQueue();
   const [, forceUpdate] = useReducer((x) => x + 1, 0);
@@ -610,11 +619,98 @@ const sendMessage = async ()=> {
     const publicData = isPrivate ? {} : {
       isEdited : chatReference ? true : false,
     }
+    const imagesToPublish = [];
+        const deleteImage =
+          onEditMessage && isDeleteImage && messageHasImage(onEditMessage);
+        if (deleteImage) {
+          const fee = await getFee('ARBITRARY');
+
+          await show({
+            publishFee: fee.fee + ' QORT',
+            message: 'Would you like to delete your previous chat image?',
+          });
+
+          await new Promise((res, rej) => {
+            chrome?.runtime?.sendMessage(
+              {
+                action: "publishOnQDN",
+                payload: {
+                  data: 'RA==',
+                  identifier: onEditMessage?.images[0]?.identifier,
+            service: onEditMessage?.images[0]?.service,
+                },
+              },
+              (response) => {
+             
+                if (!response?.error) {
+                  res(response);
+                  return
+                }
+                rej(response.error);
+              }
+            );
+          });
+        }
+        if (chatImagesToSave?.length > 0) {
+          const imageToSave = chatImagesToSave[0];
+
+          const base64ToSave = isPrivate
+            ? await encryptChatMessage(imageToSave, secretKeyObject)
+            : imageToSave;
+          // 1 represents public group, 0 is private
+          const identifier = `grp-q-manager_${isPrivate ? 0 : 1}_group_${selectedGroup}_${uidImages.rnd()}`;
+          imagesToPublish.push({
+            service: 'IMAGE',
+            identifier,
+            name: myName,
+            base64: base64ToSave,
+          });
+
+         
+         const res = await new Promise((res, rej) => {
+            chrome?.runtime?.sendMessage(
+              {
+                action: "PUBLISH_MULTIPLE_QDN_RESOURCES",
+                type: "qortalRequest",
+                payload: {
+                  resources: imagesToPublish,
+                },
+              },
+              (response) => {
+                if (response.error) {
+                  rej(response?.message);
+                  return;
+                } else {
+                  res(response);
+                  
+                }
+              }
+            );
+          });
+          if (res !== true) throw new Error('Unable to publish images');
+        }
+
+        const images =
+          imagesToPublish?.length > 0
+            ? imagesToPublish.map((item) => {
+                return {
+                  name: item.name,
+                  identifier: item.identifier,
+                  service: item.service,
+                  timestamp: Date.now(),
+                };
+              })
+            : chatReference
+              ?  isDeleteImage
+              ? []
+              : onEditMessage?.images || []
+              : [];
     const otherData = {
       repliedTo,
       ...(onEditMessage?.decryptedData || {}),
       type: chatReference ? 'edit' : '',
       specialId: uid.rnd(),
+      images,
       ...publicData
     }
     const objectMessage = {
@@ -650,6 +746,8 @@ const sendMessage = async ()=> {
     clearEditorContent()
     setReplyMessage(null)
     setOnEditMessage(null)
+    setIsDeleteImage(false);
+    setChatImagesToSave([]);
     }
     // send chat message
   } catch (error) {
@@ -712,6 +810,8 @@ useEffect(() => {
     }
     setReplyMessage(message)
     setOnEditMessage(null)
+    setIsDeleteImage(false);
+    setChatImagesToSave([]);
     editorRef?.current?.chain().focus()
   }, [])
 
@@ -781,6 +881,24 @@ useEffect(() => {
     }
   }, [isPrivate])
 
+  const insertImage = useCallback(
+    (img) => {
+      if (
+        chatImagesToSave?.length > 0 ||
+        (messageHasImage(onEditMessage) && !isDeleteImage)
+      ) {
+        setInfoSnack({
+          type: 'error',
+          message: 'This message already has an image',
+        });
+        setOpenSnack(true);
+        return;
+      }
+      setChatImagesToSave((prev) => [...prev, img]);
+    },
+    [chatImagesToSave, onEditMessage?.images, isDeleteImage]
+  );
+
   
   return (
     <div style={{
@@ -823,6 +941,117 @@ useEffect(() => {
             width: 'calc(100% - 100px)',
             justifyContent: 'flex-end'
       }}>
+        <Box
+              sx={{
+                alignItems: 'flex-start',
+                display: 'flex',
+                width: '100%',
+                gap: '10px',
+                flexWrap: 'wrap',
+              }}
+            >
+              {!isDeleteImage &&
+                onEditMessage &&
+                messageHasImage(onEditMessage) &&
+                onEditMessage?.images?.map((_, index) => (
+                  <div
+                    key={index}
+                    style={{
+                      position: 'relative',
+                      height: '50px',
+                      width: '50px',
+                    }}
+                  >
+                    <ImageIcon
+                      
+                      sx={{
+                        height: '100%',
+                        width: '100%',
+                        borderRadius: '3px',
+                        color:'white'
+                      }}
+                    />
+                    <Tooltip title="Delete image">
+                      <IconButton
+                        onClick={() => setIsDeleteImage(true)}
+                        size="small"
+                        sx={{
+                          position: 'absolute',
+                          top: '50%',
+                          left: '50%',
+                          transform: 'translate(-50%, -50%)',
+                          backgroundColor: (theme) =>
+                            theme.palette.background.paper,
+                          color: (theme) => theme.palette.text.primary,
+                          borderRadius: '50%',
+                          opacity: 0,
+                          transition: 'opacity 0.2s',
+                          boxShadow: (theme) => theme.shadows[2],
+                          '&:hover': {
+                            backgroundColor: (theme) =>
+                              theme.palette.background.default,
+                            opacity: 1,
+                          },
+                          pointerEvents: 'auto',
+                        }}
+                      >
+                        <CloseIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </div>
+                ))}
+              {chatImagesToSave.map((imgBase64, index) => (
+                <div
+                  key={index}
+                  style={{
+                    position: 'relative',
+                    height: '50px',
+                    width: '50px',
+                  }}
+                >
+                  <img
+                    src={`data:image/webp;base64,${imgBase64}`}
+                    style={{
+                      height: '100%',
+                      width: '100%',
+                      objectFit: 'contain',
+                      borderRadius: '3px',
+                    }}
+                  />
+                  <Tooltip title="Remove image">
+                    <IconButton
+                      onClick={() =>
+                        setChatImagesToSave((prev) =>
+                          prev.filter((_, i) => i !== index)
+                        )
+                      }
+                      size="small"
+                      sx={{
+                        position: 'absolute',
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        backgroundColor: (theme) =>
+                          theme.palette.background.paper,
+                        color: (theme) => theme.palette.text.primary,
+                        borderRadius: '50%',
+                        opacity: 0,
+                        transition: 'opacity 0.2s',
+                        boxShadow: (theme) => theme.shadows[2],
+                        '&:hover': {
+                          backgroundColor: (theme) =>
+                            theme.palette.background.default,
+                          opacity: 1,
+                        },
+                        pointerEvents: 'auto',
+                      }}
+                    >
+                      <CloseIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                </div>
+              ))}
+            </Box>
         {replyMessage && (
         <Box sx={{
           display: 'flex',
@@ -837,6 +1066,8 @@ useEffect(() => {
                 setReplyMessage(null)
               
                 setOnEditMessage(null)
+                setIsDeleteImage(false);
+                setChatImagesToSave([]);
 
                }}
              >
@@ -857,7 +1088,8 @@ useEffect(() => {
                onClick={() => {
                 setReplyMessage(null)
                 setOnEditMessage(null)
-              
+                setIsDeleteImage(false);
+        setChatImagesToSave([]);
                   clearEditorContent()
                 
                }}
@@ -868,7 +1100,7 @@ useEffect(() => {
       )}
      
      
-       <Tiptap enableMentions setEditorRef={setEditorRef} onEnter={sendMessage} isChat disableEnter={isMobile ? true : false} isFocusedParent={isFocusedParent} setIsFocusedParent={setIsFocusedParent} membersWithNames={members} />
+       <Tiptap enableMentions setEditorRef={setEditorRef} onEnter={sendMessage} isChat disableEnter={isMobile ? true : false} isFocusedParent={isFocusedParent} setIsFocusedParent={setIsFocusedParent} membersWithNames={members} insertImage={insertImage} />
        {messageSize > 750 && (
         <Box sx={{
           display: 'flex',

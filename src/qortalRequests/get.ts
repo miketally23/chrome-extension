@@ -1477,7 +1477,7 @@ if (accepted || skip) {
     };
     const messageObject = fullMessageObject ? fullMessageObject : {
       messageText: tiptapJson,
-      images: [""],
+      images: [],
       repliedTo: "",
       version: 3,
     };
