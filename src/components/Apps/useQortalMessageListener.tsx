@@ -105,6 +105,35 @@ export const createAndCopyEmbedLink = async (data) => {
 
 };
 
+const fileReferences = {}
+
+
+function saveFileReferences(obj) {
+  if (obj.file) {
+    const fileId = "objFile_qortalfile_" + Date.now();
+
+    fileReferences[fileId] = obj.file
+    obj.fileId = fileId;
+  }
+  if (obj.blob) {
+    const fileId = "objFile_qortalfile_" + Date.now();
+
+    fileReferences[fileId] = obj.blob
+    obj.fileId = fileId
+  }
+
+  // Iterate through resources to find files and save them to IndexedDB
+  for (let resource of (obj?.resources || [])) {
+    if (resource.file) {
+      const fileId = resource.identifier + "_qortalfile_" + Date.now();
+
+      fileReferences[fileId] = resource.file
+      resource.fileId = fileId
+    }
+  }
+  return obj
+}
+
 class Semaphore {
 	constructor(count) {
 		this.count = count
@@ -235,7 +264,85 @@ async function handleGetFileFromIndexedDB(fileId, sendResponse) {
   }
 
   
+  async function reusablePostStream(endpoint, _body) {
+
+    const headers = {};
   
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers,
+      body: _body,
+    });
+  
+    return response;
+  }
+  
+  async function uploadChunkWithRetry(endpoint, formData, index, maxRetries = 3) {
+    let attempt = 0;
+    while (attempt < maxRetries) {
+      try {
+        const response = await reusablePostStream(endpoint, formData);
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(errorText);
+        }
+        return; // Success
+      } catch (err) {
+        attempt++;
+        console.warn(
+          `Chunk ${index} failed (attempt ${attempt}): ${err.message}`
+        );
+        if (attempt >= maxRetries) {
+          throw new Error(`Chunk ${index} failed after ${maxRetries} attempts`);
+        }
+        // Wait 10 seconds before next retry
+        await new Promise((res) => setTimeout(res, 10_000));
+      }
+    }
+  }
+  
+  async function handleSendDataChunksToCore(fileId, chunkUrl, sendResponse){
+    try {
+      if(!fileReferences[fileId]) throw new Error('No file reference found')
+        const chunkSize = 5 * 1024 * 1024; // 5MB
+  
+        const file = fileReferences[fileId]
+        const totalChunks = Math.ceil(file.size / chunkSize);
+  
+      for (let index = 0; index < totalChunks; index++) {
+        const start = index * chunkSize;
+        const end = Math.min(start + chunkSize, file.size);
+        const chunk = file.slice(start, end);
+  
+        const formData = new FormData();
+        formData.append('chunk', chunk, file.name); // Optional: include filename
+        formData.append('index', index);
+  
+        await uploadChunkWithRetry(chunkUrl, formData, index);
+      }
+      sendResponse({ result: true });
+    } catch (error) {
+      sendResponse({ result: null, error: error?.message || "Could not save chunks to the core" });
+    } finally {
+      if(fileReferences[fileId]){
+        delete fileReferences[fileId]
+      }
+    }
+  }
+  
+  async function handleGetFileBase64(fileId, sendResponse){
+    try {
+      if(!fileReferences[fileId]) throw new Error('No file reference found')
+     const base64 = await fileToBase64(fileReferences[fileId]);
+      sendResponse({ result: base64 });
+    } catch (error) {
+      sendResponse({ result: null, error: error?.message || "Could not save chunks to the core" });
+    } finally {
+      if(fileReferences[fileId]){
+        delete fileReferences[fileId]
+      }
+    }
+  }
   
 
 const UIQortalRequests = [
@@ -329,6 +436,20 @@ const UIQortalRequests = [
   }
 
   const showSaveFilePicker = async (data) => {
+    if(data?.locationEndpoint){
+      try {
+        const a = document.createElement('a');
+  
+        a.href = data?.locationEndpoint;
+        a.download = data.filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      } catch (error) {
+        console.error(error)
+      }
+      return
+    }
     let blob
     let fileName
     try {
@@ -539,9 +660,7 @@ isDOMContentLoaded: false
           event.ports[0]
         );
       } else if (
-        event?.data?.action === 'PUBLISH_MULTIPLE_QDN_RESOURCES' ||
-        event?.data?.action === 'PUBLISH_QDN_RESOURCE' ||
-        event?.data?.action === 'ENCRYPT_DATA' || event?.data?.action === 'SAVE_FILE' || event?.data?.action === 'ENCRYPT_DATA_WITH_SHARING_KEY' || event?.data?.action === 'ENCRYPT_QORTAL_GROUP_DATA'
+        event?.data?.action === 'ENCRYPT_DATA' ||  event?.data?.action === 'ENCRYPT_DATA_WITH_SHARING_KEY' || event?.data?.action === 'ENCRYPT_QORTAL_GROUP_DATA'
         
       ) {
         let data;
@@ -566,6 +685,54 @@ isDOMContentLoaded: false
             error: 'Failed to prepare data for publishing',
           });
         }
+      } else if (
+         event?.data?.action === 'SAVE_FILE' 
+        
+      ) {
+        let data;
+        try {
+          if(!event?.data?.location){
+            data = await storeFilesInIndexedDB(event.data);
+          } else {
+            data = event?.data
+          }
+          
+        } catch (error) {
+          console.error('Error storing files in IndexedDB:', error);
+          event.ports[0].postMessage({
+            result: null,
+            error: 'Failed to store files in IndexedDB',
+          });
+          return;
+        }
+        if (data) {
+          sendMessageToRuntime(
+            { action: event.data.action, type: 'qortalRequest', payload: data, isExtension: true },
+            event.ports[0]
+          );
+        } else {
+          event.ports[0].postMessage({
+            result: null,
+            error: 'Failed to prepare data for publishing',
+          });
+        }
+      } else if (event?.data?.action === 'PUBLISH_MULTIPLE_QDN_RESOURCES' || event?.data?.action === 'PUBLISH_QDN_RESOURCE' ) {
+        let data;
+        try {
+          data = saveFileReferences(event.data);
+        } catch (error) {
+          console.error('Failed to store file references:', error);
+          event.ports[0].postMessage({
+            result: null,
+            error: 'Failed to store file references',
+          });
+          return;
+        }
+    
+        sendMessageToRuntime(
+          { action: event.data.action, type: 'qortalRequest', payload: data, isExtension: true },
+          event.ports[0]
+        );
       } else if(event?.data?.action === 'LINK_TO_QDN_RESOURCE' ||
       event?.data?.action === 'QDN_RESOURCE_DISPLAYED'){
         const pathUrl = event?.data?.path != null ? (event?.data?.path.startsWith('/') ? '' : '/') + event?.data?.path : null
@@ -679,16 +846,29 @@ isDOMContentLoaded: false
     
   }, [appName, appService]); // Empty dependency array to run once when the component mounts
 
-  chrome.runtime?.onMessage.addListener( function (message, sender, sendResponse) {
-     if(message.action === "SHOW_SAVE_FILE_PICKER"){
-      showSaveFilePicker(message?.data)
-    }
-  
-    else  if (message.action === "getFileFromIndexedDB") {
-      handleGetFileFromIndexedDB(message.fileId, sendResponse);
-      return true; // Keep the message channel open for async response
-    }
-  });
+  useEffect(() => {
+    const listener = (message, sender, sendResponse) => {
+      if (message.action === 'SHOW_SAVE_FILE_PICKER') {
+        showSaveFilePicker(message?.data);
+      } else if (message.action === 'getFileFromIndexedDB') {
+        handleGetFileFromIndexedDB(message.fileId, sendResponse);
+        return true; // Keep channel open for async
+      } else if (message.action === 'sendDataChunksToCore') {
+        handleSendDataChunksToCore(message.fileId, message.chunkUrl, sendResponse);
+        return true; // Keep channel open for async
+      } else if (message.action === 'getFileBase64') {
+        handleGetFileBase64(message.fileId, sendResponse);
+        return true; // Keep channel open for async
+      }
+    };
+
+    chrome.runtime?.onMessage.addListener(listener);
+
+    // ✅ Cleanup on unmount
+    return () => {
+      chrome.runtime?.onMessage.removeListener(listener);
+    };
+  }, []);
 
   return {path, history, resetHistory, changeCurrentIndex}
 };

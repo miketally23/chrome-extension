@@ -23,7 +23,8 @@ export const AppsHomeDesktop = ({
   myApp,
   myWebsite,
   availableQapps,
-  myName
+  myName,
+  myAddress
 }) => {
   const [qortalUrl, setQortalUrl] = useState('')
 
@@ -138,7 +139,7 @@ export const AppsHomeDesktop = ({
             <AppCircleLabel>Library</AppCircleLabel>
           </AppCircleContainer>
         </ButtonBase>
-        <AppsPrivate myName={myName} />
+        <AppsPrivate myName={myName} myAddress={myAddress} />
         <SortablePinnedApps
           isDesktop={true}
           availableQapps={availableQapps}

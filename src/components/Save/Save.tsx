@@ -154,7 +154,8 @@ export const Save = ({ isDesktop, disableWidth, myName }) => {
               payload: {
                 data: encryptData,
                 identifier: "ext_saved_settings",
-                service: 'DOCUMENT_PRIVATE'
+                service: 'DOCUMENT_PRIVATE',
+                uploadType: 'base64',
               },
             },
             (response) => {

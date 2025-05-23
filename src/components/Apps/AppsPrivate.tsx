@@ -1,4 +1,4 @@
-import React, { useContext, useMemo, useState } from "react";
+import React, { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import {
   Avatar,
   Box,
@@ -30,14 +30,17 @@ import {
   PublishQAppInfo,
 } from "./Apps-styles";
 import ImageUploader from "../../common/ImageUploader";
-import { isMobile, MyContext } from "../../App";
+import { getBaseApiReact, isMobile, MyContext } from "../../App";
 import { fileToBase64 } from "../../utils/fileReading";
 import { objectToBase64 } from "../../qdn/encryption/group-encryption";
 import { getFee } from "../../background";
+import { useSortedMyNames } from "../../hooks/useSortedMyNames";
 
 const maxFileSize = 50 * 1024 * 1024; // 50MB
 
-export const AppsPrivate = ({myName}) => {
+export const AppsPrivate = ({myName, myAddress}) => {
+  const [names, setNames] = useState([]);
+  const [name, setName] = useState(0);
   const { openApp } = useHandlePrivateApps();
   const [file, setFile] = useState(null);
   const [logo, setLogo] = useState(null);
@@ -48,6 +51,9 @@ export const AppsPrivate = ({myName}) => {
   const [myGroupsWhereIAmAdminFromGlobal] = useRecoilState(
     myGroupsWhereIAmAdminAtom
   );
+
+  const mySortedNames = useSortedMyNames(names, myName);
+
 
   const myGroupsWhereIAmAdmin = useMemo(()=> {
     return myGroupsWhereIAmAdminFromGlobal?.filter((group)=> groupsProperties[group?.groupId]?.isOpen === false)
@@ -180,6 +186,8 @@ export const AppsPrivate = ({myName}) => {
               data: decryptedData,
               identifier: newPrivateAppValues?.identifier,
               service: newPrivateAppValues?.service,
+              uploadType: 'base64',
+              name
             },
           },
           (response) => {
@@ -195,7 +203,7 @@ export const AppsPrivate = ({myName}) => {
         {
           identifier: newPrivateAppValues?.identifier,
           service: newPrivateAppValues?.service,
-          name: myName,
+          name: name,
           groupId: selectedGroup,
         },
         true
@@ -209,6 +217,22 @@ export const AppsPrivate = ({myName}) => {
       });
     }
   };
+
+  const getNames = useCallback(async () => {
+    if (!myAddress) return;
+    try {
+      const res = await fetch(
+        `${getBaseApiReact()}/names/address/${myAddress}?limit=0`
+      );
+      const data = await res.json();
+      setNames(data?.map((item) => item.name));
+    } catch (error) {
+      console.error(error);
+    }
+  }, [myAddress]);
+  useEffect(() => {
+    getNames();
+  }, [getNames]);
 
   const handleChange = (event: React.SyntheticEvent, newValue: number) => {
     setValueTabPrivateApp(newValue);
@@ -445,6 +469,33 @@ export const AppsPrivate = ({myName}) => {
                   <input {...getInputProps()} />
                   {file ? "Change" : "Choose"} File
                 </PublishQAppChoseFile>
+                <Spacer height="20px" />
+                <Box
+                  sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '5px',
+                  }}
+                >
+                  <Label>Select a Qortal name</Label>
+
+                  <Select
+                    labelId="demo-simple-select-label"
+                    id="demo-simple-select"
+                    value={name}
+                    label="Groups where you are an admin"
+                    onChange={(e) => setName(e.target.value)}
+                  >
+                    <MenuItem value={0}>No name selected</MenuItem>
+                    {mySortedNames.map((name) => {
+                      return (
+                        <MenuItem key={name} value={name}>
+                          {name}
+                        </MenuItem>
+                      );
+                    })}
+                  </Select>
+                </Box>
                 <Spacer height="20px" />
                 <Box
                   sx={{

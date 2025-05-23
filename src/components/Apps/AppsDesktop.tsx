@@ -25,7 +25,7 @@ import { AppsIcon } from "../../assets/Icons/AppsIcon";
 
 const uid = new ShortUniqueId({ length: 8 });
 
-export const AppsDesktop = ({ mode, setMode, show , myName, goToHome, setDesktopSideView, hasUnreadDirects, isDirects, isGroups, hasUnreadGroups, toggleSideViewGroups, toggleSideViewDirects, setDesktopViewMode, isApps, desktopViewMode}) => {
+export const AppsDesktop = ({ mode, setMode, show , myName, goToHome, setDesktopSideView, hasUnreadDirects, isDirects, isGroups, hasUnreadGroups, toggleSideViewGroups, toggleSideViewDirects, setDesktopViewMode, isApps, desktopViewMode, myAddress}) => {
   const [availableQapps, setAvailableQapps] = useState([]);
   const [selectedAppInfo, setSelectedAppInfo] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState(null)
@@ -395,7 +395,7 @@ export const AppsDesktop = ({ mode, setMode, show , myName, goToHome, setDesktop
         }}>
 
          <Spacer height="30px" />
-        <AppsHomeDesktop myName={myName} availableQapps={availableQapps}  setMode={setMode} myApp={myApp} myWebsite={myWebsite} />
+        <AppsHomeDesktop myName={myName} availableQapps={availableQapps}  setMode={setMode} myApp={myApp} myWebsite={myWebsite} myAddress={myAddress} />
         </Box>
       )}
     
@@ -412,7 +412,7 @@ export const AppsDesktop = ({ mode, setMode, show , myName, goToHome, setDesktop
       {mode === "appInfo" && !selectedTab && <AppInfo app={selectedAppInfo} myName={myName} />}
       {mode === "appInfo-from-category" && !selectedTab && <AppInfo app={selectedAppInfo} myName={myName} />}
       <AppsCategoryDesktop  availableQapps={availableQapps} isShow={mode === 'category' && !selectedTab} category={selectedCategory} myName={myName} />
-      {mode === "publish" && !selectedTab && <AppPublish names={myName ?  [myName] : []} categories={categories} />}
+      {mode === "publish" && !selectedTab && <AppPublish  categories={categories} myAddress={myAddress} />}
       {tabs.map((tab) => {
         if (!iframeRefs.current[tab.tabId]) {
           iframeRefs.current[tab.tabId] = React.createRef();
@@ -440,7 +440,7 @@ export const AppsDesktop = ({ mode, setMode, show , myName, goToHome, setDesktop
         }}>
 
          <Spacer height="30px" />
-          <AppsHomeDesktop myName={myName}  availableQapps={availableQapps} setMode={setMode} myApp={myApp} myWebsite={myWebsite}  />
+          <AppsHomeDesktop myName={myName}  availableQapps={availableQapps} setMode={setMode} myApp={myApp} myWebsite={myWebsite} myAddress={myAddress}  />
           </Box>
         </>
       )}

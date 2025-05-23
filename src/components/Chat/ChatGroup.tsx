@@ -638,6 +638,7 @@ const sendMessage = async ()=> {
                   data: 'RA==',
                   identifier: onEditMessage?.images[0]?.identifier,
             service: onEditMessage?.images[0]?.service,
+            uploadType: 'base64',
                 },
               },
               (response) => {

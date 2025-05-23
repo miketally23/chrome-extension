@@ -71,7 +71,8 @@ const [isLoading, setIsLoading] = useState(false)
                   payload: {
                     data: avatarBase64,
                     identifier: "qortal_avatar",
-                    service: 'THUMBNAIL'
+                    service: 'THUMBNAIL',
+                    uploadType: 'base64',
                   },
                 },
                 (response) => {

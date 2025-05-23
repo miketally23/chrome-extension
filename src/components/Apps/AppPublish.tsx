@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import {
   AppCircle,
   AppCircleContainer,
@@ -49,6 +49,8 @@ import { LoadingSnackbar } from "../Snackbar/LoadingSnackbar";
 import { CustomizedSnackbars } from "../Snackbar/Snackbar";
 import { getFee } from "../../background";
 import { fileToBase64 } from "../../utils/fileReading";
+import { publishData } from "../../qdn/publish/pubish";
+import { useSortedMyNames } from "../../hooks/useSortedMyNames";
 
 const CustomSelect = styled(Select)({
   border: "0.5px solid var(--50-white, #FFFFFF80)",
@@ -82,7 +84,8 @@ const CustomMenuItem = styled(MenuItem)({
   },
 });
 
-export const AppPublish = ({ names, categories }) => {
+export const AppPublish = ({  categories, myAddress, myName }) => {
+  const [names, setNames] = useState([]);
   const [name, setName] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -98,6 +101,8 @@ export const AppPublish = ({ names, categories }) => {
   const [tag5, setTag5] = useState("");
   const [openSnack, setOpenSnack] = useState(false);
   const [infoSnack, setInfoSnack] = useState(null);
+  const mySortedNames = useSortedMyNames(names, myName);
+
   const [isLoading, setIsLoading] = useState("");
   const maxFileSize = appType === "APP" ? 50 * 1024 * 1024 : 400 * 1024 * 1024; // 50MB or 400MB
   const { getRootProps, getInputProps } = useDropzone({
@@ -125,6 +130,25 @@ export const AppPublish = ({ names, categories }) => {
       });
     },
   });
+
+  const getNames = useCallback(async () => {
+    if (!myAddress) return;
+    try {
+      setIsLoading('Loading names');
+      const res = await fetch(
+        `${getBaseApiReact()}/names/address/${myAddress}?limit=0`
+      );
+      const data = await res.json();
+      setNames(data?.map((item) => item.name));
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsLoading('');
+    }
+  }, [myAddress]);
+  useEffect(() => {
+    getNames();
+  }, [getNames]);
 
   const getQapp = React.useCallback(async (name, appType) => {
     try {
@@ -199,34 +223,16 @@ export const AppPublish = ({ names, categories }) => {
         publishFee: fee.fee + " QORT",
       });
       setIsLoading("Publishing... Please wait.");
-      const fileBase64 = await fileToBase64(file);
-      await new Promise((res, rej) => {
-        chrome?.runtime?.sendMessage(
-          {
-            action: "publishOnQDN",
-            payload: {
-              data: fileBase64,
-              service: appType,
-              title,
-              description,
-              category,
-              tag1,
-              tag2,
-              tag3,
-              tag4,
-              tag5,
-              uploadType: 'zip'
-            },
-          },
-          (response) => {
-            if (!response?.error) {
-              res(response);
-              return;
-            }
-            rej(response.error);
-          }
-        );
-      });
+       await publishData({
+        registeredName: name, data: file, service: appType, identifier: null, uploadType: 'zip',  withFee: true, title,
+        description,
+        category,
+        tag1,
+        tag2,
+        tag3,
+        tag4,
+        tag5
+    })
       setInfoSnack({
         type: "success",
         message:
@@ -288,7 +294,7 @@ export const AppPublish = ({ names, categories }) => {
             </em>{" "}
             {/* This is the placeholder item */}
           </CustomMenuItem>
-          {names.map((name) => {
+          {mySortedNames.map((name) => {
             return <CustomMenuItem value={name}>{name}</CustomMenuItem>;
           })}
         </CustomSelect>

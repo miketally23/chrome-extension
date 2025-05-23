@@ -2844,7 +2844,7 @@ export const Group = ({
              {!isMobile  && (
             <AppsDesktop toggleSideViewGroups={toggleSideViewGroups} toggleSideViewDirects={toggleSideViewDirects} goToHome={goToHome} mode={appsMode} setMode={setAppsMode} setDesktopSideView={setDesktopSideView} hasUnreadDirects={directChatHasUnread} show={desktopViewMode === "apps"} myName={userInfo?.name}  isGroups={isOpenSideViewGroups}
             isDirects={isOpenSideViewDirects}    hasUnreadGroups={groupChatHasUnread ||
-              groupsAnnHasUnread} setDesktopViewMode={setDesktopViewMode} isApps={desktopViewMode === 'apps'} desktopViewMode={desktopViewMode} />
+              groupsAnnHasUnread} setDesktopViewMode={setDesktopViewMode} isApps={desktopViewMode === 'apps'} desktopViewMode={desktopViewMode} myAddress={userInfo?.address} />
           )}
       
       <WalletsAppWrapper />

@@ -38,7 +38,7 @@ import {
   getNameOrAddress,
   getAssetBalanceInfo
 } from "../background";
-import { decryptGroupEncryption, getNameInfo, uint8ArrayToObject } from "../backgroundFunctions/encryption";
+import { decryptGroupEncryption, getAllUserNames, getNameInfo, uint8ArrayToObject } from "../backgroundFunctions/encryption";
 import { QORT_DECIMALS } from "../constants/constants";
 import Base58 from "../deps/Base58";
 
@@ -424,6 +424,39 @@ function getFileFromContentScript(fileId, sender) {
     );
   });
 }
+
+export function sendDataChunksToCore(fileId, chunkUrl, sender) {
+  return new Promise((resolve, reject) => {
+    chrome.tabs.sendMessage(
+      sender.tab.id,
+      { action: "sendDataChunksToCore", fileId: fileId, chunkUrl },
+      (response) => {
+        if (response && response.result) {
+          resolve(response.result);
+        } else {
+          reject(response?.error || "Failed to retrieve file");
+        }
+      }
+    );
+  });
+}
+
+export function getFileBase64(fileId, sender) {
+  return new Promise((resolve, reject) => {
+    chrome.tabs.sendMessage(
+      sender.tab.id,
+      { action: "getFileBase64", fileId: fileId },
+      (response) => {
+        if (response && response.result) {
+          resolve(response.result);
+        } else {
+          reject(response?.error || "Failed to retrieve file");
+        }
+      }
+    );
+  });
+}
+
 function sendToSaveFilePicker(data, sender) {
 
   chrome.tabs.sendMessage(sender.tab.id, {
@@ -883,7 +916,7 @@ export const publishQDNResource = async (data: any, sender, isFromExtension) => 
   if(appFee && appFee > 0 && appFeeRecipient){
     hasAppFee = true
   }
-  const registeredName = await getNameInfo();
+  const registeredName = data?.name || await getNameInfo();
   const name = registeredName;
   if(!name){
     throw new Error('User has no Qortal name')
@@ -917,15 +950,16 @@ const { tag1, tag2, tag3, tag4, tag5 } = result;
     throw new Error("Encrypting data requires public keys");
   }
 
-  if (data.fileId) {
-    data64 = await getFileFromContentScript(data.fileId, sender);
-  }
+ 
   if (data.encrypt) {
     try {
         const resKeyPair = await getKeyPair()
         const parsedData = JSON.parse(resKeyPair)
         const privateKey = parsedData.privateKey
         const userPublicKey = parsedData.publicKey
+        if (data?.fileId) {
+          data64 = await getFileBase64(data?.fileId, sender);
+        }
       const encryptDataResponse = encryptDataGroup({
         data64,
         publicKeys: data.publicKeys,
@@ -973,11 +1007,10 @@ const { tag1, tag2, tag3, tag4, tag5 } = result;
     try {
       const resPublish = await publishData({
         registeredName: encodeURIComponent(name),
-        file: data64,
+        data: data64 ? data64 : data?.fileId,
         service: service,
         identifier: encodeURIComponent(identifier),
-        uploadType: "file",
-        isBase64: true,
+        uploadType: data64 ? "base64" : "file",
         filename: filename,
         title,
         description,
@@ -989,6 +1022,7 @@ const { tag1, tag2, tag3, tag4, tag5 } = result;
         tag5,
         apiVersion: 2,
         withFee: true,
+        sender
       });
       if(resPublish?.signature && hasAppFee && checkbox1){
         sendCoinFunc({
@@ -1082,6 +1116,14 @@ export const publishMultipleQDNResources = async (data: any, sender, isFromExten
   if(!name){
     throw new Error('You need a Qortal name to publish.')
   }
+
+  const userNames = await getAllUserNames();
+  data.resources?.forEach((item) => {
+    if (item?.name && !userNames?.includes(item.name))
+      throw new Error(
+        `The name ${item.name}, does not belong to the publisher.`
+      );
+  });
   const appFee = data?.appFee ? +data.appFee : undefined
   const appFeeRecipient = data?.appFeeRecipient
   let hasAppFee = false
@@ -1208,7 +1250,8 @@ export const publishMultipleQDNResources = async (data: any, sender, isFromExten
       }
       const service = resource.service;
       let identifier = resource.identifier;
-      let data64 = resource?.data64 || resource?.base64;
+      // let data64 = resource?.data64 || resource?.base64;
+      let rawData = resource?.data64 || resource?.base64;
       const filename = resource.filename;
       const title = resource.title;
       const description = resource.description;
@@ -1232,26 +1275,34 @@ export const publishMultipleQDNResources = async (data: any, sender, isFromExten
         failedPublishesIdentifiers.push({
           reason: errorMsg,
           identifier: resource.identifier,
+          service: resource.service,
+          name: resource?.name || name,
         });
         continue;
       }
       if (resource.fileId) {
-        data64 = await getFileFromContentScript(resource.fileId, sender);
+        rawData = resource.fileId;
       }
+      // if (resource.fileId) {
+      //   data64 = await sendDataChunksToCore(resource.fileId, sender);
+      // }
       if (resourceEncrypt) {
         try {
+          if (resource?.fileId) {
+            rawData = await getFileBase64(resource.fileId, sender);
+          }
             const resKeyPair = await getKeyPair()
         const parsedData = JSON.parse(resKeyPair)
         const privateKey = parsedData.privateKey
         const userPublicKey = parsedData.publicKey
           const encryptDataResponse = encryptDataGroup({
-            data64,
+            data64: rawData,
             publicKeys: data.publicKeys,
             privateKey,
             userPublicKey
           });
           if (encryptDataResponse) {
-            data64 = encryptDataResponse;
+            rawData = encryptDataResponse;
           }
         } catch (error) {
           const errorMsg =
@@ -1260,20 +1311,24 @@ export const publishMultipleQDNResources = async (data: any, sender, isFromExten
             reason: errorMsg,
             identifier: resource.identifier,
             service: resource.service,
+            name: resource?.name || name,
           });
           continue;
         }
       }
 
       try {
+        const dataType =
+        (resource?.base64 || resource?.data64 || resourceEncrypt)
+          ? 'base64'
+          : 'file';
         await retryTransaction(publishData, [
           {
             registeredName: encodeURIComponent(name),
-          file: data64,
+          data: rawData,
           service: service,
           identifier: encodeURIComponent(identifier),
-          uploadType: "file",
-          isBase64: true,
+          uploadType: dataType,
           filename: filename,
           title,
           description,
@@ -1285,6 +1340,7 @@ export const publishMultipleQDNResources = async (data: any, sender, isFromExten
           tag5,
           apiVersion: 2,
           withFee: true,
+          sender
           },
         ], true);
         await new Promise((res) => {
@@ -1298,6 +1354,7 @@ export const publishMultipleQDNResources = async (data: any, sender, isFromExten
           reason: errorMsg,
           identifier: resource.identifier,
           service: resource.service,
+          name: resource?.name || name,
         });
       }
     } catch (error) {
@@ -1305,6 +1362,7 @@ export const publishMultipleQDNResources = async (data: any, sender, isFromExten
         reason: error?.message || "Unknown error",
         identifier: resource.identifier,
         service: resource.service,
+        name: resource?.name || name,
       });
     }
   }
@@ -1683,6 +1741,46 @@ export const joinGroup = async (data, isFromExtension) => {
 
 export const saveFile = async (data, sender, isFromExtension) => {
   try {
+    if (!data?.filename) throw new Error('Missing filename');
+    if (data?.location) {
+      const requiredFieldsLocation = ['service', 'name'];
+      const missingFieldsLocation: string[] = [];
+      requiredFieldsLocation.forEach((field) => {
+        if (!data?.location[field]) {
+          missingFieldsLocation.push(field);
+        }
+      });
+      if (missingFieldsLocation.length > 0) {
+        const missingFieldsString = missingFieldsLocation.join(', ');
+        const errorMsg = `Missing fields: ${missingFieldsString}`;
+        throw new Error(errorMsg);
+      }
+      const resPermission = await getUserPermission(
+        {
+          text1: 'Would you like to download:',
+          highlightedText: `${data?.filename}`,
+        },
+        isFromExtension
+      );
+      const { accepted } = resPermission;
+      if (!accepted) throw new Error('User declined to save file');
+      let locationUrl = `/arbitrary/${data.location.service}/${data.location.name}`;
+      if (data.location.identifier) {
+        locationUrl = locationUrl + `/${data.location.identifier}`;
+      }
+      const endpoint = await createEndpoint(
+        locationUrl + `?attachment=true&attachmentFilename=${data?.filename}`
+      );
+     
+      sendToSaveFilePicker(
+        {
+          locationEndpoint: endpoint,
+          filename: data.filename
+        },
+        sender
+      );
+      return true;
+    }
     const requiredFields = ["filename", "fileId"];
     const missingFields: string[] = [];
     requiredFields.forEach((field) => {
@@ -4084,9 +4182,10 @@ export const updateNameRequest = async (data, isFromExtension) => {
   const fee = await getFee("UPDATE_NAME");
   const resPermission = await getUserPermission(
     {
-      text1: `Do you give this application permission to register this name?`,
-      highlightedText: data.newName,
-      text2: data?.description,
+      text1: `Do you give this application permission to update this name?`,
+      text2: `previous name: ${oldName}`,
+      text3: `new name: ${newName}`,
+      text4: data?.description,
       fee: fee.fee,
     },
     isFromExtension
@@ -4807,7 +4906,7 @@ export const updateGroupRequest = async (data, isFromExtension) => {
   const requiredFields = ["groupId", "newOwner",  "type", "approvalThreshold", "minBlock", "maxBlock"];
   const missingFields: string[] = [];
   requiredFields.forEach((field) => {
-    if (data[field] !== undefined && data[field] !== null) {
+    if (data[field] === undefined || data[field] === null) {
       missingFields.push(field);
     }
   });
@@ -4872,7 +4971,7 @@ export const sellNameRequest = async (data, isFromExtension) => {
   const requiredFields = ["salePrice", "nameForSale"];
   const missingFields: string[] = [];
   requiredFields.forEach((field) => {
-    if (data[field] !== undefined && data[field] !== null) {
+    if (data[field] === undefined || data[field] === null) {
       missingFields.push(field);
     }
   });
@@ -4917,7 +5016,7 @@ export const cancelSellNameRequest = async (data, isFromExtension) => {
   const requiredFields = ["nameForSale"];
   const missingFields: string[] = [];
   requiredFields.forEach((field) => {
-    if (data[field] !== undefined && data[field] !== null) {
+    if (data[field] === undefined || data[field] === null) {
       missingFields.push(field);
     }
   });
@@ -4958,7 +5057,7 @@ export const buyNameRequest = async (data, isFromExtension) => {
   const requiredFields = ["nameForSale"];
   const missingFields: string[] = [];
   requiredFields.forEach((field) => {
-    if (data[field] !== undefined && data[field] !== null) {
+    if (data[field] === undefined || data[field] === null) {
       missingFields.push(field);
     }
   });
@@ -5261,12 +5360,11 @@ const assetBalance = await getAssetBalanceInfo(assetId)
         const resPublish = await retryTransaction(publishData, [
           {
             registeredName: encodeURIComponent(name),
-            file: encryptDataResponse,
+            data: encryptDataResponse,
             service: transaction.service,
             identifier: encodeURIComponent(transaction.identifier),
-            uploadType: "file",
+            uploadType: "base64",
             description: transaction?.description,
-            isBase64: true,
             apiVersion: 2,
             withFee: true,
           },
@@ -5302,12 +5400,11 @@ const assetBalance = await getAssetBalanceInfo(assetId)
         const resPublish = await retryTransaction(publishData, [
           {
             registeredName: encodeURIComponent(name),
-            file: encryptDataResponse,
+            data: encryptDataResponse,
             service: transaction.service,
             identifier: encodeURIComponent(transaction.identifier),
-            uploadType: "file",
+            uploadType: "base64",
             description: transaction?.description,
-            isBase64: true,
             apiVersion: 2,
             withFee: true,
           },
