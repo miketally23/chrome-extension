@@ -1,4 +1,4 @@
-import { banFromGroup, gateways, getApiKeyFromStorage } from "./background";
+import { banFromGroup, gateways, getApiKeyFromStorage, getNameInfoForOthers } from "./background";
 import { addForeignServer, addGroupAdminRequest, addListItems, adminAction, banFromGroupRequest, buyNameRequest, cancelGroupBanRequest, cancelGroupInviteRequest, cancelSellNameRequest, cancelSellOrder, createBuyOrder, createGroupRequest, createPoll, createSellOrder, decryptAESGCMRequest, decryptData, decryptDataWithSharingKey, decryptQortalGroupData, deleteHostedData, deleteListItems, deployAt, encryptData, encryptDataWithSharingKey, encryptQortalGroupData, getArrrSyncStatus, getCrossChainServerInfo, getDaySummary, getForeignFee, getHostedData, getListItems, getNodeInfo, getNodeStatus, getServerConnectionHistory, getTxActivitySummary, getUserAccount, getUserWallet, getUserWalletInfo, getUserWalletTransactions, getWalletBalance, inviteToGroupRequest, joinGroup, kickFromGroupRequest, leaveGroupRequest, multiPaymentWithPrivateData, publishMultipleQDNResources, publishQDNResource, registerNameRequest, removeForeignServer, removeGroupAdminRequest, saveFile, sellNameRequest, sendChatMessage, sendCoin, setCurrentForeignServer, showPdfReader, signForeignFees, signTransaction, transferAssetRequest, updateForeignFee, updateGroupRequest, updateNameRequest, voteOnPoll } from "./qortalRequests/get";
 
  export const listOfAllQortalRequests = [
@@ -89,6 +89,7 @@ import { addForeignServer, addGroupAdminRequest, addListItems, adminAction, banF
  'BUY_NAME',  'MULTI_ASSET_PAYMENT_WITH_PRIVATE_DATA',
  'TRANSFER_ASSET',
  'SIGN_FOREIGN_FEES',
+ 'GET_PRIMARY_NAME',
  ]
 
 // Promisify chrome.storage.local.get
@@ -943,7 +944,19 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
           });
         break;
       }
-     
+      case "GET_PRIMARY_NAME": {
+        const data = request.payload;
+      
+        getNameInfoForOthers(data)
+          .then((res) => {
+            const resData = res ? res : null;
+            sendResponse(resData);
+          })
+          .catch((error) => {
+            sendResponse({ error: error.message });
+          });
+        break;
+      }
     }
   }
   return true;
