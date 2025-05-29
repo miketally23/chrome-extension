@@ -39,6 +39,7 @@ import { ContextMenuMentions } from "../ContextMenuMentions";
 import { convert } from "html-to-text";
 import { generateHTML } from "@tiptap/react";
 import ErrorBoundary from "../../common/ErrorBoundary";
+import { isHtmlString } from "../../utils/chat";
 
 const extractTextFromHTML = (htmlString = "") => {
   return convert(htmlString, {
@@ -71,19 +72,22 @@ export const ChatOptions = ({
     return untransformedMessages?.map((item) => {
       if (item?.messageText) {
         let transformedMessage = item?.messageText;
+        const isHtml = isHtmlString(item?.messageText);
         try {
-          transformedMessage = generateHTML(item?.messageText, [
-            StarterKit,
-            Underline,
-            Highlight,
-            Mention,
-          ]);
+          transformedMessage = isHtml
+            ? item?.messageText
+            : generateHTML(item?.messageText, [
+                StarterKit,
+                Underline,
+                Highlight,
+                Mention,
+              ]);
           return {
             ...item,
             messageText: transformedMessage,
           };
         } catch (error) {
-          // error
+          console.log(error);
         }
       } else return item;
     });

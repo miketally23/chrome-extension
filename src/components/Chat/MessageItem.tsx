@@ -33,7 +33,7 @@ import level8Img from "../../assets/badges/level-8.png"
 import level9Img from "../../assets/badges/level-9.png"
 import level10Img from "../../assets/badges/level-10.png"
 import { Embed } from "../Embeds/Embed";
-import { buildImageEmbedLink, messageHasImage } from "../../utils/chat";
+import { buildImageEmbedLink, isHtmlString, messageHasImage } from "../../utils/chat";
 
 const getBadgeImg = (level)=> {
   switch(level?.toString()){
@@ -92,35 +92,33 @@ useEffect(()=> {
    getInfo()
 }, [message?.sender, getIndividualUserInfo])
 
-const htmlText = useMemo(()=> {
-  
-  if(message?.messageText){
+const htmlText = useMemo(() => {
+  if (message?.messageText) {
+    const isHtml = isHtmlString(message?.messageText);
+    if (isHtml) return message?.messageText;
     return generateHTML(message?.messageText, [
       StarterKit,
       Underline,
       Highlight,
       Mention,
-      TextStyle
-    ])
+      TextStyle,
+    ]);
   }
-  
-}, [message?.editTimestamp])
+}, [message?.editTimestamp]);
 
-
-
-const htmlReply = useMemo(()=> {
-  
-  if(reply?.messageText){
+const htmlReply = useMemo(() => {
+  if (reply?.messageText) {
+    const isHtml = isHtmlString(reply?.messageText);
+    if (isHtml) return reply?.messageText;
     return generateHTML(reply?.messageText, [
       StarterKit,
       Underline,
       Highlight,
       Mention,
-      TextStyle
-    ])
+      TextStyle,
+    ]);
   }
-  
-}, [reply?.editTimestamp])
+}, [reply?.editTimestamp]);
 
 const userAvatarUrl = useMemo(()=> {
   return message?.senderName ? `${getBaseApiReact()}/arbitrary/THUMBNAIL/${
@@ -500,7 +498,17 @@ const onSeenFunc = useCallback(()=> {
 
 
 export const ReplyPreview = ({message, isEdit})=> {
-
+  const replyMessageText = useMemo(() => {
+    const isHtml = isHtmlString(message?.messageText);
+    if (isHtml) return message?.messageText;
+    return generateHTML(message?.messageText, [
+      StarterKit,
+      Underline,
+      Highlight,
+      Mention,
+      TextStyle,
+    ]);
+  }, [message?.messageText]);
   return (
     <Box
             sx={{
@@ -537,13 +545,7 @@ export const ReplyPreview = ({message, isEdit})=> {
           
               {message?.messageText && (
                 <MessageDisplay
-                  htmlContent={generateHTML(message?.messageText, [
-                    StarterKit,
-                    Underline,
-                    Highlight,
-                    Mention,
-                    TextStyle
-                  ])}
+                  htmlContent={replyMessageText}
                 />
               )}
               {message?.decryptedData?.type === "notification" ? (
