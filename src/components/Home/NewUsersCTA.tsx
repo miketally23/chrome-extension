@@ -55,7 +55,7 @@ export const NewUsersCTA = ({ balance }) => {
             }}
             onClick={() => {
               if (chrome && chrome.tabs) {
-                chrome.tabs.create({ url: "https://link.qortal.dev/telegram-invite" }, (tab) => {
+                chrome.tabs.create({ url: "https://link.qortal.dev/support" }, (tab) => {
                   if (chrome.runtime.lastError) {
                     console.error("Error opening tab:", chrome.runtime.lastError);
                   } else {
@@ -66,7 +66,7 @@ export const NewUsersCTA = ({ balance }) => {
           
             }}
           >
-            Telegram
+            Nextcloud
           </ButtonBase>
           <ButtonBase
             sx={{

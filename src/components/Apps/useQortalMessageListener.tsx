@@ -4,6 +4,8 @@ import { executeEvent } from '../../utils/events';
 import { useSetRecoilState } from 'recoil';
 import { navigationControllerAtom } from '../../atoms/global';
 import { extractComponents } from '../Chat/MessageDisplay';
+import { isRunningGateway } from '../../qortalRequests';
+import { MAX_SIZE_PUBLIC_NODE, MAX_SIZE_PUBLISH } from '../../constants/constants';
 
 
 
@@ -718,6 +720,67 @@ isDOMContentLoaded: false
         }
       } else if (event?.data?.action === 'PUBLISH_MULTIPLE_QDN_RESOURCES' || event?.data?.action === 'PUBLISH_QDN_RESOURCE' ) {
         let data;
+        if(event?.data?.action === 'PUBLISH_QDN_RESOURCE'){
+          try {
+            const file = event?.data?.file
+            if (file && file.size > MAX_SIZE_PUBLISH) {
+              throw new Error(
+                "Maximum file size allowed is 2 GB per file"
+              );
+            }
+            
+            if (file && file.size > MAX_SIZE_PUBLIC_NODE) {
+              const isPublicNode = await isRunningGateway();
+              if (isPublicNode) {
+                throw new Error(
+                  "Maximum file size allowed on the public node is 500 MB. Please use your local node for larger files."
+                );
+              }
+            }
+          } catch (error) {
+            event.ports[0].postMessage({
+              result: null,
+              error: error?.message,
+            });
+            return;
+          }
+        }
+        if(event?.data?.action === 'PUBLISH_MULTIPLE_QDN_RESOURCES'){
+          try {
+            const resources = event.data?.resources
+            const isPublicNode = await isRunningGateway();
+            if (isPublicNode) {
+              const hasOversizedFilePublicNode = resources.some((resource) => {
+                const file = resource?.file;
+                return file instanceof File && file.size > MAX_SIZE_PUBLIC_NODE;
+              });
+
+              if (hasOversizedFilePublicNode) {
+                throw new Error(
+                  "Maximum file size allowed on the public node is 500 MB. Please use your local node for larger files."
+                );
+              }
+            }
+
+              const hasOversizedFile = resources.some((resource) => {
+                const file = resource?.file;
+                return file instanceof File && file.size > MAX_SIZE_PUBLISH;
+              });
+
+              if (hasOversizedFile) {
+                throw new Error(
+                  "Maximum file size allowed is 2 GB per file"
+                );
+              }
+          } catch (error) {
+            event.ports[0].postMessage({
+              result: null,
+              error: error?.message,
+            });
+            return;
+          }
+        }
+       
         try {
           data = saveFileReferences(event.data);
         } catch (error) {

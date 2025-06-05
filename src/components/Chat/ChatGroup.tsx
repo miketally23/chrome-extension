@@ -121,7 +121,7 @@ export const ChatGroup = ({selectedGroup, secretKey, setSecretKey, getSecretKey,
   const onEdit = useCallback((message)=> {
     setOnEditMessage(message)
     setReplyMessage(null)
-    editorRef.current.chain().focus().setContent(message?.messageText || message?.text).run();
+    editorRef?.current?.chain().focus().setContent(message?.messageText || message?.text || '<p></p>').run();
 
   }, [])
 
@@ -600,13 +600,28 @@ const sendMessage = async ()=> {
     if(+balance < 4) throw new Error('You need at least 4 QORT to send a message')
     pauseAllQueues()
     if (editorRef.current) {
-      const htmlContent = editorRef.current.getHTML();
-   
-      if(!htmlContent?.trim() || htmlContent?.trim() === '<p></p>') return
-      
+      let htmlContent = editorRef.current.getHTML();
+        const deleteImage =
+          onEditMessage && isDeleteImage && messageHasImage(onEditMessage);
 
-      setIsSending(true)
-    const message = isPrivate === false ? editorRef.current.getJSON() : htmlContent
+        const hasImage =
+          chatImagesToSave?.length > 0 || onEditMessage?.images?.length > 0;
+        if (
+          (!htmlContent?.trim() || htmlContent?.trim() === '<p></p>') &&
+          !hasImage &&
+          !deleteImage
+        )
+          return;
+        if (htmlContent?.trim() === '<p></p>') {
+          htmlContent = null;
+        }
+        setIsSending(true);
+        const message =
+          isPrivate === false
+            ? !htmlContent
+              ? '<p></p>'
+              : editorRef.current.getJSON()
+            : htmlContent;
     const secretKeyObject = await getSecretKey(false, true)
 
     let repliedTo = replyMessage?.signature
@@ -620,8 +635,7 @@ const sendMessage = async ()=> {
       isEdited : chatReference ? true : false,
     }
     const imagesToPublish = [];
-        const deleteImage =
-          onEditMessage && isDeleteImage && messageHasImage(onEditMessage);
+     
         if (deleteImage) {
           const fee = await getFee('ARBITRARY');
 

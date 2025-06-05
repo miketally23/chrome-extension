@@ -34,6 +34,7 @@ import level9Img from "../../assets/badges/level-9.png"
 import level10Img from "../../assets/badges/level-10.png"
 import { Embed } from "../Embeds/Embed";
 import { buildImageEmbedLink, isHtmlString, messageHasImage } from "../../utils/chat";
+import CommentsDisabledIcon from '@mui/icons-material/CommentsDisabled';
 
 const getBadgeImg = (level)=> {
   switch(level?.toString()){
@@ -70,6 +71,7 @@ export const MessageItem = React.memo(({
   onEdit,
   isPrivate
 }) => {
+
 
 const {getIndividualUserInfo} = useContext(MyContext)
   const [anchorEl, setAnchorEl] = useState(null);
@@ -129,6 +131,13 @@ const userAvatarUrl = useMemo(()=> {
 const onSeenFunc = useCallback(()=> {
   onSeen(message.id);
 }, [message?.id])
+
+const hasNoMessage =
+(!message.decryptedData?.data?.message ||
+  message.decryptedData?.data?.message === '<p></p>') &&
+(message?.images || [])?.length === 0 &&
+(!message?.messageText || message?.messageText === '<p></p>') &&
+(!message?.text || message?.text === '<p></p>');
 
 
   return (
@@ -312,16 +321,36 @@ const onSeenFunc = useCallback(()=> {
           </>
         )}
       
-          <MessageDisplay
-            htmlContent={htmlText}
-          />
-      
-        {message?.decryptedData?.type === "notification" ? (
-          <MessageDisplay htmlContent={message.decryptedData?.data?.message} />
-        ) : (
-          <MessageDisplay htmlContent={message.text} />
-        )}
-         {message?.images && messageHasImage(message) && (
+      {htmlText && !hasNoMessage && (
+                <MessageDisplay htmlContent={htmlText} />
+              )}
+
+              {message?.decryptedData?.type === 'notification' ? (
+                <MessageDisplay
+                  htmlContent={message.decryptedData?.data?.message}
+                />
+              ) : hasNoMessage ? null : (
+                <MessageDisplay htmlContent={message.text} />
+              )}
+              {hasNoMessage && (
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                  }}
+                >
+                  <CommentsDisabledIcon sx={{
+                    color: 'white'
+                  }} />
+                  <Typography sx={{
+                    color: 'white'
+                  }}>
+                    No message
+                  </Typography>
+                </Box>
+              )}
+                  {message?.images && messageHasImage(message) && (
                 <Embed embedLink={buildImageEmbedLink(message.images[0])} />
               )}
         <Box
@@ -499,6 +528,7 @@ const onSeenFunc = useCallback(()=> {
 
 export const ReplyPreview = ({message, isEdit})=> {
   const replyMessageText = useMemo(() => {
+    if (!message?.messageText) return null;
     const isHtml = isHtmlString(message?.messageText);
     if (isHtml) return message?.messageText;
     return generateHTML(message?.messageText, [
@@ -543,7 +573,7 @@ export const ReplyPreview = ({message, isEdit})=> {
                     }}>Replied to {message?.senderName || message?.senderAddress}</Typography>
               )}
           
-              {message?.messageText && (
+              {replyMessageText && (
                 <MessageDisplay
                   htmlContent={replyMessageText}
                 />
