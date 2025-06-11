@@ -1936,6 +1936,7 @@ export const Group = ({
             width: "100%",
             justifyContent: "center",
             padding: "10px",
+            gap: '10px'
           }}
         >
           <CustomButton
@@ -1953,6 +1954,23 @@ export const Group = ({
             />
             New Chat
           </CustomButton>
+          {!isRunningPublicNode && (
+            <CustomButton
+              onClick={() => {
+                setIsOpenBlockedUserModal(true);
+              }}
+              sx={{
+                minWidth: 'unset',
+                padding: '10px',
+              }}
+            >
+              <PersonOffIcon
+                sx={{
+                  color: 'white',
+                }}
+              />
+            </CustomButton>
+          )}
         </div>
       </div>
     );

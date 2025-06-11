@@ -6,12 +6,15 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
+  IconButton,
   TextField,
   Typography,
 } from "@mui/material";
 import React, { useContext, useEffect, useState } from "react";
 import { getBaseApiReact, MyContext } from "../../App";
 import { Spacer } from "../../common/Spacer";
+import CloseIcon from '@mui/icons-material/Close';
+
 import { executeEvent, subscribeToEvent, unsubscribeFromEvent } from "../../utils/events";
 import { validateAddress } from "../../utils/validateAddress";
 import { getNameInfo, requestQueueMemberNames } from "./Group";
@@ -314,6 +317,17 @@ export const BlockedUsersModal = () => {
         <DialogTitle id="alert-dialog-title">
           {"Decide what to block"}
         </DialogTitle>
+        <IconButton
+          onClick={onCancel}
+          sx={{
+            position: 'absolute',
+            right: 8,
+            top: 8,
+            color: 'white',
+          }}
+        >
+          <CloseIcon />
+        </IconButton>
         <DialogContent>
           <DialogContentText id="alert-dialog-description">
             Blocking {message?.userName || message?.userAddress}
