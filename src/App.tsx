@@ -328,7 +328,7 @@ function App() {
     useState<string>("");
     const {isUserBlocked,
       addToBlockList,
-      removeBlockFromList, getAllBlockedUsers} = useBlockedAddresses()
+      removeBlockFromList, getAllBlockedUsers} = useBlockedAddresses(extState === 'authenticated')
     const [isOpenDrawerLookup, setIsOpenDrawerLookup] = useState(false)
   const [isMain, setIsMain] = useState<boolean>(
     window?.location?.href?.includes("?main=true")
