@@ -949,7 +949,7 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
       
         getNameInfoForOthers(data)
           .then((res) => {
-            const resData = res ? res : null;
+            const resData = res ? res : "";
             sendResponse(resData);
           })
           .catch((error) => {
