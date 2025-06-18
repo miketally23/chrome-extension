@@ -2466,7 +2466,7 @@ export async function joinGroup({ groupId }) {
   return res;
 }
 
-export async function cancelInvitationToGroup({ groupId, qortalAddress }) {
+export async function cancelInvitationToGroup({ groupId, qortalAddress, txGroupId = 0}) {
   const lastReference = await getLastRef();
   const resKeyPair = await getKeyPair();
   const parsedData = JSON.parse(resKeyPair);
@@ -2483,6 +2483,7 @@ export async function cancelInvitationToGroup({ groupId, qortalAddress }) {
     recipient: qortalAddress,
     rGroupId: groupId,
     lastReference: lastReference,
+    groupID: txGroupId,
   });
 
   const signedBytes = Base58.encode(tx.signedBytes);
@@ -2493,7 +2494,7 @@ export async function cancelInvitationToGroup({ groupId, qortalAddress }) {
   return res;
 }
 
-export async function cancelBan({ groupId, qortalAddress }) {
+export async function cancelBan({ groupId, qortalAddress, txGroupId = 0  }) {
   const lastReference = await getLastRef();
   const resKeyPair = await getKeyPair();
   const parsedData = JSON.parse(resKeyPair);
@@ -2510,6 +2511,7 @@ export async function cancelBan({ groupId, qortalAddress }) {
     recipient: qortalAddress,
     rGroupId: groupId,
     lastReference: lastReference,
+    groupID: txGroupId
   });
 
   const signedBytes = Base58.encode(tx.signedBytes);
@@ -2574,7 +2576,7 @@ export async function updateName({ newName, oldName, description }) {
   return res;
 }
 
-export async function makeAdmin({ groupId, qortalAddress }) {
+export async function makeAdmin({ groupId, qortalAddress, txGroupId = 0  }) {
   const lastReference = await getLastRef();
   const resKeyPair = await getKeyPair();
   const parsedData = JSON.parse(resKeyPair);
@@ -2591,6 +2593,7 @@ export async function makeAdmin({ groupId, qortalAddress }) {
     recipient: qortalAddress,
     rGroupId: groupId,
     lastReference: lastReference,
+    groupID: txGroupId
   });
 
   const signedBytes = Base58.encode(tx.signedBytes);
@@ -2601,7 +2604,7 @@ export async function makeAdmin({ groupId, qortalAddress }) {
   return res;
 }
 
-export async function removeAdmin({ groupId, qortalAddress }) {
+export async function removeAdmin({ groupId, qortalAddress, txGroupId = 0  }) {
   const lastReference = await getLastRef();
   const resKeyPair = await getKeyPair();
   const parsedData = JSON.parse(resKeyPair);
@@ -2618,6 +2621,7 @@ export async function removeAdmin({ groupId, qortalAddress }) {
     recipient: qortalAddress,
     rGroupId: groupId,
     lastReference: lastReference,
+    groupID: txGroupId
   });
 
   const signedBytes = Base58.encode(tx.signedBytes);
@@ -2633,6 +2637,7 @@ export async function banFromGroup({
   qortalAddress,
   rBanReason = "",
   rBanTime,
+  txGroupId = 0 
 }) {
   const lastReference = await getLastRef();
   const resKeyPair = await getKeyPair();
@@ -2652,6 +2657,7 @@ export async function banFromGroup({
     rBanReason: rBanReason,
     rBanTime,
     lastReference: lastReference,
+    groupID: txGroupId
   });
 
   const signedBytes = Base58.encode(tx.signedBytes);
@@ -2662,7 +2668,7 @@ export async function banFromGroup({
   return res;
 }
 
-export async function kickFromGroup({ groupId, qortalAddress, rBanReason = "" }) {
+export async function kickFromGroup({ groupId, qortalAddress, rBanReason = "" , txGroupId = 0 }) {
   const lastReference = await getLastRef();
   const resKeyPair = await getKeyPair();
   const parsedData = JSON.parse(resKeyPair);
@@ -2680,6 +2686,7 @@ export async function kickFromGroup({ groupId, qortalAddress, rBanReason = "" })
     rGroupId: groupId,
     rBanReason: rBanReason,
     lastReference: lastReference,
+groupID: txGroupId
   });
 
   const signedBytes = Base58.encode(tx.signedBytes);
@@ -2837,7 +2844,8 @@ export async function updateGroup({
   newDescription,
   newApprovalThreshold,
   newMinimumBlockDelay,
-  newMaximumBlockDelay
+  newMaximumBlockDelay,
+  txGroupId = 0 
 }) {
   const wallet = await getSaveWallet();
   const address = wallet.address0;
@@ -2863,6 +2871,7 @@ export async function updateGroup({
     newMinimumBlockDelay,
     newMaximumBlockDelay,
     lastReference: lastReference,
+    groupID: txGroupId
   });
 
   const signedBytes = Base58.encode(tx.signedBytes);
@@ -2874,7 +2883,7 @@ export async function updateGroup({
 }
 
 
-export async function inviteToGroup({ groupId, qortalAddress, inviteTime }) {
+export async function inviteToGroup({ groupId, qortalAddress, inviteTime, txGroupId = 0  }) {
   const address = await getNameOrAddress(qortalAddress);
   if (!address) throw new Error("Cannot find user");
   const lastReference = await getLastRef();
@@ -2894,6 +2903,7 @@ export async function inviteToGroup({ groupId, qortalAddress, inviteTime }) {
     rGroupId: groupId,
     rInviteTime: inviteTime,
     lastReference: lastReference,
+    groupID: txGroupId
   });
 
   const signedBytes = Base58.encode(tx.signedBytes);
@@ -3635,8 +3645,8 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
         break;
       case "inviteToGroup":
         {
-          const { groupId, qortalAddress, inviteTime } = request.payload;
-          inviteToGroup({ groupId, qortalAddress, inviteTime })
+          const { groupId, qortalAddress, inviteTime, txGroupId = 0 } = request.payload;
+          inviteToGroup({ groupId, qortalAddress, inviteTime, txGroupId })
             .then((res) => {
               sendResponse(res);
             })
@@ -3705,8 +3715,8 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
         break;
       case "cancelInvitationToGroup":
         {
-          const { groupId, qortalAddress } = request.payload;
-          cancelInvitationToGroup({ groupId, qortalAddress })
+          const { groupId, qortalAddress, txGroupId = 0 } = request.payload;
+          cancelInvitationToGroup({ groupId, qortalAddress, txGroupId })
             .then((res) => {
               sendResponse(res);
             })
@@ -3748,8 +3758,8 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
 
       case "kickFromGroup":
         {
-          const { groupId, qortalAddress, rBanReason } = request.payload;
-          kickFromGroup({ groupId, qortalAddress, rBanReason })
+          const { groupId, qortalAddress, rBanReason, txGroupId = 0 } = request.payload;
+          kickFromGroup({ groupId, qortalAddress, rBanReason, txGroupId })
             .then((res) => {
               sendResponse(res);
             })
@@ -3762,9 +3772,9 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
         break;
       case "banFromGroup":
         {
-          const { groupId, qortalAddress, rBanReason, rBanTime } =
+          const { groupId, qortalAddress, rBanReason, rBanTime, txGroupId = 0 } =
             request.payload;
-          banFromGroup({ groupId, qortalAddress, rBanReason, rBanTime })
+          banFromGroup({ groupId, qortalAddress, rBanReason, rBanTime , txGroupId})
             .then((res) => {
               sendResponse(res);
             })
@@ -3829,8 +3839,8 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
         break;
       case "cancelBan":
         {
-          const { groupId, qortalAddress } = request.payload;
-          cancelBan({ groupId, qortalAddress })
+          const { groupId, qortalAddress, txGroupId = 0 } = request.payload;
+          cancelBan({ groupId, qortalAddress, txGroupId })
             .then((res) => {
               sendResponse(res);
             })
@@ -3880,8 +3890,8 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
           break;
       case "makeAdmin":
         {
-          const { groupId, qortalAddress } = request.payload;
-          makeAdmin({ groupId, qortalAddress })
+          const { groupId, qortalAddress , txGroupId = 0} = request.payload;
+          makeAdmin({ groupId, qortalAddress , txGroupId})
             .then((res) => {
               sendResponse(res);
             })
@@ -3894,8 +3904,8 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
         break;
       case "removeAdmin":
         {
-          const { groupId, qortalAddress } = request.payload;
-          removeAdmin({ groupId, qortalAddress })
+          const { groupId, qortalAddress, txGroupId = 0 } = request.payload;
+          removeAdmin({ groupId, qortalAddress, txGroupId })
             .then((res) => {
               sendResponse(res);
             })

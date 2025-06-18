@@ -6,6 +6,7 @@ import nacl from '../../deps/nacl-fast';
 import utils from '../../utils/utils';
 import { createEndpoint, getBaseApi, getKeyPair } from '../../background';
 import { sendDataChunksToCore } from '../../qortalRequests/get';
+import { executeEvent } from '../../utils/events';
 
 export async function reusableGet(endpoint) {
   const validApi = await getBaseApi();
@@ -91,7 +92,8 @@ export const publishData = async ({
   tag4,
   tag5,
   feeAmount,
-  sender
+  sender,
+  appInfo,
 }: any) => {
   const validateName = async (receiverName: string) => {
     return await reusableGet(`/names/${receiverName}`);
@@ -193,7 +195,17 @@ export const publishData = async ({
     } else {
       myResponse = response;
     }
-
+     if (appInfo?.tabId) {
+      executeEvent('receiveChunks', {
+        tabId: appInfo.tabId,
+        publishLocation: {
+          name: registeredName,
+          identifier,
+          service,
+        },
+        processed: true,
+      });
+    }
     return myResponse;
   };
 
@@ -306,6 +318,19 @@ export const publishData = async ({
         uploadDataUrl = uploadDataUrl + urlSuffix;
       }
       uploadDataUrl = uploadDataUrl + paramQueries;
+      if (appInfo?.tabId) {
+        executeEvent('receiveChunks', {
+          tabId: appInfo.tabId,
+          publishLocation: {
+            name: registeredName,
+            identifier,
+            service,
+          },
+          chunksSubmitted: 1,
+          totalChunks: 1,
+          processed: false,
+        });
+      }
       return await reusablePost(uploadDataUrl, postBody);
     }
 
@@ -327,7 +352,19 @@ export const publishData = async ({
     const chunkSize = 5 * 1024 * 1024; // 5MB
 
     const totalChunks = Math.ceil(file.size / chunkSize);
-
+     if (appInfo?.tabId) {
+      executeEvent('receiveChunks', {
+        tabId: appInfo.tabId,
+        publishLocation: {
+          name: registeredName,
+          identifier,
+          service,
+        },
+        chunksSubmitted: 0,
+        totalChunks,
+        processed: false,
+      });
+    }
     for (let index = 0; index < totalChunks; index++) {
       const start = index * chunkSize;
       const end = Math.min(start + chunkSize, file.size);
@@ -337,6 +374,18 @@ export const publishData = async ({
       formData.append('index', index);
 
       await uploadChunkWithRetry(chunkUrl, formData, index);
+       if (appInfo?.tabId) {
+        executeEvent('receiveChunks', {
+          tabId: appInfo.tabId,
+          publishLocation: {
+            name: registeredName,
+            identifier,
+            service,
+          },
+          chunksSubmitted: index + 1,
+          totalChunks,
+        });
+      }
     }
   }
 

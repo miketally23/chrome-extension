@@ -657,7 +657,7 @@ isDOMContentLoaded: false
       if (UIQortalRequests.includes(event.data.action)) {
         sendMessageToRuntime(
           { action: event.data.action, type: 'qortalRequest', payload: event.data, isExtension: true, appInfo: {
-            name: appName, service: appService
+            name: appName, service: appService,  tabId
           }, skipAuth },
           event.ports[0]
         );
@@ -907,7 +907,7 @@ isDOMContentLoaded: false
     };
 
     
-  }, [appName, appService]); // Empty dependency array to run once when the component mounts
+  }, [appName, appService, tabId]); // Empty dependency array to run once when the component mounts
 
   useEffect(() => {
     const listener = (message, sender, sendResponse) => {

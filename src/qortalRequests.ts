@@ -258,7 +258,7 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
       case "PUBLISH_MULTIPLE_QDN_RESOURCES": {
         const data = request.payload;
         
-        publishMultipleQDNResources(data, sender, isFromExtension)
+        publishMultipleQDNResources(data, sender, isFromExtension, appInfo)
           .then((res) => {
             sendResponse(res);
           })

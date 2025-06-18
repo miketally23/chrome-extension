@@ -1074,7 +1074,7 @@ export const checkArrrSyncStatus = async (seed) => {
 };
 
 
-export const publishMultipleQDNResources = async (data: any, sender, isFromExtension) => {
+export const publishMultipleQDNResources = async (data: any, sender, isFromExtension, appInfo) => {
   const requiredFields = ["resources"];
   const missingFields: string[] = [];
   let feeAmount = null;
@@ -1340,7 +1340,8 @@ export const publishMultipleQDNResources = async (data: any, sender, isFromExten
           tag5,
           apiVersion: 2,
           withFee: true,
-          sender
+          sender,
+          appInfo
           },
         ], true);
         await new Promise((res) => {
@@ -4261,6 +4262,7 @@ export const inviteToGroupRequest = async (data, isFromExtension) => {
   const groupId = data.groupId
   const qortalAddress = data?.inviteeAddress
   const inviteTime = data?.inviteTime
+  const txGroupId = data?.txGroupId || 0;
 
   let groupInfo = null;
   try {
@@ -4291,6 +4293,7 @@ export const inviteToGroupRequest = async (data, isFromExtension) => {
         groupId,
         qortalAddress,
         inviteTime,
+        txGroupId
       })
   return response
 
@@ -4315,6 +4318,7 @@ export const kickFromGroupRequest = async (data, isFromExtension) => {
   const groupId = data.groupId
   const qortalAddress = data?.qortalAddress
   const reason = data?.reason
+  const txGroupId = data?.txGroupId || 0;
 
   let groupInfo = null;
   try {
@@ -4344,7 +4348,8 @@ export const kickFromGroupRequest = async (data, isFromExtension) => {
   const response = await kickFromGroup({
         groupId,
         qortalAddress,
-        rBanReason: reason
+        rBanReason: reason,
+        txGroupId
       })
   return response
 
@@ -4370,6 +4375,8 @@ export const banFromGroupRequest = async (data, isFromExtension) => {
   const qortalAddress = data?.qortalAddress
   const rBanTime = data?.banTime
   const reason = data?.reason
+    const txGroupId = data?.txGroupId || 0;
+
   let groupInfo = null;
   try {
     const url = await createEndpoint(`/groups/${groupId}`);
@@ -4399,7 +4406,8 @@ export const banFromGroupRequest = async (data, isFromExtension) => {
         groupId,
         qortalAddress,
         rBanTime,
-        rBanReason: reason
+        rBanReason: reason,
+        txGroupId
       })
   return response
 
@@ -4423,6 +4431,7 @@ export const cancelGroupBanRequest = async (data, isFromExtension) => {
   }
   const groupId = data.groupId
   const qortalAddress = data?.qortalAddress
+  const txGroupId = data?.txGroupId || 0;
 
   let groupInfo = null;
   try {
@@ -4452,6 +4461,7 @@ export const cancelGroupBanRequest = async (data, isFromExtension) => {
   const response = await cancelBan({
         groupId,
         qortalAddress,
+        txGroupId
       })
   return response
 
@@ -4475,6 +4485,7 @@ export const addGroupAdminRequest = async (data, isFromExtension) => {
   }
   const groupId = data.groupId
   const qortalAddress = data?.qortalAddress
+  const txGroupId = data?.txGroupId || 0;
 
   let groupInfo = null;
   try {
@@ -4504,6 +4515,7 @@ export const addGroupAdminRequest = async (data, isFromExtension) => {
   const response = await makeAdmin({
         groupId,
         qortalAddress,
+        txGroupId
       })
   return response
 
@@ -4527,6 +4539,7 @@ export const removeGroupAdminRequest = async (data, isFromExtension) => {
   }
   const groupId = data.groupId
   const qortalAddress = data?.qortalAddress
+  const txGroupId = data?.txGroupId || 0;
 
   let groupInfo = null;
   try {
@@ -4556,6 +4569,7 @@ export const removeGroupAdminRequest = async (data, isFromExtension) => {
   const response = await removeAdmin({
         groupId,
         qortalAddress,
+        txGroupId
       })
   return response
 
@@ -4579,6 +4593,7 @@ export const cancelGroupInviteRequest = async (data, isFromExtension) => {
   }
   const groupId = data.groupId
   const qortalAddress = data?.qortalAddress
+  const txGroupId = data?.txGroupId || 0;
 
   let groupInfo = null;
   try {
@@ -4608,6 +4623,7 @@ export const cancelGroupInviteRequest = async (data, isFromExtension) => {
   const response = await cancelInvitationToGroup({
         groupId,
         qortalAddress,
+        txGroupId
       })
   return response
 
@@ -4922,6 +4938,7 @@ export const updateGroupRequest = async (data, isFromExtension) => {
   const approvalThreshold = +data?.approvalThreshold
   const minBlock = +data?.minBlock
   const maxBlock = +data.maxBlock
+  const txGroupId = data?.txGroupId || 0;
 
   let groupInfo = null;
   try {
@@ -4957,7 +4974,8 @@ export const updateGroupRequest = async (data, isFromExtension) => {
     newDescription: description,
     newApprovalThreshold: approvalThreshold,
     newMinimumBlockDelay: minBlock,
-    newMaximumBlockDelay: maxBlock
+    newMaximumBlockDelay: maxBlock,
+    txGroupId
       })
   return response
 
