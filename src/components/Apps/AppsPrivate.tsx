@@ -231,8 +231,10 @@ export const AppsPrivate = ({myName, myAddress}) => {
     }
   }, [myAddress]);
   useEffect(() => {
-    getNames();
-  }, [getNames]);
+    if (isOpenPrivateModal) {
+      getNames();
+    }
+  }, [getNames, isOpenPrivateModal]);
 
   const handleChange = (event: React.SyntheticEvent, newValue: number) => {
     setValueTabPrivateApp(newValue);

@@ -117,7 +117,7 @@ import { MainAvatar } from "./components/MainAvatar";
 import { useRetrieveDataLocalStorage } from "./useRetrieveDataLocalStorage";
 import { useQortalGetSaveSettings } from "./useQortalGetSaveSettings";
 import { useRecoilState, useResetRecoilState, useSetRecoilState } from "recoil";
-import { canSaveSettingToQdnAtom, fullScreenAtom, groupsPropertiesAtom, hasSettingsChangedAtom, isDisabledEditorEnterAtom, isUsingImportExportSettingsAtom, lastPaymentSeenTimestampAtom, mailsAtom, oldPinnedAppsAtom, qMailLastEnteredTimestampAtom, settingsLocalLastUpdatedAtom, settingsQDNLastUpdatedAtom, sortablePinnedAppsAtom } from "./atoms/global";
+import { canSaveSettingToQdnAtom, fullScreenAtom, groupsPropertiesAtom, hasSettingsChangedAtom, isDisabledEditorEnterAtom, isUsingImportExportSettingsAtom, lastPaymentSeenTimestampAtom, mailsAtom, myGroupsWhereIAmAdminAtom, oldPinnedAppsAtom, qMailLastEnteredTimestampAtom, settingsLocalLastUpdatedAtom, settingsQDNLastUpdatedAtom, sortablePinnedAppsAtom } from "./atoms/global";
 import { useAppFullScreen } from "./useAppFullscreen";
 import { NotAuthenticated } from "./ExtStates/NotAuthenticated";
 import { useFetchResources } from "./common/useFetchResources";
@@ -445,6 +445,9 @@ function App() {
   const resetAtomMailsAtom = useResetRecoilState(mailsAtom)
   const resetGroupPropertiesAtom = useResetRecoilState(groupsPropertiesAtom)
   const resetLastPaymentSeenTimestampAtom = useResetRecoilState(lastPaymentSeenTimestampAtom)
+    const resetMyGroupsWhereIAmAdminAtom = useResetRecoilState(
+    myGroupsWhereIAmAdminAtom
+  );
   const resetAllRecoil = () => {
     resetAtomSortablePinnedAppsAtom();
     resetAtomCanSaveSettingToQdnAtom();
@@ -456,6 +459,7 @@ function App() {
     resetAtomMailsAtom()
     resetGroupPropertiesAtom()
     resetLastPaymentSeenTimestampAtom()
+    resetMyGroupsWhereIAmAdminAtom()
   };
   useEffect(() => {
     if (!isMobile) return;
