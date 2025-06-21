@@ -6,6 +6,7 @@ import { navigationControllerAtom } from '../../atoms/global';
 import { extractComponents } from '../Chat/MessageDisplay';
 import { isRunningGateway } from '../../qortalRequests';
 import { MAX_SIZE_PUBLIC_NODE, MAX_SIZE_PUBLISH } from '../../constants/constants';
+import { createEndpoint } from '../../background';
 
 
 
@@ -303,14 +304,26 @@ async function handleGetFileFromIndexedDB(fileId, sendResponse) {
     }
   }
   
-  async function handleSendDataChunksToCore(fileId, chunkUrl, sendResponse){
+  async function handleSendDataChunksToCore(fileId, chunkUrl, sendResponse, appInfo, resourceInfo){
     try {
       if(!fileReferences[fileId]) throw new Error('No file reference found')
         const chunkSize = 5 * 1024 * 1024; // 5MB
   
         const file = fileReferences[fileId]
         const totalChunks = Math.ceil(file.size / chunkSize);
-  
+    executeEvent('receiveChunks', {
+                tabId: appInfo.tabId,
+        publishLocation: {
+          name: resourceInfo?.name,
+          identifier: resourceInfo?.identifier,
+          service: resourceInfo?.service,
+        },
+        chunksSubmitted: 0,
+        totalChunks,
+        processed: false,
+        filename:
+          resourceInfo?.filename
+              })
       for (let index = 0; index < totalChunks; index++) {
         const start = index * chunkSize;
         const end = Math.min(start + chunkSize, file.size);
@@ -321,6 +334,16 @@ async function handleGetFileFromIndexedDB(fileId, sendResponse) {
         formData.append('index', index);
   
         await uploadChunkWithRetry(chunkUrl, formData, index);
+        executeEvent('receiveChunks', {
+              tabId: appInfo.tabId,
+          publishLocation: {
+           name: resourceInfo?.name,
+          identifier: resourceInfo?.identifier,
+          service: resourceInfo?.service,
+          },
+          chunksSubmitted: index + 1,
+          totalChunks,
+              })
       }
       sendResponse({ result: true });
     } catch (error) {
@@ -678,7 +701,9 @@ isDOMContentLoaded: false
         }
         if (data) {
           sendMessageToRuntime(
-            { action: event.data.action, type: 'qortalRequest', payload: data, isExtension: true },
+            { action: event.data.action, type: 'qortalRequest', payload: data, isExtension: true, appInfo: {
+            name: appName, service: appService,  tabId
+          }  },
             event.ports[0]
           );
         } else {
@@ -709,7 +734,9 @@ isDOMContentLoaded: false
         }
         if (data) {
           sendMessageToRuntime(
-            { action: event.data.action, type: 'qortalRequest', payload: data, isExtension: true },
+            { action: event.data.action, type: 'qortalRequest', payload: data, isExtension: true, appInfo: {
+            name: appName, service: appService,  tabId
+          } },
             event.ports[0]
           );
         } else {
@@ -761,6 +788,22 @@ isDOMContentLoaded: false
                 );
               }
             }
+             const totalFileSize = resources.reduce((acc, resource) => {
+    const file = resource?.file;
+    if (file && file?.size && !isNaN(file?.size)) {
+      return acc + file.size;
+    }
+    return acc;
+  }, 0);
+  if (totalFileSize > 0) {
+    const urlCheck = `/arbitrary/check/tmp?totalSize=${totalFileSize}`;
+
+    const checkEndpoint = await createEndpoint(urlCheck);
+    const checkRes = await fetch(checkEndpoint);
+    if (!checkRes.ok) {
+      throw new Error('Not enough space on your hard drive');
+    }
+  }
 
               const hasOversizedFile = resources.some((resource) => {
                 const file = resource?.file;
@@ -793,7 +836,9 @@ isDOMContentLoaded: false
         }
     
         sendMessageToRuntime(
-          { action: event.data.action, type: 'qortalRequest', payload: data, isExtension: true },
+          { action: event.data.action, type: 'qortalRequest', payload: data, isExtension: true , appInfo: {
+            name: appName, service: appService,  tabId
+          }},
           event.ports[0]
         );
       } else if(event?.data?.action === 'LINK_TO_QDN_RESOURCE' ||
@@ -917,7 +962,8 @@ isDOMContentLoaded: false
         handleGetFileFromIndexedDB(message.fileId, sendResponse);
         return true; // Keep channel open for async
       } else if (message.action === 'sendDataChunksToCore') {
-        handleSendDataChunksToCore(message.fileId, message.chunkUrl, sendResponse);
+        console.log('message', message)
+        handleSendDataChunksToCore(message.fileId, message.chunkUrl, sendResponse, message?.appInfo, message?.resourceInfo);
         return true; // Keep channel open for async
       } else if (message.action === 'getFileBase64') {
         handleGetFileBase64(message.fileId, sendResponse);

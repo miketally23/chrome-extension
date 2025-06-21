@@ -425,11 +425,11 @@ function getFileFromContentScript(fileId, sender) {
   });
 }
 
-export function sendDataChunksToCore(fileId, chunkUrl, sender) {
+export function sendDataChunksToCore(fileId, chunkUrl, sender, appInfo, resourceInfo) {
   return new Promise((resolve, reject) => {
     chrome.tabs.sendMessage(
       sender.tab.id,
-      { action: "sendDataChunksToCore", fileId: fileId, chunkUrl },
+      { action: "sendDataChunksToCore", fileId: fileId, chunkUrl, appInfo, resourceInfo },
       (response) => {
         if (response && response.result) {
           resolve(response.result);
@@ -1220,6 +1220,7 @@ export const publishMultipleQDNResources = async (data: any, sender, isFromExten
     throw new Error("User declined request");
   }
   let failedPublishesIdentifiers = [];
+  const publishedResponses = [];
   for (const resource of resources) {
     try {
       const requiredFields = ["service"];
@@ -1322,28 +1323,29 @@ export const publishMultipleQDNResources = async (data: any, sender, isFromExten
         (resource?.base64 || resource?.data64 || resourceEncrypt)
           ? 'base64'
           : 'file';
-        await retryTransaction(publishData, [
-          {
-            registeredName: encodeURIComponent(name),
-          data: rawData,
-          service: service,
-          identifier: encodeURIComponent(identifier),
-          uploadType: dataType,
-          filename: filename,
-          title,
-          description,
+       const response = await publishData({
+          apiVersion: 2,
           category,
+          data: rawData,
+          description,
+          filename: filename,
+          identifier: encodeURIComponent(identifier),
+          registeredName: encodeURIComponent(resource?.name || name),
+          service: service,
           tag1,
           tag2,
           tag3,
           tag4,
           tag5,
-          apiVersion: 2,
-          withFee: true,
+          title,
           sender,
-          appInfo
-          },
-        ], true);
+          uploadType: dataType,
+          withFee: true,
+          appInfo,
+        });
+        if (response?.signature) {
+          publishedResponses.push(response);
+        }
         await new Promise((res) => {
           setTimeout(() => {
             res();
@@ -1382,7 +1384,7 @@ export const publishMultipleQDNResources = async (data: any, sender, isFromExten
      receiver: appFeeRecipient
    }, true)
  }
-  return true;
+  return publishedResponses;
 };
 
 export const voteOnPoll = async (data, isFromExtension) => {

@@ -947,7 +947,7 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
       case "GET_PRIMARY_NAME": {
         const data = request.payload;
       
-        getNameInfoForOthers(data)
+        getNameInfoForOthers(data?.address)
           .then((res) => {
             const resData = res ? res : "";
             sendResponse(resData);

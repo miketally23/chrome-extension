@@ -826,6 +826,11 @@ function App() {
         executeEvent("openThreadNewPost", {
           data: message.payload.data,
         });
+      } else if (
+        message.action === "receiveChunks" &&
+        isMainWindow
+      ) {
+       executeEvent('receiveChunks', message.payload?.data);
       }
 
       // Call the permission request handler for "QORTAL_REQUEST_PERMISSION"

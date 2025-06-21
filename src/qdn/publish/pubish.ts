@@ -26,6 +26,10 @@ async function reusablePost(endpoint, _body) {
     },
     body: _body,
   });
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(errorText);
+  }
   let data;
   try {
     data = await response.clone().json();
@@ -73,7 +77,48 @@ async function uploadChunkWithRetry(endpoint, formData, index, maxRetries = 3) {
   }
 }
 
+async function resuablePostRetry(
+  endpoint,
+  body,
+  maxRetries = 3,
+  appInfo,
+  resourceInfo
+) {
+  let attempt = 0;
+  while (attempt < maxRetries) {
+    try {
+      const response = await reusablePost(endpoint, body);
 
+      return response;
+    } catch (err) {
+      attempt++;
+      if (attempt >= maxRetries) {
+        throw new Error(
+          err instanceof Error
+            ? err?.message || `Failed to make request`
+            : `Failed to make request`
+        );
+      }
+      if (appInfo?.tabId && resourceInfo) {
+        chrome.runtime.sendMessage({
+              action: "receiveChunks",
+              payload: { data:  {
+              tabId: appInfo.tabId,
+              publishLocation: {
+              name: resourceInfo?.name,
+              identifier: resourceInfo?.identifier,
+              service: resourceInfo?.service,
+                },
+              retry: true,
+              } },
+          });
+     
+      }
+      // Wait 10 seconds before next retry
+      await new Promise((res) => setTimeout(res, 25_000));
+    }
+  }
+}
 
 export const publishData = async ({
   registeredName,
@@ -100,7 +145,13 @@ export const publishData = async ({
   };
 
   const convertBytesForSigning = async (transactionBytesBase58: string) => {
-    return await reusablePost('/transactions/convert', transactionBytesBase58);
+   return await resuablePostRetry(
+      '/transactions/convert',
+      transactionBytesBase58,
+      3,
+      appInfo,
+      { identifier, name: registeredName, service }
+    );
   };
 
   const getArbitraryFee = async () => {
@@ -157,9 +208,12 @@ export const publishData = async ({
   };
 
   const processTransactionVersion2 = async (bytes) => {
-    return await reusablePost(
+    return await resuablePostRetry(
       '/transactions/process?apiVersion=2',
-      Base58.encode(bytes)
+      Base58.encode(bytes),
+      3,
+      appInfo,
+      { identifier, name: registeredName, service }
     );
   };
 
@@ -196,15 +250,19 @@ export const publishData = async ({
       myResponse = response;
     }
      if (appInfo?.tabId) {
-      executeEvent('receiveChunks', {
-        tabId: appInfo.tabId,
+    
+      chrome.runtime.sendMessage({
+              action: "receiveChunks",
+              payload: { data:  {
+              tabId: appInfo.tabId,
         publishLocation: {
           name: registeredName,
           identifier,
           service,
         },
         processed: true,
-      });
+              } },
+          });
     }
     return myResponse;
   };
@@ -319,8 +377,11 @@ export const publishData = async ({
       }
       uploadDataUrl = uploadDataUrl + paramQueries;
       if (appInfo?.tabId) {
-        executeEvent('receiveChunks', {
-          tabId: appInfo.tabId,
+      
+        chrome.runtime.sendMessage({
+              action: "receiveChunks",
+              payload: { data:  {
+              tabId: appInfo.tabId,
           publishLocation: {
             name: registeredName,
             identifier,
@@ -329,9 +390,14 @@ export const publishData = async ({
           chunksSubmitted: 1,
           totalChunks: 1,
           processed: false,
-        });
+              } },
+          });
       }
-      return await reusablePost(uploadDataUrl, postBody);
+      return await resuablePostRetry(uploadDataUrl, postBody, 3, appInfo, {
+        identifier,
+        name: registeredName,
+        service,
+      });
     }
 
     const file = data;
@@ -346,15 +412,23 @@ export const publishData = async ({
     const chunkUrl = uploadDataUrl + `/chunk`;
 	const createdChunkUrl = await createEndpoint(chunkUrl)
   if(sender){
-    await sendDataChunksToCore(file, createdChunkUrl, sender)
+    await sendDataChunksToCore(file, createdChunkUrl, sender, appInfo, {
+      name: registeredName,
+          identifier,
+          service,
+          filename: file?.name || filename || title || `${service}-${identifier || ''}`
+    })
 
   } else {
     const chunkSize = 5 * 1024 * 1024; // 5MB
 
     const totalChunks = Math.ceil(file.size / chunkSize);
      if (appInfo?.tabId) {
-      executeEvent('receiveChunks', {
-        tabId: appInfo.tabId,
+      
+       chrome.runtime.sendMessage({
+              action: "receiveChunks",
+              payload: { data:  {
+                tabId: appInfo.tabId,
         publishLocation: {
           name: registeredName,
           identifier,
@@ -363,7 +437,10 @@ export const publishData = async ({
         chunksSubmitted: 0,
         totalChunks,
         processed: false,
-      });
+        filename:
+          file?.name || filename || title || `${service}-${identifier || ''}`,
+              } },
+          });
     }
     for (let index = 0; index < totalChunks; index++) {
       const start = index * chunkSize;
@@ -375,8 +452,11 @@ export const publishData = async ({
 
       await uploadChunkWithRetry(chunkUrl, formData, index);
        if (appInfo?.tabId) {
-        executeEvent('receiveChunks', {
-          tabId: appInfo.tabId,
+     
+         chrome.runtime.sendMessage({
+              action: "receiveChunks",
+              payload: { data:  {
+               tabId: appInfo.tabId,
           publishLocation: {
             name: registeredName,
             identifier,
@@ -384,7 +464,8 @@ export const publishData = async ({
           },
           chunksSubmitted: index + 1,
           totalChunks,
-        });
+              } },
+          });
       }
     }
   }
@@ -398,7 +479,7 @@ export const publishData = async ({
       headers: {},
     });
 
-    if (!response.ok) {
+    if (!response?.ok) {
       const errorText = await response.text();
       throw new Error(`Finalize failed: ${errorText}`);
     }

@@ -102,12 +102,15 @@ export const AppViewer = React.forwardRef(({ app , hide, isDevMode, skipAuth}, i
 
     const receiveChunksFunc = useCallback(
       (e) => {
+        console.log('eee', e)
         const iframe = iframeRef?.current;
         if (!iframe || !iframe?.src) return;
         if (app?.tabId !== e.detail?.tabId) return;
         const publishLocation = e.detail?.publishLocation;
         const chunksSubmitted = e.detail?.chunksSubmitted;
         const totalChunks = e.detail?.totalChunks;
+         const retry = e.detail?.retry;
+        const filename = e.detail?.filename;
         try {
           if (publishLocation === undefined || publishLocation === null) return;
           const dataToBeSent = {};
@@ -117,8 +120,15 @@ export const AppViewer = React.forwardRef(({ app , hide, isDevMode, skipAuth}, i
           if (totalChunks !== undefined && totalChunks !== null) {
             dataToBeSent.totalChunks = totalChunks;
           }
-          const targetOrigin = new URL(iframe.src).origin;
-          iframe.contentWindow?.postMessage(
+            if (retry !== undefined && retry !== null) {
+            dataToBeSent.retry = retry;
+          }
+          if (filename !== undefined && filename !== null) {
+            dataToBeSent.filename = filename;
+          }
+          const targetOrigin = iframeRef.current ? new URL(iframeRef.current.src).origin : "*"; 
+          console.log('targetOrigin', targetOrigin)
+          iframeRef.current?.contentWindow?.postMessage(
             {
               action: 'PUBLISH_STATUS',
               publishLocation,
@@ -128,6 +138,7 @@ export const AppViewer = React.forwardRef(({ app , hide, isDevMode, skipAuth}, i
             },
             targetOrigin
           );
+       
         } catch (err) {
           console.error('Failed to send status to iframe:', err);
         }

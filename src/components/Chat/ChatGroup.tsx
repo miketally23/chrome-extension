@@ -702,7 +702,7 @@ const sendMessage = async ()=> {
               }
             );
           });
-          if (res !== true) throw new Error('Unable to publish images');
+          if (res?.error) throw new Error('Unable to publish images');
         }
 
         const images =
