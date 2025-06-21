@@ -1154,7 +1154,7 @@ export async function transferAsset({
 }) {
   const lastReference = await getLastRef();
   const resKeyPair = await getKeyPair();
-  const parsedData = resKeyPair;
+  const parsedData = JSON.parse(resKeyPair);
   const uint8PrivateKey = Base58.decode(parsedData.privateKey);
   const uint8PublicKey = Base58.decode(parsedData.publicKey);
   const keyPair = {
@@ -2551,7 +2551,7 @@ export async function registerName({ name, description = "" }) {
 export async function updateName({ newName, oldName, description }) {
   const lastReference = await getLastRef();
   const resKeyPair = await getKeyPair();
-  const parsedData = resKeyPair;
+  const parsedData = JSON.parse(resKeyPair);
   const uint8PrivateKey = Base58.decode(parsedData.privateKey);
   const uint8PublicKey = Base58.decode(parsedData.publicKey);
   const keyPair = {
@@ -2748,7 +2748,7 @@ export async function sellName({
   const lastReference = await getLastRef();
   const feeres = await getFee("SELL_NAME");
   const resKeyPair = await getKeyPair();
-  const parsedData = resKeyPair;
+  const parsedData = JSON.parse(resKeyPair);
   const uint8PrivateKey = Base58.decode(parsedData.privateKey);
   const uint8PublicKey = Base58.decode(parsedData.publicKey);
   const keyPair = {
@@ -2780,7 +2780,7 @@ export async function cancelSellName({
   const lastReference = await getLastRef();
   const feeres = await getFee("SELL_NAME");
   const resKeyPair = await getKeyPair();
-  const parsedData = resKeyPair;
+  const parsedData = JSON.parse(resKeyPair);
   const uint8PrivateKey = Base58.decode(parsedData.privateKey);
   const uint8PublicKey = Base58.decode(parsedData.publicKey);
   const keyPair = {
@@ -2813,7 +2813,7 @@ export async function buyName({
   const lastReference = await getLastRef();
   const feeres = await getFee("BUY_NAME");
   const resKeyPair = await getKeyPair();
-  const parsedData = resKeyPair;
+  const parsedData = JSON.parse(resKeyPair);
   const uint8PrivateKey = Base58.decode(parsedData.privateKey);
   const uint8PublicKey = Base58.decode(parsedData.publicKey);
   const keyPair = {
@@ -2853,7 +2853,7 @@ export async function updateGroup({
   const lastReference = await getLastRef();
   const feeres = await getFee("UPDATE_GROUP");
   const resKeyPair = await getKeyPair();
-  const parsedData = resKeyPair;
+  const parsedData = JSON.parse(resKeyPair);
   const uint8PrivateKey = Base58.decode(parsedData.privateKey);
   const uint8PublicKey = Base58.decode(parsedData.publicKey);
   const keyPair = {
@@ -4684,7 +4684,7 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
           tag2,
           tag3,
           tag4,
-          tag5, uploadType } = request.payload;
+          tag5, uploadType, name = "" } = request.payload;
 
         publishOnQDN({
           data,
@@ -4698,7 +4698,8 @@ chrome?.runtime?.onMessage.addListener((request, sender, sendResponse) => {
           tag3,
           tag4,
           tag5,
-          uploadType
+          uploadType,
+          name
         })
           .then((data) => {
             sendResponse(data);

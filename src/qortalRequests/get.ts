@@ -4648,7 +4648,8 @@ export const decryptAESGCMRequest = async (data, isFromExtension) => {
 
   // Decode keys and IV
   const senderPublicKey = Base58.decode(senderPublicKeyBase58);
-  const resKeyPair = await getKeyPair(); // Assume this retrieves the current user's keypair
+  let resKeyPair = await getKeyPair(); // Assume this retrieves the current user's keypair
+  resKeyPair = JSON.parse(resKeyPair);
   const uint8PrivateKey = Base58.decode(resKeyPair.privateKey);
 
   // Convert ed25519 keys to Curve25519
@@ -4789,7 +4790,7 @@ if (resPermission) {
     let publicKey
     if(data?.coin === 'ARRR'){
     const resKeyPair = await getKeyPair();
-    const parsedData = resKeyPair;
+    const parsedData = JSON.parse(resKeyPair);
     publicKey = parsedData.arrrSeed58;
     } else {
       publicKey = walletKeys["publickey"]
@@ -4892,7 +4893,7 @@ export const getNodeStatus = async () => {
 
 export const getArrrSyncStatus = async () => {
   const resKeyPair = await getKeyPair();
-  const parsedData = resKeyPair;
+  const parsedData = JSON.parse(resKeyPair);
   const arrrSeed = parsedData.arrrSeed58;
   const url = `/crosschain/arrr/syncstatus`; // Simplified endpoint URL
 
@@ -5128,7 +5129,7 @@ export const multiPaymentWithPrivateData = async (data, isFromExtension) => {
       }
   });
   const resKeyPair = await getKeyPair();
-  const parsedData = resKeyPair;
+  const parsedData = JSON.parse(resKeyPair);
   const privateKey = parsedData.privateKey;
   const userPublicKey = parsedData.publicKey
   const {fee: paymentFee} = await getFee("TRANSFER_ASSET");
@@ -5493,7 +5494,7 @@ export const signForeignFees = async (data, isFromExtension) => {
     const wallet = await getSaveWallet();
     const address = wallet.address0;
     const resKeyPair = await getKeyPair();
-    const parsedData = resKeyPair;
+    const parsedData = JSON.parse(resKeyPair);
     const uint8PrivateKey = Base58.decode(parsedData.privateKey);
     const uint8PublicKey = Base58.decode(parsedData.publicKey);
     const keyPair = {

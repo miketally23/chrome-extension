@@ -62,7 +62,7 @@ import HomeIcon from "@mui/icons-material/Home";
 import CloseIcon from "@mui/icons-material/Close";
 
 import { ThingsToDoInitial } from "./ThingsToDoInitial";
-import { GroupJoinRequests } from "./GroupJoinRequests";
+import { GroupJoinRequests, requestQueueGroupJoinRequests } from "./GroupJoinRequests";
 import { GroupForum } from "../Chat/GroupForum";
 import { GroupInvites } from "./GroupInvites";
 import {
