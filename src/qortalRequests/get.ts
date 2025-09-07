@@ -929,6 +929,7 @@ export const publishQDNResource = async (data: any, sender, isFromExtension) => 
   const description = data.description;
   const category = data.category;
  const tags = data?.tags || [];
+ const isMultiFileZip = data?.isMultiFileZip === true;
 const result = {};
 
 // Fill tags dynamically while maintaining backward compatibility
@@ -1010,7 +1011,7 @@ const { tag1, tag2, tag3, tag4, tag5 } = result;
         data: data64 ? data64 : data?.fileId,
         service: service,
         identifier: encodeURIComponent(identifier),
-        uploadType: data64 ? "base64" : "file",
+        uploadType: isMultiFileZip ? 'zip' :  data64 ? "base64" : "file",
         filename: filename,
         title,
         description,
@@ -1258,6 +1259,8 @@ export const publishMultipleQDNResources = async (data: any, sender, isFromExten
       const description = resource.description;
       const category = resource.category;
       const tags = resource?.tags || [];
+      const isMultiFileZip = resource?.isMultiFileZip === true;
+
       const result = {};
 
       // Fill tags dynamically while maintaining backward compatibility
@@ -1320,7 +1323,9 @@ export const publishMultipleQDNResources = async (data: any, sender, isFromExten
 
       try {
         const dataType =
-        (resource?.base64 || resource?.data64 || resourceEncrypt)
+       isMultiFileZip
+          ? 'zip'
+          :  (resource?.base64 || resource?.data64 || resourceEncrypt)
           ? 'base64'
           : 'file';
        const response = await publishData({
