@@ -3827,6 +3827,7 @@ export const decryptQortalGroupData = async (data, sender) => {
   let data64 = data?.data64 || data?.base64;
   let groupId = data?.groupId
   let isAdmins = data?.isAdmins
+  const refreshCache = data?.refreshCache === true;
   if(!groupId){
     throw new Error('Please provide a groupId')
   }
@@ -3837,7 +3838,7 @@ export const decryptQortalGroupData = async (data, sender) => {
 
   let secretKeyObject
   if(!isAdmins){
-  if(groupSecretkeys[groupId] && groupSecretkeys[groupId].secretKeyObject && groupSecretkeys[groupId]?.timestamp && (Date.now() - groupSecretkeys[groupId]?.timestamp) <  1200000){
+  if(!refreshCache && groupSecretkeys[groupId] && groupSecretkeys[groupId].secretKeyObject && groupSecretkeys[groupId]?.timestamp && (Date.now() - groupSecretkeys[groupId]?.timestamp) <  1200000){
     secretKeyObject = groupSecretkeys[groupId].secretKeyObject
   }
   if(!secretKeyObject){
@@ -3868,7 +3869,7 @@ url
     }
   }
 } else {
-  if(groupSecretkeys[`admins-${groupId}`] && groupSecretkeys[`admins-${groupId}`].secretKeyObject && groupSecretkeys[`admins-${groupId}`]?.timestamp && (Date.now() - groupSecretkeys[`admins-${groupId}`]?.timestamp) <  1200000){
+  if(!refreshCache && groupSecretkeys[`admins-${groupId}`] && groupSecretkeys[`admins-${groupId}`].secretKeyObject && groupSecretkeys[`admins-${groupId}`]?.timestamp && (Date.now() - groupSecretkeys[`admins-${groupId}`]?.timestamp) <  1200000){
     secretKeyObject = groupSecretkeys[`admins-${groupId}`].secretKeyObject
   }
   if(!secretKeyObject){
@@ -3964,6 +3965,8 @@ export const encryptQortalGroupData = async (data, sender) => {
   let data64 = data?.data64 || data?.base64;
   let groupId = data?.groupId
   let isAdmins = data?.isAdmins
+  const refreshCache = data?.refreshCache === true;
+
   if(!groupId){
     throw new Error('Please provide a groupId')
   }
@@ -3977,7 +3980,7 @@ export const encryptQortalGroupData = async (data, sender) => {
 
   let secretKeyObject
   if(!isAdmins){
-  if(groupSecretkeys[groupId] && groupSecretkeys[groupId].secretKeyObject && groupSecretkeys[groupId]?.timestamp && (Date.now() - groupSecretkeys[groupId]?.timestamp) <  1200000){
+  if(!refreshCache && groupSecretkeys[groupId] && groupSecretkeys[groupId].secretKeyObject && groupSecretkeys[groupId]?.timestamp && (Date.now() - groupSecretkeys[groupId]?.timestamp) <  1200000){
     secretKeyObject = groupSecretkeys[groupId].secretKeyObject
   }
 
@@ -4011,7 +4014,7 @@ url
   }
 } else {
 
-  if(groupSecretkeys[`admins-${groupId}`] && groupSecretkeys[`admins-${groupId}`].secretKeyObject && groupSecretkeys[`admins-${groupId}`]?.timestamp && (Date.now() - groupSecretkeys[`admins-${groupId}`]?.timestamp) <  1200000){
+  if(!refreshCache && groupSecretkeys[`admins-${groupId}`] && groupSecretkeys[`admins-${groupId}`].secretKeyObject && groupSecretkeys[`admins-${groupId}`]?.timestamp && (Date.now() - groupSecretkeys[`admins-${groupId}`]?.timestamp) <  1200000){
     secretKeyObject = groupSecretkeys[`admins-${groupId}`].secretKeyObject
   }
 
