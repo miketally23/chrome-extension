@@ -43,7 +43,7 @@ export const sortablePinnedAppsAtom = atom({
     service: 'APP'
   },
   {
-    name: 'Q-Nodecontrol',
+    name: 'Q-Node',
     service: 'APP'
   }
 ], 
