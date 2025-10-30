@@ -20,7 +20,9 @@ import ShortUniqueId from "short-unique-id";
 import { ReturnIcon } from '../../assets/Icons/ReturnIcon';
 import { ExitIcon } from '../../assets/Icons/ExitIcon';
 import { MessageItem, ReplyPreview } from './MessageItem';
-
+import {
+  MIN_REQUIRED_QORTS,
+} from '../../constants/constants.ts';
 
 const uid = new ShortUniqueId({ length: 5 });
 
@@ -56,6 +58,65 @@ export const ChatDirect = ({ myAddress, isNewChat, selectedDirect, setSelectedDi
     forceUpdate(); // Trigger re-render by updating the state
   };
   const publicKeyOfRecipientRef = useRef(null)
+
+  const handleReaction = useCallback(
+    async (reaction, chatMessage, reactionState = true) => {
+      try {
+        if (isSending) return;
+        if (+balance < MIN_REQUIRED_QORTS)
+          throw new Error(
+            t('group:message.error.qortals_required', {
+              quantity: MIN_REQUIRED_QORTS,
+              postProcess: 'capitalizeFirstChar',
+            })
+          );
+
+        pauseAllQueues();
+        setIsSending(true);
+
+        const otherData = {
+          specialId: uid.rnd(),
+          type: 'reaction',
+          content: reaction,
+          contentState: reactionState,
+        };
+
+        const sendMessageFunc = async () => {
+          return await sendChatDirect(
+            { chatReference: chatMessage.signature, messageText: '', otherData },
+            selectedDirect?.address,
+            publicKeyOfRecipient,
+            false
+          );
+        };
+
+        // Add the function to the queue for optimistic UI
+        const messageObj = {
+          message: {
+            timestamp: Date.now(),
+            senderName: myName,
+            sender: myAddress,
+            ...(otherData || {}),
+          },
+          chatReference: chatMessage.signature,
+        };
+        addToQueue(sendMessageFunc, messageObj, 'chat-direct', selectedDirect?.address);
+      } catch (error) {
+        const errorMsg = error?.message || error;
+        setInfoSnack({
+          type: 'error',
+          message: errorMsg,
+        });
+        setOpenSnack(true);
+        console.error(error);
+      } finally {
+        setIsSending(false);
+        resumeAllQueues();
+      }
+    },
+    [isSending, balance, selectedDirect?.address, publicKeyOfRecipient, myName, myAddress]
+  );
+
   const getPublicKeyFunc = async (address)=> {
     try {
       const publicKey = await getPublicKey(address)
@@ -134,14 +195,90 @@ export const ChatDirect = ({ myAddress, isNewChat, selectedDirect, setSelectedDi
                   setChatReferences((prev) => {
                     const organizedChatReferences = { ...prev };
 
-                  response.filter((rawItem) => !!rawItem?.chatReference && rawItem?.type === 'edit').forEach((item) => {
+                  response.filter((rawItem) =>
+                    rawItem &&
+                    rawItem.chatReference &&
+                    (rawItem?.type === 'reaction' ||
+                      rawItem?.type === 'edit' ||
+                      rawItem?.isEdited)
+                  )
+                  .forEach((item) => {
                     try {
-                      organizedChatReferences[item.chatReference] = {
-                        ...(organizedChatReferences[item.chatReference] || {}),
-                        edit: item
-                      };
-                    } catch(error){
+                      if (item?.type === 'edit' || item?.isEdited) {
+                        organizedChatReferences[item.chatReference] = {
+                          ...(organizedChatReferences[item.chatReference] ||
+                            {}),
+                          edit: item,
+                        };
+                      } else {
+                        const content = item?.content;
+                        const sender = item.sender;
+                        const newTimestamp = item.timestamp;
+                        const contentState = item?.contentState;
 
+                        if (
+                          !content ||
+                          typeof content !== 'string' ||
+                          !sender ||
+                          typeof sender !== 'string' ||
+                          !newTimestamp
+                        ) {
+                          return;
+                        }
+
+                        organizedChatReferences[item.chatReference] = {
+                          ...(organizedChatReferences[item.chatReference] ||
+                            {}),
+                          reactions:
+                            organizedChatReferences[item.chatReference]
+                              ?.reactions || {},
+                        };
+
+                        organizedChatReferences[item.chatReference].reactions[
+                          content
+                        ] =
+                          organizedChatReferences[item.chatReference]
+                            .reactions[content] || [];
+
+                        let latestTimestampForSender = null;
+
+                        organizedChatReferences[item.chatReference].reactions[
+                          content
+                        ] = organizedChatReferences[
+                          item.chatReference
+                        ].reactions[content].filter((reaction) => {
+                          if (reaction.sender === sender) {
+                            latestTimestampForSender = Math.max(
+                              latestTimestampForSender || 0,
+                              reaction.timestamp
+                            );
+                          }
+                          return reaction.sender !== sender;
+                        });
+
+                        if (
+                          latestTimestampForSender &&
+                          newTimestamp < latestTimestampForSender
+                        ) {
+                          return;
+                        }
+
+                        if (contentState !== false) {
+                          organizedChatReferences[
+                            item.chatReference
+                          ].reactions[content].push(item);
+                        }
+
+                        if (
+                          organizedChatReferences[item.chatReference]
+                            .reactions[content].length === 0
+                        ) {
+                          delete organizedChatReferences[item.chatReference]
+                            .reactions[content];
+                        }
+                      }
+                    } catch(error){
+                      console.error('Error processing reaction/edit item:', error, item);
                     }
                   })
                    return  organizedChatReferences
@@ -160,14 +297,90 @@ export const ChatDirect = ({ myAddress, isNewChat, selectedDirect, setSelectedDi
                   setChatReferences((prev) => {
                     const organizedChatReferences = { ...prev };
 
-                  response.filter((rawItem) => !!rawItem?.chatReference && rawItem?.type === 'edit').forEach((item) => {
+                  response.filter((rawItem) =>
+                    rawItem &&
+                    rawItem.chatReference &&
+                    (rawItem?.type === 'reaction' ||
+                      rawItem?.type === 'edit' ||
+                      rawItem?.isEdited)
+                  )
+                  .forEach((item) => {
                     try {
-                      organizedChatReferences[item.chatReference] = {
-                        ...(organizedChatReferences[item.chatReference] || {}),
-                        edit: item
-                      };
-                    } catch(error){
+                      if (item?.type === 'edit' || item?.isEdited) {
+                        organizedChatReferences[item.chatReference] = {
+                          ...(organizedChatReferences[item.chatReference] ||
+                            {}),
+                          edit: item,
+                        };
+                      } else {
+                        const content = item?.content;
+                        const sender = item.sender;
+                        const newTimestamp = item.timestamp;
+                        const contentState = item?.contentState;
 
+                        if (
+                          !content ||
+                          typeof content !== 'string' ||
+                          !sender ||
+                          typeof sender !== 'string' ||
+                          !newTimestamp
+                        ) {
+                          return;
+                        }
+
+                        organizedChatReferences[item.chatReference] = {
+                          ...(organizedChatReferences[item.chatReference] ||
+                            {}),
+                          reactions:
+                            organizedChatReferences[item.chatReference]
+                              ?.reactions || {},
+                        };
+
+                        organizedChatReferences[item.chatReference].reactions[
+                          content
+                        ] =
+                          organizedChatReferences[item.chatReference]
+                            .reactions[content] || [];
+
+                        let latestTimestampForSender = null;
+
+                        organizedChatReferences[item.chatReference].reactions[
+                          content
+                        ] = organizedChatReferences[
+                          item.chatReference
+                        ].reactions[content].filter((reaction) => {
+                          if (reaction.sender === sender) {
+                            latestTimestampForSender = Math.max(
+                              latestTimestampForSender || 0,
+                              reaction.timestamp
+                            );
+                          }
+                          return reaction.sender !== sender;
+                        });
+
+                        if (
+                          latestTimestampForSender &&
+                          newTimestamp < latestTimestampForSender
+                        ) {
+                          return;
+                        }
+
+                        if (contentState !== false) {
+                          organizedChatReferences[
+                            item.chatReference
+                          ].reactions[content].push(item);
+                        }
+
+                        if (
+                          organizedChatReferences[item.chatReference]
+                            .reactions[content].length === 0
+                        ) {
+                          delete organizedChatReferences[item.chatReference]
+                            .reactions[content];
+                        }
+                      }
+                    } catch(error){
+                      console.error('Error processing reaction item:', error, item);
                     }
                   })
                    return  organizedChatReferences
@@ -562,7 +775,7 @@ const sendMessage = async ()=> {
         </>
       )}
       
-              <ChatList chatReferences={chatReferences} onEdit={onEdit} onReply={onReply} chatId={selectedDirect?.address} initialMessages={messages} myAddress={myAddress} tempMessages={tempMessages} tempChatReferences={tempChatReferences}/>
+              <ChatList chatReferences={chatReferences} handleReaction={handleReaction} onEdit={onEdit} onReply={onReply} chatId={selectedDirect?.address} initialMessages={messages} myAddress={myAddress} tempMessages={tempMessages} tempChatReferences={tempChatReferences}/>
 
    
       <div style={{
