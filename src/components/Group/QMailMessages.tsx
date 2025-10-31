@@ -5,7 +5,7 @@ import ListItemButton from "@mui/material/ListItemButton";
 import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
 import moment from 'moment'
-import { Box, ButtonBase, Collapse, Typography } from "@mui/material";
+import { Box, ButtonBase, Collapse, Typography, useTheme } from "@mui/material";
 import { Spacer } from "../../common/Spacer";
 import { getBaseApiReact, isMobile } from "../../App";
 import { MessagingIcon } from '../../assets/Icons/MessagingIcon';
@@ -17,7 +17,6 @@ import { useRecoilState } from 'recoil';
 import { mailsAtom, qMailLastEnteredTimestampAtom } from '../../atoms/global';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
-import MarkEmailUnreadIcon from '@mui/icons-material/MarkEmailUnread';
 export const isLessThanOneWeekOld = (timestamp) => {
   // Current time in milliseconds
   const now = Date.now();
@@ -48,6 +47,7 @@ export const QMailMessages = ({userName, userAddress}) => {
     const [mails, setMails] = useRecoilState(mailsAtom)
     const [lastEnteredTimestamp, setLastEnteredTimestamp] = useRecoilState(qMailLastEnteredTimestampAtom)
     const [loading, setLoading] = useState(true)
+    const theme = useTheme();
 
     const getMails = useCallback(async () => {
         try {
@@ -142,9 +142,28 @@ export const QMailMessages = ({userName, userAddress}) => {
       >
         Latest Q-Mails
       </Typography>
-      <MarkEmailUnreadIcon sx={{
-        color: anyUnread ? 'var(--unread)' : 'white'
-      }}/>
+        <Box sx={{ position: 'relative', display: 'inline-flex' }}>
+          {anyUnread && (
+            <div
+              style={{
+                backgroundColor: 'var(--unread)',
+                borderRadius: '50%',
+                height: '15px',
+                outline: '1px solid white',
+                position: 'absolute',
+                right: '-7px',
+                top: '-7px',
+                width: '15px',
+                zIndex: 1,
+              }}
+            />
+          )}
+          <MailIcon
+            sx={{
+              color: anyUnread ? 'var(--unread)' : 'white',
+            }}
+          />
+        </Box>
      {isExpanded ? <ExpandLessIcon sx={{
       marginLeft: 'auto'
      }} /> : (
