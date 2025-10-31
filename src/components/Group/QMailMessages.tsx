@@ -5,7 +5,7 @@ import ListItemButton from "@mui/material/ListItemButton";
 import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
 import moment from 'moment'
-import { Box, ButtonBase, Collapse, Typography, useTheme } from "@mui/material";
+import { Box, ButtonBase, Collapse, Typography } from "@mui/material";
 import { Spacer } from "../../common/Spacer";
 import { getBaseApiReact, isMobile } from "../../App";
 import { MessagingIcon } from '../../assets/Icons/MessagingIcon';
@@ -47,7 +47,6 @@ export const QMailMessages = ({userName, userAddress}) => {
     const [mails, setMails] = useRecoilState(mailsAtom)
     const [lastEnteredTimestamp, setLastEnteredTimestamp] = useRecoilState(qMailLastEnteredTimestampAtom)
     const [loading, setLoading] = useState(true)
-    const theme = useTheme();
 
     const getMails = useCallback(async () => {
         try {
